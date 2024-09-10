@@ -1,0 +1,72 @@
+﻿@using WendlandtVentas.Core.Entities.Enums
+@using Humanizer;
+@model WendlandtVentas.Web.Models.PromotionViewModels.PromotionViewModel
+<div class="modal-dialog" role="document">
+    <form asp-action="@ViewData["Action"]" asp-antiforgery="true" class="modal-content forma-ajax--modal">
+        <div class="modal-header">
+            <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            @Html.HiddenFor(t => t.Id)
+            <p class="text-muted">
+                Todos los campos son requeridos.
+            </p>
+            <div class="form-group">
+                <label asp-for="Name"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Buy"></label>
+                <input asp-for="Buy" class="form-control" />
+                <span asp-validation-for="Buy" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Present"></label>
+                <input asp-for="Present" class="form-control" />
+                <span asp-validation-for="Present" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PresentationIds"></label>
+                <div class="form-check form-check-inline">
+                    <input @(Model.PresentationsAllSelected ? "checked" : string.Empty) class="form-check-input" type="checkbox" id="PresentationsAllSelected" name="PresentationsAllSelected" value="true">
+                    <label class="form-check-label" for="PresentationsAllSelected">Todas</label>
+                </div>
+                <div id="content-presentations" class="@(Model.PresentationsAllSelected ? "d-none":string.Empty)">
+                    <select asp-for="PresentationIds" asp-items="@Model.Presentations" multiple class="form-control select2"></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label asp-for="Type"></label>
+                <div>
+                    @foreach (var promotionType in Model.PromotionTypes)
+                    {
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input radio-type" type="radio" name="Type" @(Model.Type == promotionType ? "checked='true'" : string.Empty) value="@promotionType.ToString()">
+                            <label class="form-check-label" for="Type">@promotionType.Humanize()</label>
+                        </div>
+                    }
+                </div>
+                <span asp-validation-for="Type" class="text-danger"></span>
+            </div>
+            <div id="content-classification" class="form-group @(Model.Type == PromotionType.Classification ? string.Empty : "d-none")">
+                <label asp-for="Classification"></label> <span class="span-load"></span>
+                <select asp-for="Classification" asp-items="@Model.Classifications" class="form-control select2"></select>
+                <span asp-validation-for="Classification" class="text-danger"></span>
+            </div>
+            <div id="content-clients" class="form-group @(Model.Type == PromotionType.Clients ? string.Empty : "d-none")">
+                <label asp-for="ClientIds"></label>
+                <select asp-for="ClientIds" asp-items="@Model.Clients" multiple class="form-control select2"></select>
+                <span asp-validation-for="ClientIds" class="text-danger"></span>
+            </div>
+            <div class="modal-errores text-danger"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,39 @@
+﻿@{
+    ViewData["Title"] = "About";
+}
+<div class="row justify-content-center">
+    <div class="col-md-6 mt-5">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="lead">
+                    Plataforma desarrollada por
+                    <br />
+                    <span id="monobits">
+                        <a href="http://monobits.co" target="_blank">
+                            <img src="~/images/brand-logo-dark.png" alt="Monobits" />
+                        </a>
+                    </span>
+                </div>
+                <br />
+                <p class="text-black-secondary">Sistema soportado en Microsoft Edge, Mozilla Firefox, Google Chrome y Apple Safari</p>
+                <p>
+                    <ul class="list-unstyled">
+                        <li><b>Teléfono:</b> +52 (686) 251-9479</li>
+                        <li>
+                            <b>Correo:</b> <a href="mailto:soporte@monobits.co">info@monobits.co</a>
+                        </li>
+                        <li>
+                            <b>Web:</b> <a href="//monobits.co" target="_blank">http://monobits.co</a>
+                        </li>
+                        @*<li><b>Manual:</b> <a target="_blank" href="~/manual.pdf"><i class="fa fa-download"></i> Descargar</a></li>*@
+                    </ul>
+                </p>
+                <br />
+                <p>
+                    <a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> Ir a la página principal</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,129 @@
+﻿@using WendlandtVentas.Core.Entities.Enums
+@{
+    ViewData["Title"] = "Promociones";
+}
+<h4>
+    @ViewData["Title"]
+    <br />
+    <small class="text-muted">Catálogo de promociones.</small>
+</h4>
+<section class="mt-3">
+    <ul class="list-inline">
+        <li>
+            <a href="#addModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Agregar</a>
+        </li>
+    </ul>
+</section>
+<div class="datatable-container">
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+        <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
+        <e-data-manager url="@Url.Action("GetData")" adaptor="UrlAdaptor"></e-data-manager>
+        <e-grid-searchsettings fields="@(new[] { "Name", "Buy", "Present", "Discount", "Presentations", "Type", "Classification", "Clients"})"></e-grid-searchsettings>
+        <e-grid-pagesettings pageSize="25"></e-grid-pagesettings>
+        <e-grid-columns>
+            <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+            <e-grid-column field="buy" headerText="Compra" width="100"></e-grid-column>
+            <e-grid-column field="present" headerText="Obsequio" width="100"></e-grid-column>
+            <e-grid-column field="discount" headerText="Descuento" width="100"></e-grid-column>
+            <e-grid-column template="#presentations" headerText="Presentaciones" width="300"></e-grid-column>
+            <e-grid-column field="type" headerText="Tipo" width="100"></e-grid-column>
+            <e-grid-column field="classification" headerText="Clasificación" width="130"></e-grid-column>
+            <e-grid-column headerText="Clientes" width="300" template="#clients"></e-grid-column>
+            <e-grid-column headerText="" width="230" template="#actionButtons" textAlign="Right"></e-grid-column>
+        </e-grid-columns>
+    </ejs-grid>
+</div>
+
+@section Modals{
+    <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Add")"></div>
+    <div class="modal" id="editModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Edit")"></div>
+    <div class="modal" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Delete")"></div>
+}
+
+@section Scripts{
+    <script id="presentations" type="text/x-template">
+        <div>
+            <span title="${presentations}">${presentations}</span>
+        </div>
+    </script>
+    <script id="clients" type="text/x-template">
+        <div>
+            <span title="${clients}">${clients}</span>
+        </div>
+    </script>
+    <script id="actionButtons" type="text/x-template">
+        ${if(isActive)}
+        <div class="d-inline">
+            <button type="button" value="${id}" title="Presione para desactivar" class="tip btn btn-sm btn-outline-success btn-change-status">ACTIVADA</button>
+        </div>
+        ${else}
+        <div class="d-inline">
+            <button type="button" value="${id}" title="Presione para activar" class="tip btn btn-sm btn-outline-dark btn-change-status">DESACTIVADA</button>
+        </div>
+        ${/if}
+        <div class="d-inline">
+            <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mx-2 btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
+            <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+        </div>
+    </script>
+    <script>
+        $(function () {
+            $('#addModal, #editModal').on('click', '#PresentationsAllSelected', function () {
+                if ($(this).is(':checked')) {
+                    $('#content-presentations').addClass('d-none');
+                } else {
+                    $('#content-presentations').removeClass('d-none');
+                }
+            });
+
+            $('.datatable').on('click', '.btn-change-status', function () {
+                var value = $(this).val();
+                monoloading('show');
+                $.post('@Url.Action("ToggleStatus")/' + value,
+                    function (res) {
+                          monoloading('hide');
+                        if (res.status == 'ok') {
+                            document.getElementsByClassName('datatable')[0].ej2_instances[0].refresh();
+                            monotoast(res.body);
+                        } else {
+                            monotoast(res.body);
+                        }
+                    });
+            });
+                $('#addModal, #editModal').on('click', '.radio-type', function () {
+                if ($(this).is(':checked')) {
+                    var value = $(this).val();
+                    switch (value) {
+                        case '@PromotionType.General.ToString()':
+                            $('#Classification').prop('selected', function () {
+                                return this.defaultSelected;
+                            });
+                            $('#ClientIds').prop('selected', function () {
+                                return this.defaultSelected;
+                            });
+                            $('#content-classification').addClass('d-none');
+                            $('#content-clients').addClass('d-none');
+                            break;
+                        case '@PromotionType.Classification.ToString()':
+                            $('#ClientIds').prop('selected', function () {
+                                return this.defaultSelected;
+                            });
+                            $('#content-classification').removeClass('d-none');
+                            $('#content-clients').addClass('d-none');
+                            break;
+                        default:
+                            $('#ClassificationIds').prop('selected', function () {
+                                return this.defaultSelected;
+                            });
+                            $('#content-classification').addClass('d-none');
+                            $('#content-clients').removeClass('d-none');
+                            break;
+                    }
+                }
+            });
+        });
+    </script>
+}
+
+
+

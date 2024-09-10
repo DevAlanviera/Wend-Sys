@@ -1,0 +1,88 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\Migrations\20200207203642_update-product.cs" />
+    <Compile Remove="Data\Migrations\20200207203642_update-product.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200207204114_update-product.cs" />
+    <Compile Remove="Data\Migrations\20200207204114_update-product.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200623195345_promotion.cs" />
+    <Compile Remove="Data\Migrations\20200623195345_promotion.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200624162052_PromoClientAndPromoPresentation.cs" />
+    <Compile Remove="Data\Migrations\20200624162052_PromoClientAndPromoPresentation.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200624162507_PromoClientAndPromoPresentation.cs" />
+    <Compile Remove="Data\Migrations\20200624162507_PromoClientAndPromoPresentation.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200624164026_promoClientAndPromoPresentation.cs" />
+    <Compile Remove="Data\Migrations\20200624164026_promoClientAndPromoPresentation.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200623180030_ModifyClientClsificationAndChannel.cs" />
+    <Compile Remove="Data\Migrations\20200623180030_ModifyClientClsificationAndChannel.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200623181021_ModifyChannelAndClasificationClient.cs" />
+    <Compile Remove="Data\Migrations\20200623181021_ModifyChannelAndClasificationClient.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200626180845_AddDeliveyOptionsToOrder.cs" />
+    <Compile Remove="Data\Migrations\20200626180845_AddDeliveyOptionsToOrder.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200626181651_AddDeliveryOptionsToOrder.cs" />
+    <Compile Remove="Data\Migrations\20200626181651_AddDeliveryOptionsToOrder.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200626190518_AddDeliveryOptionsToClient.cs" />
+    <Compile Remove="Data\Migrations\20200626190518_AddDeliveryOptionsToClient.Designer.cs" />
+    <Compile Remove="Data\Migrations\20200626191755_AddDeliveryOptionsToClient.cs" />
+    <Compile Remove="Data\Migrations\20200626191755_AddDeliveryOptionsToClient.Designer.cs" />
+    <Compile Remove="Data\Migrations\20201015235501_AddAddress.cs" />
+    <Compile Remove="Data\Migrations\20201015235501_AddAddress.Designer.cs" />
+    <Compile Remove="Data\Migrations\20201016010035_AddAddress.cs" />
+    <Compile Remove="Data\Migrations\20201016010035_AddAddress.Designer.cs" />
+    <Compile Remove="Data\Migrations\20201016162309_AddAddress.cs" />
+    <Compile Remove="Data\Migrations\20201016162309_AddAddress.Designer.cs" />
+    <Compile Remove="Data\Migrations\20201016162814_AddAddress.cs" />
+    <Compile Remove="Data\Migrations\20201016162814_AddAddress.Designer.cs" />
+    <Compile Remove="Data\Migrations\20201016163426_AddAddress.cs" />
+    <Compile Remove="Data\Migrations\20201016163426_AddAddress.Designer.cs" />
+    <Compile Remove="Data\Migrations\20201016164403_AddAddress.cs" />
+    <Compile Remove="Data\Migrations\20201016164403_AddAddress.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210903223323_Update.cs" />
+    <Compile Remove="Data\Migrations\20210903223323_Update.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210903223559_Update.cs" />
+    <Compile Remove="Data\Migrations\20210903223559_Update.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210903224026_ClientAddresses.cs" />
+    <Compile Remove="Data\Migrations\20210903224026_ClientAddresses.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210923164137_WendModificaciones.cs" />
+    <Compile Remove="Data\Migrations\20210923164137_WendModificaciones.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Autofac" Version="6.0.0" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.0.2" />
+    <PackageReference Include="AutoMapper" Version="10.0.0" />
+    <PackageReference Include="Humanizer.Core.es" Version="2.8.26" />
+    <PackageReference Include="IdentityModel" Version="4.4.0" />
+    <PackageReference Include="LinqKit.Microsoft.EntityFrameworkCore" Version="3.0.0" />
+    <PackageReference Include="MailKit" Version="2.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="3.1.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.1.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.Extensions" Version="3.1.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Razor.Language" Version="3.1.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="3.1.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="3.1.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="OpenXmlPowerTools" Version="4.5.3.2" />
+    <PackageReference Include="RestSharp" Version="106.10.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0006" />
+    <PackageReference Include="Syncfusion.DocIORenderer.Net.Core" Version="18.3.0.40" />
+    <PackageReference Include="Syncfusion.XlsIORenderer.Net.Core" Version="18.3.0.40" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WendlandtVentas.Core\WendlandtVentas.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,22 @@
+﻿@{
+    ViewData["Title"] = "Notificaciones";
+}
+<h4>
+    @ViewData["Title"]
+    <br />
+    <small class="text-muted">Dashboard de notificaciones.</small>
+</h4>
+<div class="datatable-container pt-3">
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+        <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
+        <e-data-manager url="@Url.Action("GetData")" adaptor="UrlAdaptor"></e-data-manager>
+        <e-grid-searchsettings fields="@(new[] {"Title", "Message", "User", "CreatedAt"})"></e-grid-searchsettings>
+        <e-grid-columns>
+            <e-grid-column field="title" headerText="Título" width="300"></e-grid-column>
+            <e-grid-column field="message" headerText="Mensaje (Id - Cliente - $Total)" width="400"></e-grid-column>
+            <e-grid-column field="createdAt" headerText="Fecha" width="200"></e-grid-column>
+        </e-grid-columns>
+    </ejs-grid>
+</div>
+
+

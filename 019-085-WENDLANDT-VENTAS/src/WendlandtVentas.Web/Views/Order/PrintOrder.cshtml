@@ -1,0 +1,185 @@
+﻿@using WendlandtVentas.Core.Models.OrderViewModels
+@using WendlandtVentas.Core.Entities.Enums
+@using WendlandtVentas.Web.Extensions;
+
+@model OrderDetailsViewModel
+
+@{
+    Layout = "_PublicLayout";
+}
+<style>
+    body {
+        background-color: white;
+    }
+
+    footer {
+        display: none !important;
+    }
+</style>
+<div class="fixed-top">
+    <h3>Detalles de pedido</h3>
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered ">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Fecha de creación</th>
+                    <th>Remisión</th>
+                    @if (Model.TypeEnum == OrderType.Invoice)
+                    {
+                        <th>Factura</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>@Model.Id</td>
+                    <td><text class="text-info"><b>@Model.Type</b></text></td>
+                    <td>@Model.CreateDate</td>
+                    <td>@Model.RemissionCode</td>
+                    @if (Model.TypeEnum == OrderType.Invoice)
+                    {
+                        <td>@Model.InvoiceCode</td>
+                    }
+                </tr>
+            </tbody>
+        </table>
+        <table class="table table-sm table-bordered ">
+            <thead>
+                <tr>
+                    <th>Promesa de pago</th>
+                    <th>Fecha de pago</th>
+                    @if (Model.TypeEnum == OrderType.Invoice)
+                    {
+                        <th><text class="float-right">Subtotal</text></th>
+                        <th><text class="float-right">Importe base</text></th>
+                        <th><text class="float-right">Distribución</text></th>
+                        <th><text class="float-right">IEPS</text></th>
+                        <th><text class="float-right">IVA</text></th>
+                    }
+                    <th><text class="float-right">Total</text></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>@Model.PaymentPromiseDate</td>
+                    <td>@Model.PaymentDate</td>
+                    @if (Model.TypeEnum == OrderType.Invoice)
+                    {
+                        <td><text class="float-right">@Model.SubTotal</text></td>
+                        <td><text class="float-right">@Model.BaseAmount</text></td>
+                        <td><text class="float-right">@Model.Distribution</text></td>
+                        <td><text class="float-right">@Model.IEPS</text></td>
+                        <td><text class="float-right">@Model.IVA</text></td>
+                    }
+                    <td><text class="float-right text-success"><b>@Model.Total</b></text></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <dl>
+        @if (!string.IsNullOrEmpty(Model.Comment))
+        {
+            <dt>Comentario</dt>
+            <dd>@Model.Comment</dd>
+        }
+        @if (!string.IsNullOrEmpty(Model.CollectionComment))
+        {
+            <dt>Comentario de cobranza</dt>
+            <dd>@Model.CollectionComment</dd>
+        }
+        <dt>Peso neto</dt>
+        <dd>@Model.Weight</dd>
+    </dl>
+    <h5 class="mt-4 mb-2">Información del cliente</h5>
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered ">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Clasificación</th>
+                    <th>Canal</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>@Model.Client.Name</td>
+                    <td>@Model.Client.Classification</td>
+                    <td>@Model.Client.Channel</td>
+                    <td>@Model.Client.State</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <h5 class="mt-4 mb-2">Información de productos</h5>
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered ">
+            <tr>
+                <th>Nombre</th>
+                <th><text class="float-right">Cantidad</text></th>
+                <th><text class="float-right">Precio</text></th>
+                <th><text class="float-right">Subtotal</text></th>
+            </tr>
+            @foreach (var item in Model.Products)
+            {
+                <tr>
+                    <td>@item.PresentationLiters</td>
+                    <td><text class="float-right">@item.Quantity</text></td>
+                    <td><text class="float-right">@item.Price.FormatCurrency()</text></td>
+                    <td><text class="float-right">@item.Total.FormatCurrency()</text></td>
+                </tr>
+            }
+            <tr>
+                <td><b>TOTAL</b></td>
+                <td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>
+                <td></td>
+                <td><text class="float-right"><b>@Model.SubTotal</b></text></td>
+            </tr>
+        </table>
+    </div>
+    @if (Model.Promotions.Any())
+    {
+        <h5 class="mt-4 mb-2">Información de promociones</h5>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered ">
+                <tr>
+                    <th>Cantidad</th>
+                    <th>Promocion</th>
+                    <th>Productos gratis</th>
+                    <th><text class="float-right">Descuento</text></th>
+                </tr>
+                @foreach (var promotionGroup in Model.Promotions.GroupBy(c => c.Id))
+                {
+                    var promotion = promotionGroup.First();
+                    <tr>
+                        <td><text class="float-right">@promotionGroup.Count()</text></td>
+                        <td>@promotion.Name</td>
+                        <td>
+                            @foreach (var product in promotionGroup.SelectMany(c => c.Products))
+                            {
+                                <label>@product.Quantity - @product.Name</label>
+                            }
+                        </td>
+                        <td><text class="float-right">@promotionGroup.Sum(c => c.DiscountMoney).FormatCurrency()</text></td>
+                    </tr>
+                }
+                <tr>
+                    <td colspan="2"><b>TOTAL</b></td>
+                    @*<td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>*@
+                    <td></td>
+                    <td><text class="float-right"><b>@Model.Promotions.Sum(c => c.DiscountMoney).FormatCurrency()</b></text></td>
+                </tr>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts{
+    <script>
+        (function () {
+            window.print();
+        })();
+    </script>
+}

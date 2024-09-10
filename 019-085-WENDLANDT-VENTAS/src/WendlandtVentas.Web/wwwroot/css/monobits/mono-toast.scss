@@ -1,0 +1,21 @@
+﻿@import "variables.scss";
+
+.mono-toast {
+    opacity: 0;
+    padding: 12px 24px;
+    min-width: 288px;
+    max-width: 568px;
+    background: $gray-800;
+    color: $white;
+    border-radius: 2px;
+    position: fixed;
+    bottom: 24px;
+    z-index: 2000;
+    box-shadow: 2px 2px 2px rgba(0,0,0,.3);
+}
+
+@media(min-width: $screen-sm) {
+    .mono-toast {
+        left: 250px;
+    }
+}

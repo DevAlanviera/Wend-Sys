@@ -1,0 +1,116 @@
+﻿@using Microsoft.Extensions.Options
+@using WendlandtVentas.Core
+@using WendlandtVentas.Core.Entities
+@inject IOptions<BrandSettings> BrandOptions
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var currentPath = Context.Request.Path.ToString().ToLower();
+    var currentUser = await UserManager.GetUserAsync(User);
+    var currentRoles = await UserManager.GetRolesAsync(currentUser);
+    var brandTitle = BrandOptions.Value.Name;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <base href="~/">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta name="author" content="Monobits">
+    <title>@ViewData["Title"] - @brandTitle</title>
+    <link rel="stylesheet" href="~/lib/fontawesome/css/fontawesome-all.min.css" />
+    <link rel="stylesheet" href="~/lib/syncfusion/bootstrap4.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.min.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2-bootstrap4.min.css" />
+    <link rel="stylesheet" href="~/lib/coreui/css/style.min.css" />
+    <link rel="stylesheet" href="~/css/monobits/dist/monolibs.min.css" />
+    <link rel="stylesheet" href="~/lib/datepicker/css/datepicker.css" />
+    <link href="~/css/commons.min.css" rel="stylesheet" />
+    @RenderSection("Styles", false)
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-3.4.1.min.js"
+            asp-fallback-src="~/lib/jquery/jquery.min.js"
+            asp-fallback-test="window.jQuery">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    @*<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>*@
+    <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async=""></script>
+    <script>
+         $(document).ready(function () {
+            window.appUser = {
+                email: '@User.Identity.Name',
+                role: '@currentRoles.FirstOrDefault()'
+            }
+             OneSignal.sendTags(window.appUser);
+         })
+        var OneSignal = window.OneSignal || [];
+        OneSignal.push(function () {
+            OneSignal.init({
+                appId: "c3ef27e8-2cb3-45f7-84ba-0ad3ae1067d6",
+                autoRegister: true,
+                notifyButton: {
+                    enable: true,
+                    displayPredicate: function () {
+                        return OneSignal.isPushNotificationsEnabled()
+                            .then(function (isPushEnabled) {
+                                /* The user is subscribed, so we want to return "false" to hide the Subscription Bell */
+                                return !isPushEnabled;
+                            });
+                    },
+                },
+            });
+        });
+    </script>
+</head>
+<body class="c-app">
+    @await Html.PartialAsync("_SidebarMenu")
+
+    <div class="c-wrapper">
+        @await Html.PartialAsync("_Header")
+
+        <div class="c-body">
+            <main class="c-main">
+                <div class="container-fluid">
+                    <div class="fade-in">
+                        @RenderBody()
+                    </div>
+                </div>
+            </main>
+
+            <div class="m-scene" id="alertTop"></div>
+            <div class="m-scene" id="alert"></div>
+        </div>
+
+        <footer class="c-footer">
+            <div>
+                <a href="@BrandOptions.Value.Host">@brandTitle</a> &copy; @DateTime.Today.Year
+            </div>
+            <div class="mfs-auto">
+                Desarrollado por <a href="//monobits.co">Monobits</a>
+            </div>
+        </footer>
+    </div>
+
+    @RenderSection("Modals", false)
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.1/jquery.validate.min.js"
+            asp-fallback-src="~/lib/jquery-validate/jquery.validate.min.js"
+            asp-fallback-test="window.jQuery && window.jQuery.validator">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.11/jquery.validate.unobtrusive.min.js"
+            asp-fallback-src="~/lib/jquery-validation/jquery.validate.unobtrusive.min.js"
+            asp-fallback-test="window.jQuery && window.jQuery.validator && window.jQuery.validator.unobtrusive">
+    </script>
+    <script src="~/lib/coreui/js/coreui.bundle.min.js"></script>
+    <script src="https://cdn.syncfusion.com/ej2/18.3.53/dist/ej2.min.js"></script>
+    
+    <script src="~/lib/syncfusion/sf-lang-es-mx.js"></script>
+    <script src="~/lib/select2/js/select2.min.js"></script>
+    <script src="~/lib/jquery-form/jquery.form.min.js"></script>
+    <script src="~/lib/jscookie/js.cookie.min.js"></script>
+    <script src="~/js/monobits/dist/monolibs.es5.min.js"></script>
+    @*<script src="~/js/monobits/dist/monolibs.js" asp-append-version="true"></script>*@
+    <script src="~/js/app.min.js" asp-append-version="true"></script>
+    <script src="~/lib/datepicker/js/bootstrap-datepicker.js"></script>
+    @RenderSection("Scripts", false)
+    <ejs-scripts></ejs-scripts>
+</body>
+</html>

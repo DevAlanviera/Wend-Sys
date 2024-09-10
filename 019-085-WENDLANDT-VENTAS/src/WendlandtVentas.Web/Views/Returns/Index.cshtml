@@ -1,0 +1,264 @@
+﻿@using WendlandtVentas.Core.Models.OrderViewModels
+@using  WendlandtVentas.Core.Models.Enums
+@model FilterViewModel
+
+@{
+    ViewData["Title"] = "Devoluciones";
+
+    var cols = new List<object> { new { field = "id", direction = "Descending" } };
+    var targetUrl = $"{Url.Action("GetData")}{Context.Request.QueryString}";
+}
+
+<h4>
+    @ViewData["Title"]
+</h4>
+@if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper")
+|| User.IsInRole("Billing") || User.IsInRole("Sales") || User.IsInRole("CashIncomes") || User.IsInRole("Distributor"))
+{
+    <section class="mt-3">
+        <ul class="list-inline">
+            <li>
+                <a asp-action="Add" asp-controller="Order" class="btn btn-primary"><i class="fa fa-plus"></i> Agregar</a>
+            </li>
+        </ul>
+    </section>
+}
+<div class="card">
+    <div class="card-header" id="headingOne">
+        <h5 class="mb-0">
+            <a data-toggle="collapse" href="#collapseOne" role="button" aria-expanded="false" aria-controls="collapseExample">
+                Filtros
+            </a>
+        </h5>
+    </div>
+    <div id="collapseOne" class="collapse">
+        <div class="card-body">
+            <section class="mt-3">
+                <div id="container-filter">
+                    <form>
+                        @Html.HiddenFor(c => c.ClientSelected)
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="form-group">
+                                    <label asp-for="OrderStatus"></label>
+                                    <select asp-for="OrderStatus" asp-items="@Model.OrderStatusAll" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-group">
+                                    <label asp-for="FilterDate"></label><br />
+                                    <label class="radio-inline"><input type="radio" class="radio-filter-date" asp-for="FilterDate" value="@FilterDate.CreatedDate" > De creación</label>&ensp;
+                                    <label class="radio-inline"><input type="radio" class="radio-filter-date" asp-for="FilterDate" value="@FilterDate.DeliveryDate" > De entrega</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-3">
+                                <div class="form-group">
+                                    <label asp-for="DateStart"></label>
+                                    <input asp-for="DateStart" class="form-control" autocomplete="off" />
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="form-group">
+                                    <label asp-for="DateEnd"></label>
+                                    <input asp-for="DateEnd" class="form-control" autocomplete="off" />
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="form-group">
+                                    <label asp-for="City"></label>
+                                    <select asp-for="City" asp-items="@Model.CityAll" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="form-group">
+                                    <label asp-for="StateId"></label>
+                                    <select asp-for="StateId" asp-items="@Model.StatesAll" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="form-group">
+                                    <label asp-for="ClientId"></label>
+                                    <select asp-for="ClientId" asp-items="@Model.Clients" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-group">
+                                    <label asp-for="ProductId"></label>
+                                    <select asp-for="ProductId" asp-items="@Model.Products" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-group">
+                                    <label asp-for="PresentationId"></label>
+                                    <select asp-for="PresentationId" asp-items="@Model.Presentations" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary mt-3">Buscar</button>
+                            <a asp-action="Index" asp-route-productPresentationId="@Model.StateId" class="btn btn-secondary mt-3">Limpiar</a>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<div class="datatable-container">
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowTextWrap="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search","Print"})">
+        @*<e-grid-pagesettings pageCount="50"></e-grid-pagesettings>*@
+        <e-data-manager url="@targetUrl" adaptor="UrlAdaptor"></e-data-manager>
+        <e-grid-sortsettings columns="@cols"></e-grid-sortsettings>
+        <e-grid-pagesettings pageSize="50" pageSizes="@(new[] {"50", "100", "200", "500", "1000", "All"})"></e-grid-pagesettings>
+        <e-grid-searchsettings fields="@(new[] {"Id", "CreateDate", "Type", "RemissionCode", "InvoiceCode", "Total", "Client", "User", "Status", "Comment","Address"})"></e-grid-searchsettings>
+        <e-grid-columns>
+            <e-grid-column field="id" headerText="ID" width="50"></e-grid-column>
+            <e-grid-column field="client" headerText="Cliente" width="200"></e-grid-column>
+            <e-grid-column field="address" headerText="Dirección" width="150" all></e-grid-column>
+            <e-grid-column field="total" headerText="Total" width="150" textAlign="Right" template="#totalTemplate"></e-grid-column>
+            <e-grid-column field="createDate" headerText="Fecha de creación" width="150"></e-grid-column>
+            @*<e-grid-column field="remissionCode" headerText="Remisión" width="150"></e-grid-column>*@
+            @*<e-grid-column field="invoiceCode" headerText="Factura" width="150"></e-grid-column>*@
+            @*<e-grid-column field="user" headerText="Usuario" width="200"></e-grid-column>*@
+            <e-grid-column field="status" headerText="Estatus" width="150"></e-grid-column>
+            @*<e-grid-column field="comment" headerText="Comentario" width="150"></e-grid-column>*@
+            <e-grid-column headerText="" width="200" template="#actionButtons" textAlign="Left"></e-grid-column>
+        </e-grid-columns>
+    </ejs-grid>
+</div>
+
+@section Modals{
+    <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Add")"></div>
+    <div class="modal" id="changeStatusModal" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="changeStatusModal-label" data-url="@Url.Action("ChangeStatus")"></div>
+    <div class="modal" id="detailsModal" tabindex="-1" role="dialog" aria-labelledby="detailsModal-label" data-url="@Url.Action("Details")"></div>
+    <div class="modal" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Delete")"></div>
+    <div class="modal" id="addCollectionCommentModal" tabindex="-1" role="dialog" aria-labelledby="addCollectionCommentModal-label" data-url="@Url.Action("AddCollectionComment")"></div>
+}
+@section Scripts{
+    <script id="actionButtons" type="text/x-template">
+        <div>
+            <a href="#detailsModal" data-id="${id}" title="Ver información completa" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-info-circle"></i></a>
+            ${if(status != "Entregado")}
+            <a href="#changeStatusModal" data-id="${id}" title="Cambiar estado" class="tip ml-2 btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-sync-alt"></i></a>
+            ${/if}
+            @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Sales") || User.IsInRole("Billing") || User.IsInRole("Storekeeper"))
+            {
+                <text>
+                    ${if(canEdit)}
+                    <a href="/Order/Edit/${id}" title="Editar" class="tip btn btn-sm btn-light ml-2"><i class="fa fa-fw fa-edit"></i></a>
+                    ${/if}
+                </text>
+            }
+        </div>
+    </script>
+    <script>
+        $(function () {
+            var stateId = $('#StateId').val();
+            var clientId = $('#ClientId').val();
+
+            if ((stateId == "undefined" || stateId == "") && (clientId == undefined || clientId == "")) {
+                UpdateSelectClients(stateId);
+            }
+        });
+
+        $('#btn-collapse').click(function () {
+            var status = $(this).data('status');
+            if (status) {
+                $('#container-filter').addClass('show');
+                $(this).data('status', false);
+            } else {
+                $('#container-filter').removeClass('show');
+                 $(this).data('status', true);
+            }
+        });
+
+        $('#StateId').change(function () {
+            const stateId = $(this).val();
+            UpdateSelectClients(stateId);
+        });
+
+        function UpdateSelectClients(stateId) {
+            var $spanLoad = $('#span-load');
+            var $selectClients = $('#ClientId');
+            $selectClients.html('');
+            $spanLoad.html("<i class='fa fa-spinner fa-spin'></i>");
+
+            $.getJSON('@Url.Action("GetClients","Client")/?states=' + stateId,
+            function (data) {
+                if (data.length > 0) {
+                    $spanLoad.html('');
+                    $selectClients.append($("<option/>", {
+                        value: null,
+                        text: 'Todos'
+                    }));
+
+                    $.each(data,
+                        function (index, item) {
+                             $selectClients.append($("<option/>",
+                                    {
+                                        value: item.value,
+                                        text: item.text
+                                    }));
+                        });
+                } else {
+                    $selectClients.append($("<option/>", {
+                        value: 0,
+                        text: 'No hay clientes'
+                    }));
+                }
+                $spanLoad.html('');
+                });
+        }
+        $(".select2").select2({
+            theme: 'bootstrap4'
+        });
+    </script>
+    <script>
+        var startDate = new Date();
+        var FromEndDate = new Date();
+
+        $("#DateStart").datepicker({
+            autoclose: true,
+            format: 'dd/mm/yyyy',
+        }).on('changeDate', function (selected) {
+            startDate = new Date(selected.date.valueOf());
+            startDate.setDate(startDate.getDate(new Date(selected.date.valueOf())));
+            $('#DateEnd').datepicker('setStartDate', startDate);
+        });
+
+        $("#DateEnd").datepicker({
+            autoclose: true,
+            format: 'dd/mm/yyyy',
+        }).on('changeDate', function (selected) {
+            FromEndDate = new Date(selected.date.valueOf());
+            FromEndDate.setDate(FromEndDate.getDate(new Date(selected.date.valueOf())));
+            $('#DateStart').datepicker('setEndDate', FromEndDate);
+        });
+    </script>
+    <script type="text/x-jsrender" id="totalTemplate">
+        <span class="text-success">${total}</span>
+    </script>
+    <script>
+        var $modal = $('#changeStatusModal');
+
+        $('#changeStatusModal').on('show.coreui.modal', function () {
+            $('.status-select').change(function () {
+                var status = $(this).val();
+                $modal.find(".modal-errores").html("");
+                $modal.find(".modal-warnings").addClass("d-none");
+
+                if (status == 'Paid') {
+                    $modal.find(".modal-errores").html("Una vez cambiado el estado a Pagado, ya no se podrá modificar");
+                }
+                else if (status == 'PartialPayment') {
+                    $modal.find(".modal-warnings").removeClass("d-none");
+                }
+            });
+        });
+    </script>
+}

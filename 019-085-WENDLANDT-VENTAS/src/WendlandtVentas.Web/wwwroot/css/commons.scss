@@ -1,0 +1,61 @@
+﻿@import "monobits/variables.scss";
+
+.display-5 {
+    font-size: 2rem;
+    font-weight: 300;
+    line-height: 1.2;
+}
+
+.py-6 {
+    padding-top: 4rem !important;
+    padding-bottom: 4rem !important;
+}
+
+.pt-6 {
+    padding-top: 4rem !important;
+}
+
+.form-logo{
+    width: 180px;
+}
+.text-black-secondary {
+    color: $black-secondary-text;
+}
+
+.text-white-secondary {
+    color: $white-secondary-text;
+}
+
+.img-container {
+    width: 50px;
+    height: 50px;
+    overflow: hidden;
+
+    img {
+        object-fit: cover;
+        width: 50px;
+        height: 50px;
+    }
+}
+
+.card.card-grey{
+    background-color: $black-active;
+}
+
+.text-blue{
+    color: $blue;
+}
+
+.text-purple {
+    color: $purple;
+}
+
+.text-cyan {
+    color: $cyan;
+}
+
+.c-header-nav-link {
+    &.active {
+    color: black !important;
+    }
+}

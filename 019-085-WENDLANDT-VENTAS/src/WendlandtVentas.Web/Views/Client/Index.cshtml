@@ -1,0 +1,124 @@
+﻿@{
+    ViewData["Title"] = "Clientes";
+}
+<h4>
+    @ViewData["Title"]
+    <br />
+    <small class="text-muted">Catálogo de clientes.</small>
+</h4>
+<section class="mt-3">
+    <ul class="list-inline">
+        <li>
+            <a href="#addModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Agregar</a>
+            <a href="#importModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Importar</a>
+            <a href="~/resources/template.xlsx" target="_blank" class="btn btn-success  "><i class="fa fa-file-excel"></i> Descargar template</a>
+        </li>
+    </ul>
+</section>
+<div class="datatable-container">
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+        <e-grid-pagesettings pageCount="50"></e-grid-pagesettings>
+        <e-data-manager url="@Url.Action("GetData")" adaptor="UrlAdaptor"></e-data-manager>
+        <e-grid-searchsettings fields="@(new[] { "Name", "Classification", "Channel", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+        <e-grid-columns>
+            <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+            <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+            <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+            <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+            <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+            <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+            <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+            <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+            <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+            <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+            <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+            <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+            <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+        </e-grid-columns>
+    </ejs-grid>
+</div>
+<style type="text/css" class="cssStyles">
+    .detailtable td {
+        font-size: 13px;
+        padding: 4px;
+        max-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .photo {
+        width: 100px;
+        height: 100px;
+        border-radius: 50px;
+        box-shadow: inset 0 0 1px #e0e0e0, inset 0 0 14px rgba(0, 0, 0, 0.2);
+    }
+</style>
+@section Modals{
+    <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Add")"></div>
+    <div class="modal" id="editModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Edit")"></div>
+    <div class="modal" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Delete")"></div>
+    <div class="modal" id="importModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("UploadXlsxView")"></div>
+
+    <div class="modal" id="addContact" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddContactView")"></div>
+    <div class="modal" id="viewContacts" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("ContactsView")"></div>
+    <div class="modal" id="editContact" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("EditContactView")"></div>
+    <div class="modal" id="deleteContact" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("DeleteContactView")"></div>
+
+    <div class="modal" id="addAddress" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddAddressView")"></div>
+    <div class="modal" id="viewAddresses" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddressesView")"></div>
+    <div class="modal" id="editAddress" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("EditAddressView")"></div>
+    <div class="modal" id="deleteAddress" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("DeleteAddressView")"></div>
+}
+
+@section Scripts{
+    <script id="actionButtons" type="text/x-template">
+        <div>
+            <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
+            <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+        </div>
+    </script>
+    <script id="contactsButtons" type="text/x-template">
+        <div>
+            <a href="#addContact" data-id="${id}" title="Agregar contactos" class="tip btn btn-sm btn-light btn-modal-action"> ${contacts} <i class="fa fa-fw fa-plus"></i></a>
+            <a href="#viewContacts" data-id="${id}" title="Ver contactos" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-id-card"></i></a>
+        </div>
+    </script>
+    <script id="contactActionButtons" type="text/x-template">
+        <div>
+            <a href="#editContact" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
+            <a href="#deleteContact" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+        </div>
+    </script>
+    <script id="addressesButtons" type="text/x-template">
+        <div>
+            <a href="#addAddress" data-id="${id}" title="Agregar dirección" class="tip btn btn-sm btn-light btn-modal-action"> ${addresses} <i class="fa fa-fw fa-plus"></i></a>
+            <a href="#viewAddresses" data-id="${id}" title="Ver direcciones" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-map-marked-alt"></i></a>
+        </div>
+    </script>
+    <script id="addressActionButtons" type="text/x-template">
+        <div>
+            <a href="#editAddress" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
+            <a href="#deleteAddress" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+        </div>
+    </script>
+    <script type="text/x-template" id="classificationTemplate">
+        ${if(classification == "Oro")}
+        <i class="fas fa-circle" style="color:gold"></i>
+        ${/if}
+        ${if(classification == "Plata")}
+        <i class="fas fa-circle" style="color:silver"></i>
+        ${/if}
+        ${if(classification == "Bronce")}
+        <i class="fas fa-circle" style="color:saddlebrown"></i>
+        ${/if}
+        <span class="ml-1">
+            ${classification}
+        </span>
+    </script>
+
+
+}
+
+
+

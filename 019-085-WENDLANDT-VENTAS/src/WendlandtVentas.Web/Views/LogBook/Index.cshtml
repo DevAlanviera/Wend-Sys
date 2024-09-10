@@ -1,0 +1,148 @@
+﻿@model WendlandtVentas.Web.Models.LogBookViewModel
+@{
+    ViewBag.Title = "Bitácora";
+}
+
+<h4>
+    @ViewData["Title"]
+    <br />
+</h4>
+<div>
+    <form id="form-filtros" method="get" autocomplete="off">
+        <div class="row pb-3">
+            <div class="col">
+                <label asp-for="UserId">Usuario</label>
+                <select class="form-control filter-select select2" asp-items="Model.Users" asp-for="UserId"></select>
+            </div>
+            <div class="col">
+                <label asp-for="ActionType">Acción</label>
+                <select class="form-control filter-select" asp-for="ActionType">
+                    <option value="0">Cualquiera</option>
+                    <option value="Agregó">Agregar</option>
+                    <option value="Modificó">Modificar</option>
+                    <option value="Eliminó">Eliminar</option>
+                </select>
+            </div>
+            <div class="col">
+                <label asp-for="RegisterDate">Fecha</label>
+                <input class="form-control filter-select daterange" asp-for="RegisterDate" />
+            </div>
+        </div>
+    </form>
+    <div class="animated fadeIn">
+        <div class="card">
+            <div class="py-2">
+                <div class="datatable-container">
+                    <ejs-grid id="Grid" locale="es-MX" class="datatable" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+                        <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
+                        <e-data-manager url="@Url.Action("GetData","LogBook",new {ActionType = Model.ActionType,UserId = Model.UserId, RegisterDate = Model.RegisterDate})" adaptor="UrlAdaptor"></e-data-manager>
+                        <e-grid-searchsettings fields="@(new[] {"actionType", "userid","user"})"></e-grid-searchsettings>
+                        <e-grid-columns>
+                            @*<e-grid-column field="Id" headerText="User ID" width="120"></e-grid-column>*@
+                            <e-grid-column headerText="Bitácora" width="400" template="#textobitacora" textAlign="Left"></e-grid-column>
+                            <e-grid-column field="date" headerText="Fecha" format="dd MMM yyy"></e-grid-column>
+                            <e-grid-column headerText="Ver registro" width="130" template="#registro" textAlign="Right"></e-grid-column>
+                        </e-grid-columns>
+                    </ejs-grid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade modal-focus-first " id="viewObject" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("ViewObject")"></div>
+
+@section Scripts{
+    <script id="textobitacora" type="text/x-template">
+        <div>
+            <i class='fa fa-fw fa-circle text-${color}'></i> <b>${user}</b> ${actionType} ${target}
+        </div>
+    </script>
+    <script id="registro" type="text/x-template">
+        <div>
+            <a href='#viewObject' data-id="${id}" class="tip btn btn-sm btn-light btn-modal-action" title="Ver galería"><i class="fa fa-fw fa-search"></i></a>
+        </div>
+    </script>
+    <script src="~/js/daterangepicker/moment.min.js"></script>
+    <script src="~/js/daterangepicker/daterangepicker.js"></script>
+    <link rel="stylesheet" type="text/css" href="~/js/daterangepicker/daterangepicker.css" />
+    <script>
+        $(document).ready(function () {
+            $(".select2").select2({
+                theme: 'bootstrap4'
+            });
+
+            $('.daterange').daterangepicker({
+                ranges: {
+                    'Ayer': [moment().add(-1, 'days'), moment().add(-1, 'days')],
+                    'Hoy': [moment(), moment()],
+                    'Mañana': [moment().add(1, 'days'), moment().add(1, 'days')]
+                },
+                autoUpdateInput: false,
+                "locale": {
+                    "format": "DD/MM/YYYY",
+                    "separator": " - ",
+                    "applyLabel": "Aplicar",
+                    "cancelLabel": "Limpiar",
+                    "fromLabel": "De",
+                    "toLabel": "Hasta",
+                    "customRangeLabel": "Personalizado",
+                    "weekLabel": "W",
+                    "daysOfWeek": [
+                        "Do",
+                        "Lu",
+                        "Ma",
+                        "Mi",
+                        "Ju",
+                        "Vi",
+                        "Sa"
+                    ],
+                    "monthNames": [
+                        "Enero",
+                        "Febrero",
+                        "Marzo",
+                        "Abril",
+                        "Mayo",
+                        "Junio",
+                        "Julio",
+                        "Agosto",
+                        "Septiembre",
+                        "Octubre",
+                        "Noviembre",
+                        "Diciembre"
+                    ],
+                    "firstDay": 1
+                }
+            });
+
+            $('.daterange').on('apply.daterangepicker',
+                function (ev, picker) {
+                    $(this).val(picker.startDate.format('DD/MM/YYYY') +
+                        ' - ' +
+                        picker.endDate.format('DD/MM/YYYY'))
+                        .change();
+                });
+
+            $('.daterange').on('cancel.daterangepicker',
+                function () {
+                    $(this).val('').change();
+                });
+        });
+
+        $(function () {
+            $(document).on("change",
+                "#form-filtros :input",
+                function () {
+                    $("#form-filtros")[0].submit();
+                });
+        });
+    </script>
+}
+
+@section Styles{
+    <style>
+        .modal-lg {
+            max-width: 95%
+        }
+    </style>
+}

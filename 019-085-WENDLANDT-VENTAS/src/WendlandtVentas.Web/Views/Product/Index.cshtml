@@ -1,0 +1,267 @@
+﻿@using WendlandtVentas.Core.Entities.Enums
+@{
+    ViewData["Title"] = "Productos";
+}
+<h4>
+    @ViewData["Title"]
+    <br />
+    <small class="text-muted">Catálogo de productos.</small>
+</h4>
+<section class="mt-3">
+    <ul class="list-inline">
+        <li>
+            <a href="#addModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Agregar</a>
+        </li>
+    </ul>
+</section>
+<div class="datatable-container">
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+        <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
+        <e-data-manager url="@Url.Action("GetData")" adaptor="UrlAdaptor"></e-data-manager>
+        <e-grid-searchsettings fields="@(new[] { "Name" })"></e-grid-searchsettings>
+        <e-grid-columns>
+            <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+            <e-grid-column field="distinction" headerText="Distinción" width="200"></e-grid-column>
+            <e-grid-column field="season" headerText="Temporada" width="200"></e-grid-column>
+            <e-grid-column template="#barrelPet20" headerText="Barril Pet 20 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            @*<e-grid-column template="#barrelPet30" headerText="Barril Pet 30 lts" disableHtmlEncode="false" textAlign="Right" width="200"></e-grid-column>*@
+            <e-grid-column template="#barrelInox20" headerText="Barril Inox 20 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            @*Ya no se maneja barril inoxidable de 30 litros*@
+            @*<e-grid-column template="#barrelInox30" headerText="Barril Inox 30 lts" disableHtmlEncode="false" textAlign="Right" width="200"></e-grid-column>*@
+            <e-grid-column template="#barrelInox60" headerText="Barril Inox 60 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            <e-grid-column template="#tasting" headerText="Tasting 1 lt" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            <e-grid-column template="#bottle" headerText="Botella 0.355 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            <e-grid-column template="#can" headerText="Lata 0.355 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            <e-grid-column template="#botelladocepack" headerText="Botella 12 pack" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+        </e-grid-columns>
+    </ejs-grid>
+</div>
+
+@section Modals{
+    <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Add")"></div>
+    <div class="modal modal-focus-first" id="editModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Edit")"></div>
+    <div class="modal modal-focus-first" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Delete")"></div>
+}
+@section Scripts{
+    <script id="tasting" type="text/x-template">
+        <div>
+            ${if(tasting != "")}
+            <span>${tasting} MXN &bull; ${tastingUsd} USD &bull; ${tastingWeight} KG</span>
+            ${else}
+            <span class="text-secondary"><b>-</b></span>
+            ${/if}
+        </div>
+    </script>
+    <script id="barrelPet20" type="text/x-template">
+        <div>
+            ${if(priceBarrelPet20 != "")}
+            <span>${priceBarrelPet20} MXN &bull; ${priceUsdBarrelPet20} USD &bull; ${weightBarrelPet20} KG</span>
+            ${else}
+            <span class="text-secondary"><b>-</b></span>
+            ${/if}
+        </div>
+    </script>
+    @*<script id="barrelPet30" type="text/x-template">
+            <div>
+                ${if(priceBarrelPet30 != "")}
+                <span>${priceBarrelPet30} MXN &bull; ${priceUsdBarrelPet30} USD &bull; ${weightBarrelPet30} KG</span>
+                ${else}
+                <span class="text-secondary"><b>-</b></span>
+                ${/if}
+            </div>
+        </script>*@
+    <script id="barrelInox20" type="text/x-template">
+        <div>
+            ${if(priceBarrelInox20 != "")}
+            <span>${priceBarrelInox20} MXN &bull; ${priceUsdBarrelInox20} USD &bull; ${weightBarrelInox20} KG</span>
+            ${else}
+            <span class="text-secondary"><b>-</b></span>
+            ${/if}
+        </div>
+    </script>
+    @*<script id="barrelInox30" type="text/x-template">
+            <div>
+                ${if(priceBarrelInox30 != "")}
+                <span>${priceBarrelInox30} MXN &bull; ${priceUsdBarrelInox30} USD &bull; ${weightBarrelInox30} KG</span>
+                ${else}
+                <span class="text-secondary"><b>-</b></span>
+                ${/if}
+            </div>
+        </script>*@
+    <script id="barrelInox60" type="text/x-template">
+        <div>
+            ${if(priceBarrelInox60 != "")}
+            <span>${priceBarrelInox60} MXN &bull; ${priceUsdBarrelInox60} USD &bull; ${weightBarrelInox60} KG</span>
+            ${else}
+            <span class="text-secondary"><b>-</b></span>
+            ${/if}
+        </div>
+    </script>
+    <script id="bottle" type="text/x-template">
+        <div>
+            ${if(priceBottle != "")}
+            <span>${priceBottle} MXN &bull; ${priceUsdBottle} USD &bull; ${weightBottle} KG</span>
+            ${else}
+            <span class="text-secondary"><b>-</b></span>
+            ${/if}
+        </div>
+    </script>
+    <script id="can" type="text/x-template">
+        <div>
+            ${if(priceCan != "")}
+            <span>${priceCan} MXN &bull; ${priceUsdCan} USD &bull; ${weightCan} KG</span>
+            ${else}
+            <span class="text-secondary"><b>-</b></span>
+            ${/if}
+        </div>
+    </script>
+     <script id="botelladocepack" type="text/x-template">
+        <div>
+             ${if(priceBotellaDoce !== "undefined" && priceBotellaDoce !== "")}
+            <span>${priceBotellaDoce} MXN &bull; ${priceUsdBotellaDoce} USD &bull; ${weightBotellaDoce} KG</span>
+            ${else}
+            <span class="text-secondary"><b>-</b></span>
+            ${/if}
+        </div>
+    </script>
+    <script id="actionButtons" type="text/x-template">
+        <div>
+            <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
+            <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+        </div>
+    </script>
+    <script>
+        var $modal = $('#addModal, #editModal');
+
+        $('#addModal').on('show.coreui.modal', function () {
+            $('.presentation-check').click(function () {
+                var container = $(this).closest('.presentations');
+                var presentations = $(container).find('.presentation-check');
+
+                presentations.each(function () {
+                    var id = $(this).val();
+                    var $priceInput = $('.price-' + id);
+                    var $priceUsdInput = $('.priceUsd-' + id);
+                    var $weightInput = $('.weight-' + id);
+
+                    if ($(this).is(':checked')) {
+                        $priceInput.prop('disabled', false);
+                        $priceUsdInput.prop('disabled', false);
+                        $weightInput.prop('disabled', false);
+                    } else {
+                        $priceInput.prop('disabled', true);
+                        $priceInput.val('');
+                        $priceUsdInput.prop('disabled', true);
+                        $priceUsdInput.val('');
+                        $weightInput.prop('disabled', true);
+                        $weightInput.val('');
+                    }
+                });
+                $modal.find(".modal-errors").html("");
+            });
+        });
+
+        //Se actua en este evento porque ocurren conflictos al traerse información de los modales si se lleno primero un addModal o un editModal en el contrario
+        //$('#addModal').on('hidden.coreui.modal', function () {
+        //    $('#addModal').empty();
+        //});
+
+        $('#editModal').on('show.coreui.modal', function () {
+            $('.presentation-check').click(function () {
+                var container = $(this).closest('.presentations');
+                var presentations = $(container).find('.presentation-check');
+
+                presentations.each(function () {
+                    var id = $(this).val();
+                    var $priceInput = $('.price-' + id);
+                    var $priceUsdInput = $('.priceUsd-' + id);
+                    var $weightInput = $('.weight-' + id);
+
+                    if ($(this).is(':checked')) {
+                        $priceInput.prop('disabled', false);
+                        $priceUsdInput.prop('disabled', false);
+                        $weightInput.prop('disabled', false);
+                    } else {
+                        $priceInput.prop('disabled', true);
+                        $priceInput.val('');
+                        $priceUsdInput.prop('disabled', true);
+                        $priceUsdInput.val('');
+                        $weightInput.prop('disabled', true);
+                        $weightInput.val('');
+                    }
+                });
+                $modal.find(".modal-errors").html("");
+            });
+        });
+
+        //Se actua en este evento porque ocurren conflictos al traerse información de los modales si se lleno primero un addModal o un editModal en el contrario
+        //$('#editModal').on('hidden.coreui.modal', function () {
+        //    $('#editModal').empty();
+        //});
+
+        $modal.on('submit', '#form-product',
+            function (e) {
+                e.preventDefault();
+                monoloading("show");
+                const $form = $(this);
+                var $action = $(this).data('action');
+                var id = $form.find("#Id").val();
+                var name = $form.find("#Name").val();
+                var distinction = $form.find("#Distinction").val();
+                var season = $form.find("#Season").val();
+                var presentationPrices = [];
+                var url = "@Url.Action("Add")";
+
+                if ($action == "Edit") {
+                    url = "@Url.Action("Edit")";
+                }
+
+                $modal.find('.presentation-check:checkbox:checked').each(function (key, value) {
+                    var presentationId = $(this).val();
+                    if ($(this).is(':checked')) {
+                        var price = $modal.find('.price-' + presentationId).val();
+                        var priceUsd = $modal.find('.priceUsd-' + presentationId).val();
+                        var weight = $modal.find('.weight-' + presentationId).val();
+                        presentationPrices.push({
+                            presentationId : presentationId,
+                            price : price,
+                            priceUsd: priceUsd,
+                            weight: weight
+                        });
+                    }
+                });
+
+                if (presentationPrices.length > 0) {
+                    $.post(url, {id:id, name: name, distinction: distinction, season: season, presentationPricesAdd: presentationPrices },
+                        function (res) {
+                            monoloading("hide");
+                            if (res.status == 'ok') {
+                                $modal.modal("hide");
+                                //document.getElementsByClassName('datatable')[0].ej2_instances[0].refresh();
+                                window.location.reload();
+                                monotoast(res.body);
+                            } else {
+                                monotoast(res.body);
+                            }
+                        });
+                } else {
+                    monoloading("hide");
+                    $modal.find(".modal-errors").html("Es necesario agregar por lo menos una presentación");
+                }
+                return false;
+            });
+
+        $modal.on('click', '.radio-distinction', function () {
+            if ($(this).is(':checked')) {
+                var value = $(this).val();
+                $('#Distinction').val(value);
+                if (value == '@Distinction.Season.ToString()') {
+                    $('.input-season').removeClass('d-none');
+                }else {
+                $('.input-season').addClass('d-none');
+                }
+            }
+        });
+    </script>
+}

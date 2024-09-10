@@ -1,0 +1,87 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+# CI and PR triggers
+pr: none
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  buildConfiguration: 'Release'
+
+stages:
+- stage: CI
+  jobs:
+  - job: BuildAndTest
+    steps:
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'build'
+        projects: '**/019-085-WENDLANDT-VENTAS.sln'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Test'
+      inputs:
+        command: 'test'
+        projects: '**/tests/*/*Tests.csproj'
+        arguments: '--configuration $(buildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura  /p:Exclude="[*Tests]*"'
+        nobuild: true
+        testRunTitle: 'dotnet test'
+
+    - task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
+      displayName: Generate Code Coverage Report
+      inputs:
+        reports: $(Build.SourcesDirectory)/*/tests/**/coverage.cobertura.xml
+        targetdir: $(build.artifactstagingdirectory)/TestResults/
+        reporttypes: 'HtmlInline_AzurePipelines;Cobertura;Badges'
+
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish Code Coverage Results'
+      inputs:
+        codeCoverageTool: cobertura
+        summaryFileLocation: $(build.artifactstagingdirectory)/TestResults/cobertura.xml
+        # To make the task not regenerate the report an environment variable was added to the pipeline in Azure DevOps; "disable.coverage.autogenerate: 'true'"
+        # see: https://github.com/danielpalme/ReportGenerator/wiki/Integration#attention
+        reportDirectory: '$(build.artifactstagingdirectory)/TestResults'
+
+- stage: Publish
+  dependsOn: CI
+  condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/master', 'refs/heads/develop'))
+  jobs:
+  - job: PublishArtifact
+    steps:
+
+    - task: PowerShell@2
+      displayName: 'Dump Environment Variables'
+      inputs:
+        targetType: 'inline'
+        script: 'get-childitem -path env:*'
+        
+    - task: replacetokens@3
+      inputs:
+        targetFiles: '**/about.cshtml'
+        encoding: 'auto'
+        writeBOM: true
+        actionOnMissing: 'warn'
+        keepToken: false
+        tokenPrefix: '#{'
+        tokenSuffix: '}#'
+        useLegacyPattern: false
+        enableTelemetry: true
+        
+    - task: DotNetCoreCLI@2
+      displayName: 'App publish'
+      inputs:
+        command: 'publish'
+        publishWebProjects: false
+        projects: '**/src/*.Web/*.Web.csproj'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        
+    - task: PublishBuildArtifacts@1
+      displayName: 'Artifacts publish'

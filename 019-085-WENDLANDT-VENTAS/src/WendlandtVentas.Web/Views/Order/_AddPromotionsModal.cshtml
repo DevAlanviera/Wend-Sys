@@ -1,0 +1,66 @@
+﻿@model WendlandtVentas.Core.Models.PromotionViewModels.PresentationPromotionModel
+<div class="modal-dialog modal-lg" role="document">
+    <form id="form-addPromotions" class="modal-content">
+        <input type="hidden" id="presentationId" value="@Model.PresentationId" />
+        <input type="hidden" id="presentation" value="@Model.Presentation" />
+        <div class="modal-header">
+            <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted">
+                @Model.Quantity elementos de  @Model.Presentation
+            </p>
+            <p>Disponibles para promoción <span id="available-quantity">@Model.Quantity</span></p>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Promoción</th>
+                            <th scope="col">Aplica a</th>
+                            <th scope="col">Compra</th>
+                            <th scope="col">Obsequio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        @{
+                            var i = 0;
+                            foreach (var promotion in Model.Promotions)
+                            {
+                                <tr>
+                                    <th scope="row">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input check-promotion" name="promotion" value="@promotion.Id" data-i="@i" data-name="@promotion.Name" data-buy="@promotion.Buy" data-present="@promotion.Present" data-totalBuy="@promotion.TotalBuy">
+                                            <label class="form-check-label" for="promotion-1">@promotion.Name</label>
+                                        </div>
+                                    </th>
+                                    <td>@promotion.TotalBuy</td>
+                                    <td>@promotion.Buy</td>
+                                    <td>
+                                        @foreach (var productGroup in promotion.Products.GroupBy(c => c.Id))
+                                        {
+                                            var product = productGroup.First();
+                                            var quantity = productGroup.Count();
+                                            <div class="products-promotion-@i-@promotion.Id" data-id="@product.Id" data-name="@product.Name" data-price="@product.Price" data-quantity="@quantity">
+                                                @quantity - @product.Name
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                                i++;
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-errors text-danger"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Agregar</button>
+        </div>
+    </form>
+</div>

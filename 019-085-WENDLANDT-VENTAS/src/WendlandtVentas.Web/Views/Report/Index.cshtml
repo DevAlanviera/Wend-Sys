@@ -1,0 +1,248 @@
+﻿@using WendlandtVentas.Core.Models.OrderViewModels
+@using WendlandtVentas.Core.Models.Enums
+@model FilterViewModel
+
+@{
+    ViewData["Title"] = "Reporte";
+}
+
+<h4>
+    @ViewData["Title"]
+    <br />
+    <small class="text-muted">Reporte de desplazamientos.</small>
+</h4>
+
+<div>
+    <div class="card">
+        <div class="card-header" id="headingOne">
+            <h5 class="mb-0">
+                <a data-toggle="collapse" href="#collapseOne" role="button" aria-expanded="false" aria-controls="collapseExample">
+                    Filtros
+                </a>
+            </h5>
+        </div>
+
+        <div id="collapseOne" class="collapse">
+            <div class="card-body">
+                <section class="mt-3">
+                    <div id="container-filter">
+                        <form>
+                            @Html.HiddenFor(c => c.ClientSelected)
+                            <div class="row">
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label asp-for="OrderType"></label>
+                                        @Html.DropDownListFor(m => m.OrderType, Model.OrderTypeAll, "Todas", new { @class = "form-control" })
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label asp-for="ClientId"></label>
+                                        <select asp-for="ClientId" asp-items="@Model.Clients" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label asp-for="UserId"></label>
+                                        <select asp-for="UserId" asp-items="@Model.Users" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label asp-for="OrderStatus"></label>
+                                        <select asp-for="OrderStatus" asp-items="@Model.OrderStatusAll" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="form-group">
+                                        <label asp-for="FilterDate"></label><br />
+                                        <label class="radio-inline"><input type="radio" class="radio-filter-date" asp-for="FilterDate" value="@FilterDate.CreatedDate" checked="checked"> De creación</label>&ensp;
+                                        <label class="radio-inline"><input type="radio" class="radio-filter-date" asp-for="FilterDate" value="@FilterDate.PaymentPromiseDate" > De promesa de pago</label>&ensp;
+                                        <label class="radio-inline"><input type="radio" class="radio-filter-date" asp-for="FilterDate" value="@FilterDate.PaymentDate" > De pago</label>&ensp;
+                                        <label class="radio-inline"><input type="radio" class="radio-filter-date" asp-for="FilterDate" value="@FilterDate.DeliveryDate" > De entrega</label>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="form-group">
+                                        <label asp-for="DateStart"></label>
+                                        <input asp-for="DateStart" class="form-control" autocomplete="off" />
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="form-group">
+                                        <label asp-for="DateEnd"></label>
+                                        <input asp-for="DateEnd" class="form-control" autocomplete="off" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label asp-for="City"></label>
+                                        <select asp-for="City" asp-items="@Model.CityAll" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label asp-for="StateId"></label>
+                                        <select asp-for="StateId" asp-items="@Model.StatesAll" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label asp-for="ProductId"></label>
+                                        <select asp-for="ProductId" asp-items="@Model.Products" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label asp-for="PresentationId"></label>
+                                        <select asp-for="PresentationId" asp-items="@Model.Presentations" multiple class="form-control select2" data-placeholder="Todas" style="width:100%"></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary mt-3">Buscar</button>
+                                <a asp-action="Index" asp-route-productPresentationId="@Model.StateId" class="btn btn-secondary mt-3">Limpiar</a>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="datatable-container pt-3">
+    <div class="text-muted mb-2.">
+        Para ver mas filtros presiona el botón <i class="e-icons e-FieldList fa-1x"></i>
+    </div>
+    <div class="text-muted mb-2">
+        <i class="fa fa-info-circle text-info mr-2"></i>Nota: para que toda la información de la tabla se incluya en el archivo de excel las agrupaciones tienen que estar expandidas.
+    </div>
+    <div class="mb-2">
+        <ejs-button id="excel" content="Export To Excel" isPrimary="true"></ejs-button>
+    </div>
+    <ejs-pivotview id="PivotView" height="1500" showGroupingBar="true" showFieldList="true" locale="es-Es" allowDrillThrough="true" allowExcelExport="true">
+        <e-datasourcesettings dataSource="@ViewBag.DataSource" expandAll="true" enableSorting="false" allowLabelFilter="true" allowValueFilter="true">
+            <e-formatsettings>
+                <e-field name="Liters" format="N2"></e-field>
+            </e-formatsettings>
+            <e-rows>
+                <e-field name="City" caption="Ciudad"></e-field>
+            </e-rows>
+            <e-columns>
+                <e-field name="Month" caption="Mes"></e-field>
+            </e-columns>
+            <e-values>
+                <e-field name="Liters" caption="Litros"></e-field>
+            </e-values>
+        </e-datasourcesettings>
+    </ejs-pivotview>
+</div>
+
+@section scripts{
+<style>
+    .e-dialog.e-popup {
+        width: 80%;
+    }
+
+    .e-FieldList:before {
+        content: '\e7da';
+    }
+</style>
+
+<script>
+
+    $('#btn-collapse').click(function () {
+        var status = $(this).data('status');
+        if (status) {
+            $('#container-filter').addClass('show');
+            $(this).data('status', false);
+        } else {
+            $('#container-filter').removeClass('show');
+            $(this).data('status', true);
+        }
+    });
+    var startDate = new Date();
+    var FromEndDate = new Date();
+
+    $("#DateStart").datepicker({
+        autoclose: true,
+        format: 'dd/mm/yyyy',
+    }).on('changeDate', function (selected) {
+        startDate = new Date(selected.date.valueOf());
+        startDate.setDate(startDate.getDate(new Date(selected.date.valueOf())));
+        $('#DateEnd').datepicker('setStartDate', startDate);
+    });
+
+    $("#DateEnd").datepicker({
+        autoclose: true,
+        format: 'dd/mm/yyyy',
+    }).on('changeDate', function (selected) {
+        FromEndDate = new Date(selected.date.valueOf());
+        FromEndDate.setDate(FromEndDate.getDate(new Date(selected.date.valueOf())));
+        $('#DateStart').datepicker('setEndDate', FromEndDate);
+    });
+
+    $(".select2").select2({
+        theme: 'bootstrap4'
+    });
+</script>
+
+<script>
+    $('#excel').on('click', function () {
+        var pivotObj = document.getElementById('PivotView').ej2_instances[0];
+        pivotObj.dataSourceSettings.expandAll = true;
+
+        var excelExportProperties = {
+            header: {
+                headerRows: 2,
+                rows: [
+                    { cells: [{ colSpan: 4, value: "Reporte de desplazamiento", style: { fontColor: '#C67878', fontSize: 20, hAlign: 'Center', bold: true } }] }
+                ]
+            }
+        };
+        pivotObj.excelExport(excelExportProperties);
+    });
+
+    $('#StateId').change(function () {
+        const stateId = $(this).val();
+        UpdateSelectClients(stateId);
+    });
+
+    function UpdateSelectClients(stateId) {
+        var $spanLoad = $('#span-load');
+        var $selectClients = $('#ClientId');
+        $selectClients.html('');
+        $spanLoad.html("<i class='fa fa-spinner fa-spin'></i>");
+
+        $.getJSON('@Url.Action("GetClients","Client")/?states=' + stateId,
+        function (data) {
+            if (data.length > 0) {
+                $spanLoad.html('');
+                $selectClients.append($("<option/>", {
+                    value: null,
+                    text: 'Todos'
+                }));
+
+                $.each(data,
+                    function (index, item) {
+                         $selectClients.append($("<option/>",
+                                {
+                                    value: item.value,
+                                    text: item.text
+                                }));
+                    });
+            } else {
+                $selectClients.append($("<option/>", {
+                    value: 0,
+                    text: 'No hay clientes'
+                }));
+            }
+            $spanLoad.html('');
+            });
+    }
+</script>
+}

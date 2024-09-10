@@ -1,0 +1,83 @@
+﻿@using WendlandtVentas.Web.Models.InventoryViewModels
+@model FilterViewModel
+@{
+    ViewData["Title"] = "Inventario";
+    var targetUrl = $"{Url.Action("GetData")}?{nameof(Model.ProductId)}={Model.ProductId}&{nameof(Model.PresentationId)}={Model.PresentationId}";
+}
+<h4>
+    @ViewData["Title"]
+    <br />
+    <small class="text-muted">Dashboard de productos en el inventario.</small>
+</h4>
+<section class="mt-3">
+    <h6>Filtros</h6>
+    <form>
+        <div class="row">
+            <div class="col-3">
+                <div class="form-group">
+                    <label asp-for="ProductId"></label>
+                    @Html.DropDownListFor(m => m.ProductId, Model.Products, "Todos", new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="form-group">
+                    <label asp-for="PresentationId"></label>
+                    @Html.DropDownListFor(m => m.PresentationId, Model.Presentations, "Todas", new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="col-2 pt-3">
+                <button type="submit" class="btn btn-primary mt-3">Buscar</button>
+                <a asp-action="Index" class="btn btn-secondary mt-3">Limpiar</a>
+            </div>
+        </div>
+    </form>
+</section>
+<div class="datatable-container">
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowGrouping="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+        <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
+        <e-grid-aggregates>
+            <e-grid-aggregate>
+                <e-aggregate-columns>
+                    <e-aggregate-column field="liters" type="Sum" groupCaptionTemplate="${Sum}" format="N2"></e-aggregate-column>
+                </e-aggregate-columns>
+            </e-grid-aggregate>
+        </e-grid-aggregates>
+        <e-data-manager url="@targetUrl" adaptor="UrlAdaptor"></e-data-manager>
+        <e-grid-searchsettings fields="@(new[] { "Name", "PresentationLiters" })"></e-grid-searchsettings>
+        <e-grid-groupsettings showGroupedColumn="false" showDropArea="false" columns="@(new string[] {"name"})"></e-grid-groupsettings>
+        <e-grid-columns>
+            <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+            <e-grid-column field="presentation" headerText="Presentación" width="200"></e-grid-column>
+            <e-grid-column field="liters" headerText="Litros" format="N2" width="100" textAlign="Right" headerTextAlign="Left"></e-grid-column>
+            <e-grid-column headerText="En existencia" width="200" template="#movements" textAlign="Center"></e-grid-column>
+            <e-grid-column width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+        </e-grid-columns>
+    </ejs-grid>
+</div>
+
+@section Modals{
+    <div class="modal modal-focus-first" id="inModal" tabindex="-1" role="dialog" aria-labelledby="inModal-label" data-url="@Url.Action("In")">
+    </div>
+    <div class="modal" id="outModal" tabindex="-1" role="dialog" aria-labelledby="outModal-label" data-url="@Url.Action("Out")">
+    </div>
+    <div class="modal" id="adjustmentModal" tabindex="-1" role="dialog" aria-labelledby="adjustmentModal-label" data-url="@Url.Action("Adjustment")">
+    </div>
+}
+
+@section Scripts{
+    <script id="actionButtons" type="text/x-template">
+        <div>
+            <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
+            <a href="#outModal" data-id="${id}" title="Agregar salida" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-out text-danger"></i></a>
+            <a href="#adjustmentModal" data-id="${id}" title="Realizar ajuste" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-pen"></i></a>
+        </div>
+    </script>
+    <script id="movements" type="text/x-template">
+        <div>
+            <a href="/Movement?productPresentationId=${id}" title="Ver movimientos" class="tip btn btn-light" style="width:70px">${stock}</a>
+        </div>
+    </script>
+}
+
+
+

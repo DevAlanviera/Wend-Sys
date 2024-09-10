@@ -1,0 +1,121 @@
+﻿@model WendlandtVentas.Web.Models.OrderViewModels.OrderStatusViewModel
+@using WendlandtVentas.Core.Entities.Enums
+
+<div class="modal-dialog" role="document">
+    <form asp-action="@ViewData["Action"]" asp-antiforgery="true" class="modal-content forma-ajax--modal">
+        <div class="modal-header">
+            <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            @Html.HiddenFor(c => c.OrderId)
+            @Html.HiddenFor(c => c.Type)
+            <div class="row mb-2  ml-1">
+                <div class="col">
+                    <div class="mb-2">
+                        <div><label asp-for="Client.Name" class="form-label text-muted"></label></div>
+                        <div><label class="font-weight-bold">@Model.Client.Name</label></div>
+                    </div>
+                    <div class="mb-2">
+                        <div><label asp-for="Client.Channel" class="form-label text-muted"></label></div>
+                        <div><label class="font-weight-bold">@Model.Client.Channel</label></div>
+                    </div>
+                    <div class="mb-2">
+                        <div><label asp-for="Client.City" class="form-label text-muted"></label></div>
+                        <div><label class="font-weight-bold">@Model.Client.City</label></div>
+                    </div>
+                    <div class="mb-2">
+                        <div><label asp-for="Client.RFC" class="form-label text-muted"></label></div>
+                        <div><label class="font-weight-bold">@Model.Client.RFC</label></div>
+                    </div>
+                    <div class="mb-2">
+                        <div><label asp-for="Client.CreationDate" class="form-label text-muted"></label></div>
+                        <div><label class="font-weight-bold">@Model.Client.CreationDate</label></div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="mb-2">
+                        <div><label asp-for="Client.Classification" class="form-label text-muted"></label></div>
+                        <div><label class="font-weight-bold">@Model.Client.Classification</label></div>
+                    </div>
+                    <div class="mb-2">
+                        <div><label asp-for="Client.PayType" class="text-muted"></label></div>
+                        <div><label class="font-weight-bold">@Model.Client.PayType</label></div>
+                    </div>
+                    <div class="mb-2">
+                        <div><label asp-for="Client.State" class="form-label text-muted"></label></div>
+                        <div><label class="font-weight-bold">@Model.Client.State</label></div>
+                    </div>
+                </div>
+            </div>
+            <hr />
+            <div class="form-row">
+                <div class="col mb-3">
+                    <label asp-for="Status"></label>
+                    @Html.DropDownListFor(m => m.Status, Model.StatusList, "Seleccionar estado", new { @class = "form-control status-select", @style = "width:100%" })
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
+                <div class="col mb-3" id="invoicecode" @(Model.Status == OrderStatus.OnRoute && Model.Type == OrderType.Invoice ? string.Empty : "hidden")>
+                    <label asp-for="InvoiceCode"></label> <b class="text-danger">*</b>
+                    <input asp-for="InvoiceCode" class="form-control" />
+                    <span asp-validation-for="InvoiceCode" class="text-danger"></span>
+                </div>
+                <div class="col mb-3" id="deliveryDay" @(Model.Status == OrderStatus.Delivered ? string.Empty : "hidden")>
+                    <label asp-for="DeliveryDay"></label> <b class="text-danger">*</b>
+                    <input asp-for="DeliveryDay" class="form-control date-picker" value="@Model.DeliveryDay" />
+                    <span asp-validation-for="DeliveryDay" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="form-group" id="initialAmount" hidden>
+                <label asp-for="InitialAmount"></label>
+                <input asp-for="InitialAmount" class="form-control" type="number" min="0" step="0.01" />
+                <span asp-validation-for="InitialAmount" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Comments"></label>
+                <textarea asp-for="Comments" maxlength="300" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Comments" class="text-danger"></span>
+            </div>
+            <div id="modal-warnings" class="modal-warnings alert alert-warning d-none" role="alert">
+                Una vez hecho el pago parcial, solo un encargado de tesorería lo podrá modificar
+            </div>
+            <div class="modal-errores text-danger"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    $(function () {
+        if ($("#Status").find('option:selected').text() == "Pago parcial")
+            $('#initialAmount').removeAttr('hidden');
+
+        $(".date-picker").datepicker({
+            autoclose: true,
+            format: 'dd/mm/yyyy',
+            theme: 'bootstrap4'
+        });
+    });
+
+    $("#Status").on('change', function () {
+        if ($(this).find('option:selected').text() == "En ruta" && $('#Type').val() == 'Invoice')
+            $('#invoicecode').removeAttr('hidden');
+        else
+            $('#invoicecode').attr('hidden', '');
+
+        if ($(this).find('option:selected').text() == "Pago parcial")
+            $('#initialAmount').removeAttr('hidden');
+        else
+            $('#initialAmount').attr('hidden', '');
+
+        if ($(this).find('option:selected').text() == "Entregado")
+            $('#deliveryDay').removeAttr('hidden');
+        else
+            $('#deliveryDay').attr('hidden', '');
+    });
+</script>

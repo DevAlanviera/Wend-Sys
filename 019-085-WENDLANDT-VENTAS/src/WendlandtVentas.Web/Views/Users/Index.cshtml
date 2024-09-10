@@ -1,0 +1,88 @@
+﻿@{
+    ViewData["Title"] = "Usuarios";
+}
+<h4>
+    @ViewData["Title"]
+    <br />
+    <small class="text-muted">Catálogo de usuarios que pueden acceder a esta consola.</small>
+</h4>
+<section class="mt-3">
+    <ul class="list-inline">
+        <li>
+            <a href="#addModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Agregar</a>
+        </li>
+    </ul>
+</section>
+<div class="datatable-container">
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+        <e-data-manager url="@Url.Action("GetData")" adaptor="UrlAdaptor"></e-data-manager>
+        <e-grid-searchsettings fields="@(new[] {"Email", "Name", "Roles"})"></e-grid-searchsettings>
+        <e-grid-columns>
+            @*<e-grid-column field="Id" headerText="User ID" width="120"></e-grid-column>*@
+            <e-grid-column field="email" headerText="Email" width="150"></e-grid-column>
+            <e-grid-column field="name" headerText="Nombre" width="150"></e-grid-column>
+            <e-grid-column field="roles" headerText="Roles" width="150"></e-grid-column>
+            <e-grid-column headerText="Estatus" template="#activeButton" textAlign="Center" width="100"></e-grid-column>
+            <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+        </e-grid-columns>
+
+    </ejs-grid>
+</div>
+
+@section Modals{
+    <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddView")">
+    </div>
+
+    <div class="modal" id="editModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("EditView")">
+    </div>
+
+    <div class="modal" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("DeleteView")">
+    </div>
+}
+
+
+@section Scripts{
+    <script id="actionButtons" type="text/x-template">
+       
+        <div>
+            <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
+            ${if(canDisableOrDelete)}
+            <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+            ${/if}
+        </div>
+     
+    </script>
+    <script id="activeButton" type="text/x-template">
+        ${if(canDisableOrDelete)}
+        ${if(isActive)}
+        <div>
+            <button type="button" value="${id}" title="Presione para desactivar" class="tip btn btn-sm btn-outline-success btn-change-status">ACTIVADO</button>
+        </div>
+        ${else}
+        <div>
+            <button type="button" value="${id}" title="Presione para activar" class="tip btn btn-sm btn-outline-dark btn-change-status">DESACTIVADO</button>
+        </div>
+        ${/if}
+        ${else}
+        <div>
+            <label class="text-success">ACTIVADO</label>
+        </div>
+        ${/if}
+    </script>
+    <script>
+    $('.datatable').on('click', '.btn-change-status', function() {
+        var value = $(this).val();
+        $.post('@Url.Action("ToggleStatus")/' + value,
+            function(res) {
+                if (res.status == 'ok') {
+                    document.getElementsByClassName('datatable')[0].ej2_instances[0].refresh();
+                } else {
+                    monotoast(res.body);
+                }
+            });
+    });
+    </script>
+}
+
+
+

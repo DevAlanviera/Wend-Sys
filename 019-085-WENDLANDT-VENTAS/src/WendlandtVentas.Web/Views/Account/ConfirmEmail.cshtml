@@ -1,0 +1,24 @@
+﻿@{
+    ViewData["Title"] = "Correo Electrónico Confirmado";
+}
+
+<div class="text-center">
+    <a href="~/">
+        <img src="~/images/brand-logo.png" class="mx-auto form-logo mb-3" />
+    </a>
+</div>
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card-group">
+            <div class="card p-4">
+                <h3>@ViewData["Title"]</h3>
+                <p>
+                    Gracias por confirmar tu correo electrónico.
+                </p>
+                <p>
+                    Si deseas cambiar tu contraseña da clic en el siguiente enlace <a href="@Url.Action("ForgotPassword","Account")">Reiniciar Contraseña</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

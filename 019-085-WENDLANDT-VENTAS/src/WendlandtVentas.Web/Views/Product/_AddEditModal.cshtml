@@ -1,0 +1,113 @@
+﻿@using WendlandtVentas.Core.Entities.Enums;
+@model WendlandtVentas.Web.Models.ProductViewModels.ProductViewModel
+<div class="modal-dialog" role="document">
+    <form data-action="@ViewData["Action"]" id="form-product" class="modal-content">
+        <div class="modal-header">
+            <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            @Html.HiddenFor(t => t.Id)
+            @Html.HiddenFor(t => t.Distinction)
+            <p class="text-muted">
+                Campos marcados con asterisco son requeridos.
+            </p>
+            <div class="form-group">
+                <label asp-for="Name"></label> <b class="text-danger">*</b>
+                <input asp-for="Name" class="form-control" autofocus />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Distinction"></label>
+                <div>
+                    @foreach (var distinction in Model.Distinctions)
+                    {
+                        var selected = distinction.Value.Equals(Model.Distinction.ToString());
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input radio-distinction" type="radio" name="radioDistinction" @(selected ? "checked='true'" : string.Empty) value="@distinction.Value">
+                            <label class="form-check-label" for="radioDistinction">@distinction.Text</label>
+                        </div>
+                    }
+                </div>
+                <span asp-validation-for="Distinction" class="text-danger"></span>
+            </div>
+            <div class="form-group input-season @(Model.Distinction != Distinction.Season ? "d-none" : string.Empty)">
+                <label asp-for="Season"></label>
+                <input asp-for="Season" class="form-control" autofocus />
+                <span asp-validation-for="Season" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label>Presentaciones</label> <b class="text-danger">*</b>
+                <div class="row">
+                    <div class="col">
+                        <label>Presentación</label>
+                    </div>
+                    <div class="col">
+                        <label>$ Precio MXN</label>
+                    </div>
+                    <div class="col">
+                        <label>$ Precio USD</label>
+                    </div>
+                    <div class="col">
+                        <label>Peso unitario</label>
+                    </div>
+                </div>
+                <div class="presentations">
+                    @foreach (var presentation in Model.Presentations)
+                    {
+                        var selected = false;
+                        var price = 0.0M;
+                        var priceUsd = 0.0M;
+                        var weight = 0.0M;
+
+                        if (Model.PresentationsEdit != null)
+                        {
+                            var presentationEdit = Model.PresentationsEdit.SingleOrDefault(c => c.PresentationId == presentation.PresentationId);
+                            if (presentationEdit != null)
+                            {
+                                selected = true;
+                                price = presentationEdit.Price;
+                                priceUsd = presentationEdit.PriceUsd;
+                                weight = presentationEdit.Weight;
+                            }
+                        }
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input presentation-check" id="@presentation.PresentationId" value="@presentation.PresentationId" @(selected ? "checked='true'" : string.Empty)>
+                                    <label class="custom-control-label" for="@presentation.PresentationId">@presentation.PresentationName</label>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <input name="@presentation.PresentationId" type="number" min="0" class="form-control price-@presentation.PresentationId" @(selected ? string.Empty : "disabled") value="@price" data-val="true" data-val-required="Campo requerido" aria-describedby="@presentation.PresentationId-error" aria-invalid="true">
+                                    <span class="text-danger field-validation-error" data-valmsg-for="@presentation.PresentationId" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <input name="@presentation.PresentationId" type="number" min="0" class="form-control priceUsd-@presentation.PresentationId" @(selected ? string.Empty : "disabled") value="@priceUsd" data-val="true" data-val-required="Campo requerido" aria-describedby="@presentation.PresentationId-error" aria-invalid="true">
+                                    <span class="text-danger field-validation-error" data-valmsg-for="@presentation.PresentationId" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <input name="@presentation.PresentationId" type="number" min="0" class="form-control weight-@presentation.PresentationId" @(selected ? string.Empty : "disabled") value="@weight" data-val="true" data-val-required="Campo requerido" aria-describedby="@presentation.PresentationId-error" aria-invalid="true">
+                                    <span class="text-danger field-validation-error" data-valmsg-for="@presentation.PresentationId" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+            </div>
+            <div class="modal-errors text-danger"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+    </form>
+</div>

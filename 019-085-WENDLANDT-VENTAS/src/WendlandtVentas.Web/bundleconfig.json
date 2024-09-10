@@ -1,0 +1,31 @@
+[
+  {
+    "outputFileName": "wwwroot/lib/syncfusion/bootstrap.min.css",
+    "inputFiles": [
+      "wwwroot/lib/syncfusion/bootstrap.css"
+    ]
+  },
+  {
+    "outputFileName": "wwwroot/lib/syncfusion/material.min.css",
+    "inputFiles": [
+      "wwwroot/lib/syncfusion/material.css"
+    ]
+  },
+  {
+    "outputFileName": "wwwroot/js/app.min.js",
+    "inputFiles": [
+      "wwwroot/js/app.js"
+    ]
+  },
+  {
+    "outputFileName": "wwwroot/js/monobits/dist/monolibs.js",
+    "inputFiles": [
+      "wwwroot/js/monobits/monobits.form.js",
+      "wwwroot/js/monobits/monobits.loading.js",
+      "wwwroot/js/monobits/monobits.maps.js",
+      "wwwroot/js/monobits/monobits.modal.js",
+      "wwwroot/js/monobits/monobits.toast.js",
+      "wwwroot/js/monobits/monobits.utils.js"
+    ]
+  }
+]

@@ -1,0 +1,15 @@
+﻿@import "variables.scss";
+
+.mono-middle {
+    opacity: 0;
+    padding: 8px;
+    max-height: 48px;
+    background: $white;
+    color: $blue;
+    border-radius: 22px;
+    position: fixed;
+    top: 8px;
+    left: 48%;
+    z-index: 2000;
+    text-align: center;
+}

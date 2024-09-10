@@ -1,0 +1,56 @@
+﻿// Variables
+//
+// Variables should follow the `$component-state-property-size` formula for
+// consistent naming. Ex: $nav-link-disabled-color and $modal-content-box-shadow-xs.
+
+
+//
+// Color system
+//
+
+// stylelint-disable
+$white: #fff !default;
+$gray-100: #f8f9fa !default;
+$gray-200: #e9ecef !default;
+$gray-300: #dee2e6 !default;
+$gray-400: #ced4da !default;
+$gray-500: #adb5bd !default;
+$gray-600: #6c757d !default;
+$gray-700: #495057 !default;
+$gray-800: #343a40 !default;
+$gray-900: #212529 !default;
+$black: #000 !default;
+
+$blue: #007bff !default;
+$indigo: #6610f2 !default;
+$purple: #6f42c1 !default;
+$pink: #e83e8c !default;
+$red: #dc3545 !default;
+$orange: #fd7e14 !default;
+$yellow: #ffc107 !default;
+$green: #28a745 !default;
+$teal: #20c997 !default;
+$cyan: #17a2b8 !default;
+
+
+//== Media queries breakpoints
+//
+//## Define the breakpoints at which your layout will change, adapting to different screen sizes.
+
+$screen-xs: 0;
+$screen-sm: 576px;
+$screen-md: 768px;
+$screen-lg: 992px;
+$screen-xl: 1200px;
+
+$black-active: rgba(0,0,0, 0.06);
+$black-dividers: rgba(0,0,0, 0.12);
+$black-hint-text: rgba(0,0,0, 0.26);
+$black-secondary-text: rgba(0,0,0, 0.54);
+$black-text: rgba(0,0,0, 0.87);
+
+$white-active: rgba(255,255,255, 0.02);
+$white-dividers: rgba(255,255,255, 0.12);
+$white-hint-text: rgba(255,255,255, 0.30);
+$white-secondary-text: rgba(255,255,255, 0.70);
+$white-text: rgba(255,255,255, 1.0);

@@ -1,0 +1,24 @@
+﻿@model WendlandtVentas.Web.Models.OrderViewModels.OrderStatusViewModel
+
+<div class="modal-dialog" role="document">
+    <form asp-action="@ViewData["Action"]" asp-antiforgery="true" class="modal-content forma-ajax--modal">
+        <div class="modal-header">
+            <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            @Html.HiddenFor(c => c.OrderId)
+            <div class="form-group">
+                <label asp-for="Comments"></label>
+                <textarea asp-for="Comments" maxlength="300" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Comments" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+    </form>
+</div>

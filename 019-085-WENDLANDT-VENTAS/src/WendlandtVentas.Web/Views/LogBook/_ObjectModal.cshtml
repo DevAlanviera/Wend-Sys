@@ -1,0 +1,43 @@
+﻿@using Humanizer
+@using WendlandtVentas.Web.Extensions
+@model WendlandtVentas.Web.Models.LogBookViewModel
+@{
+    var claseHeader = "text-";
+
+    switch (Model.ActionType[0])
+    {
+        case 'A':
+            claseHeader += "success";
+            break;
+        case 'M':
+            claseHeader += "warning";
+            break;
+        case 'E':
+            claseHeader += "danger";
+            break;
+    }
+    var elements = Model.Content.Where(x => !x.Key.Contains("Id"))
+        .Select(x => new KeyValuePair<string, string>(x.Key, x.Value?.ToString() ?? string.Empty))
+        .Where(x => !string.IsNullOrEmpty(x.Value));
+}
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header ">
+            <h4 class="modal-title" id="addModal-label"><i class="fa fa-circle @claseHeader mr-2"></i>@Model.Target.Humanize()</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <dl class="row">
+                @foreach (var element in elements)
+                {
+                    <dt class="col">@element.Key.Humanize()</dt>
+                    <dd class="col">
+                        @Html.Raw(element.ExractContent())
+                    </dd>
+                }
+            </dl>
+        </div>
+    </div>
+</div>

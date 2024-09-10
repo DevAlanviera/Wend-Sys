@@ -1,0 +1,35 @@
+﻿@using Newtonsoft.Json
+@model WendlandtVentas.Core.Models.PromotionViewModels.PresentationPromotionModel
+
+<div id="promotion-presentation-@Model.PresentationId" class="promotion-presentation">
+    <input type="hidden" name="Promotions" value="@JsonConvert.SerializeObject(Model.Promotions)" />
+    <input type="hidden" class="discount-presentation" value="@Model.Discount" />
+    <div>
+        <b>@Model.Presentation</b>
+    </div>
+    @foreach (var promotionGroup in Model.Promotions.GroupBy(c => c.Id))
+    {
+        var promotion = promotionGroup.FirstOrDefault();
+        var promotionCount = promotionGroup.Count();
+        var discount =0M;
+        <div class="ml-3">
+            <div class="row">
+                <div class="col-3">@promotionCount - @promotion.Name</div>
+                <div class="col-4">
+                    @foreach (var productGroup in promotion.Products.GroupBy(c => c.Id))
+                    {
+                        var product = productGroup.First();
+                        var productCount = productGroup.Sum(c => c.Quantity) * promotionCount;
+                        discount += productCount * product.Price;
+
+                        <div>@productCount - @product.Name <span class="text-warning"><b>gratis</b></span></div>
+                    }
+                </div>
+                <div class="col-3 text-right">
+                    equivalente a <b>@discount.ToString("C")</b>
+                </div>
+                <div class="col"></div>
+            </div>
+        </div>
+    }
+</div>

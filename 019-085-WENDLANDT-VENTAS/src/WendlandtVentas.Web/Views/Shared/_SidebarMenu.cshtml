@@ -1,0 +1,102 @@
+﻿@using WendlandtVentas.Core.Entities
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var currentPath = Context.Request.Path.ToString().ToLower();
+
+    var system = currentPath.Equals("/product") || currentPath.Equals("/users") || currentPath.Equals("/promotion") || currentPath.Equals("/logbook") || currentPath.Equals("/client");
+    var currentUser = await UserManager.GetUserAsync(User);
+    var logoLink = "";
+    if (system)
+    {
+        logoLink = "Product";
+    }
+    else
+    {
+        logoLink = "Order";
+    }
+}
+<div class="c-sidebar c-sidebar-dark c-sidebar-fixed c-sidebar-lg-show" id="sidebar">
+    <div class="c-sidebar-brand">
+        <a asp-controller="@logoLink" asp-action="Index">
+            <img class="c-sidebar-brand-full" src="~/images/logo-white.png" height="40" alt="Wendlandt">
+            <span class="c-sidebar-brand-minimized text-white font-weight-bold" style="text-decoration: none">W</span>
+        </a>
+    </div>
+    <ul class="c-sidebar-nav" data-drodpown-accordion="true">
+        @if (system)
+        {
+            <li class="c-sidebar-nav-item @(currentPath.Equals("/client") ? "active" : "")">
+                <a class="c-sidebar-nav-link" asp-controller="Client" asp-action="Index">
+                    <i class="c-sidebar-nav-icon far fa-users-class"></i> Clientes
+                </a>
+            </li>
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing"))
+            {
+                <li class="c-sidebar-nav-item @(currentPath.Equals("/product") ? "active" : "")">
+                    <a class="c-sidebar-nav-link" asp-controller="Product" asp-action="Index">
+                        <i class="c-sidebar-nav-icon far fa-cubes"></i> Productos
+                    </a>
+                </li>
+                <li class="c-sidebar-nav-item @(currentPath.Equals("/promotion") ? "active" : "")">
+                    <a class="c-sidebar-nav-link" asp-controller="Promotion" asp-action="Index">
+                        <i class="c-sidebar-nav-icon far fa-gift"></i> Promociones
+                    </a>
+                </li>
+            }
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing"))
+            {
+                <li class="c-sidebar-nav-item @(currentPath.Equals("/users") ? "active" : "")">
+                    <a class="c-sidebar-nav-link" asp-controller="Users" asp-action="Index">
+                        <i class="c-sidebar-nav-icon far fa-users"></i> Usuarios
+                    </a>
+                </li>
+            }
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial"))
+            {
+                <li class="c-sidebar-nav-item @(currentPath.Equals("/logbook") ? "active" : "")">
+                    <a class="c-sidebar-nav-link" asp-controller="LogBook" asp-action="Index">
+                        <i class="c-sidebar-nav-icon far fa-book"></i> Bitácora
+                    </a>
+                </li>
+            }
+        }
+        else
+        {
+            <li class="c-sidebar-nav-item @(currentPath.Equals("/order") ? "active" : "")">
+                <a class="c-sidebar-nav-link" asp-controller="Order" asp-action="Index">
+                    <i class="c-sidebar-nav-icon far fa-book"></i> Pedidos
+                </a>
+            </li>
+            <li class="c-sidebar-nav-item @(currentPath.Equals("/returns") ? "active" : "")">
+                <a class="c-sidebar-nav-link" asp-controller="Returns" asp-action="Index">
+                    <i class="c-sidebar-nav-icon far fa-book"></i> Devoluciones
+                </a>
+            </li>
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing"))
+            {
+                <li class="c-sidebar-nav-item @(currentPath.Equals("/inventory") ? "active" : "")">
+                    <a class="c-sidebar-nav-link" asp-controller="Inventory" asp-action="Index">
+                        <i class="c-sidebar-nav-icon far fa-warehouse"></i> Inventario
+                    </a>
+                </li>
+            }
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing") || User.IsInRole("Sales"))
+            {
+                <li class="c-sidebar-nav-item @(currentPath.Equals("/report") ? "active" : "")">
+                    <a class="c-sidebar-nav-link" asp-controller="Report" asp-action="Index">
+                        <i class="c-sidebar-nav-icon far fa-chart-line"></i> Reportes
+                    </a>
+                </li>
+                if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing"))
+                {
+                    <li class="c-sidebar-nav-item @(currentPath.Equals("/notification") ? "active" : "")">
+                        <a class="c-sidebar-nav-link" asp-controller="Notification" asp-action="Index">
+                            <i class="c-sidebar-nav-icon far fa-info"></i> Notificaciones
+                        </a>
+                    </li>
+                }
+            }
+        }
+    </ul>
+    <button class="c-sidebar-minimizer c-class-toggler" type="button" data-target="_parent" data-class="c-sidebar-unfoldable"></button>
+</div>

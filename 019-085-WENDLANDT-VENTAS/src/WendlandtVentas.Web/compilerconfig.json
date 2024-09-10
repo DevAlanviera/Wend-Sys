@@ -1,0 +1,18 @@
+﻿[
+  {
+    "outputFile": "wwwroot/lib/syncfusion/bootstrap4.css",
+    "inputFile": "wwwroot/lib/syncfusion/bootstrap4.scss"
+  },
+  {
+    "outputFile": "wwwroot/css/commons.css",
+    "inputFile": "wwwroot/css/commons.scss"
+  },
+  {
+    "outputFile": "wwwroot/js/monobits/dist/monolibs.es5.js",
+    "inputFile": "wwwroot/js/monobits/dist/monolibs.js"
+  },
+  {
+    "outputFile": "wwwroot/lib/coreui/js/coreui.bundle.min.es5.js",
+    "inputFile": "wwwroot/lib/coreui/js/coreui.bundle.min.js"
+  }
+]

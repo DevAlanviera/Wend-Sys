@@ -1,0 +1,32 @@
+{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iis": {
+      "applicationUrl": "http://localhost/WendlandtVentas.Web",
+      "sslPort": 0
+    },
+    "iisExpress": {
+      "applicationUrl": "http://localhost:61438",
+      "sslPort": 44375
+    }
+  },
+  "profiles": {
+    "WendlandtVentas.Web": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
+    },
+    "IISExpress": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "sqlDebugging": true,
+      "ancmHostingModel": "OutOfProcess",
+      "nativeDebugging": true,
+      "use64Bit": true
+    }
+  }
+}

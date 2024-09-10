@@ -1,0 +1,94 @@
+﻿@using WendlandtVentas.Web.Models.MovementViewModels
+@model FilterViewModel
+@{
+    var targetUrl = $"{Url.Action("GetData")}?{nameof(Model.ProductPresentationId)}={Model.ProductPresentationId}&{nameof(Model.DateStart)}={Model.DateStart}&{nameof(Model.DateEnd)}={Model.DateEnd}&{nameof(Model.UserId)}={Model.UserId}&{nameof(Model.Operation)}={Model.Operation}";
+}
+
+<h4>
+    <a asp-action="Index" asp-controller="Inventory" title="Regresar" class="btn btn-sm btn-secondary">
+        <i class="fa fa-fw fa-arrow-left"></i>
+    </a>
+    @ViewData["Title"]
+    <br />
+    <small class="text-muted">Dashboard de movimientos de un producto.</small>
+</h4>
+<section class="mt-3">
+    <h6>Filtros</h6>
+    <form>
+        @Html.HiddenFor(c => c.ProductPresentationId)
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group">
+                    <label asp-for="DateStart"></label>
+                    <input asp-for="DateStart" class="form-control" />
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <label asp-for="DateEnd"></label>
+                    <input asp-for="DateEnd" class="form-control" />
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label asp-for="UserId">Usuario</label>
+                    @Html.DropDownListFor(m => m.UserId, Model.Users, "Todos", new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <label asp-for="Operation">Operación</label>
+                    @Html.DropDownListFor(m => m.Operation, Model.Operations, "Todas", new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="col-2 pt-3">
+                <button type="submit" class="btn btn-primary mt-3">Ir</button>
+                <a asp-action="Index" asp-route-productPresentationId="@Model.ProductPresentationId" class="btn btn-secondary mt-3">Limpiar</a>
+            </div>
+        </div>
+    </form>
+</section>
+<div class="datatable-container">
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+        <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
+        <e-data-manager url="@targetUrl" adaptor="UrlAdaptor"></e-data-manager>
+        <e-grid-searchsettings fields="@(new[] {"Quantity", "Operation", "QuantityCurrent", "QuantityOld", "User", "CreatedAt", "Comment"})"></e-grid-searchsettings>
+        <e-grid-columns>
+            <e-grid-column field="quantity" headerText="Cantidad" width="200"></e-grid-column>
+            <e-grid-column field="operation" headerText="Operación" width="200"></e-grid-column>
+            <e-grid-column field="quantityCurrent" headerText="Cantidad actual" width="200"></e-grid-column>
+            <e-grid-column field="quantityOld" headerText="Cantidad anterior" width="200"></e-grid-column>
+            <e-grid-column field="user" headerText="Usuario" width="200"></e-grid-column>
+            <e-grid-column field="createdAt" headerText="Fecha" width="200"></e-grid-column>
+            <e-grid-column field="comment" headerText="Comentario" width="300"></e-grid-column>
+        </e-grid-columns>
+    </ejs-grid>
+</div>
+
+@section Scripts{
+    <script>
+        var startDate = new Date();
+        var FromEndDate = new Date();
+
+        $("#DateStart").datepicker({
+            autoclose: true,
+            format: 'dd/mm/yyyy',
+        }).on('changeDate', function (selected) {
+            startDate = new Date(selected.date.valueOf());
+            startDate.setDate(startDate.getDate(new Date(selected.date.valueOf())));
+            $('#DateEnd').datepicker('setStartDate', startDate);
+        });
+
+        $("#DateEnd").datepicker({
+            autoclose: true,
+            format: 'dd/mm/yyyy',
+        }).on('changeDate', function (selected) {
+            FromEndDate = new Date(selected.date.valueOf());
+            FromEndDate.setDate(FromEndDate.getDate(new Date(selected.date.valueOf())));
+            $('#DateStart').datepicker('setEndDate', FromEndDate);
+        });
+    </script>
+}
+
+
+

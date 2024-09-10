@@ -1,0 +1,295 @@
+﻿/*
+ * Keyframes
+ */
+
+@-moz-keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@-webkit-keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@-moz-keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(0, 100%, 0);
+        -ms-transform: translate3d(0, 100%, 0);
+        -o-transform: translate3d(0, 100%, 0);
+        -webkit-transform: translate3d(0, 100%, 0);
+        transform: translate3d(0, 100%, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@-webkit-keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(0, 100%, 0);
+        -ms-transform: translate3d(0, 100%, 0);
+        -o-transform: translate3d(0, 100%, 0);
+        -webkit-transform: translate3d(0, 100%, 0);
+        transform: translate3d(0, 100%, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(0, 100%, 0);
+        -ms-transform: translate3d(0, 100%, 0);
+        -o-transform: translate3d(0, 100%, 0);
+        -webkit-transform: translate3d(0, 100%, 0);
+        transform: translate3d(0, 100%, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@-moz-keyframes fadeInDown {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(0, -100%, 0);
+        -ms-transform: translate3d(0, -100%, 0);
+        -o-transform: translate3d(0, -100%, 0);
+        -webkit-transform: translate3d(0, -100%, 0);
+        transform: translate3d(0, -100%, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@-webkit-keyframes fadeInDown {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(0, -100%, 0);
+        -ms-transform: translate3d(0, -100%, 0);
+        -o-transform: translate3d(0, -100%, 0);
+        -webkit-transform: translate3d(0, -100%, 0);
+        transform: translate3d(0, -100%, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@keyframes fadeInDown {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(0, -100%, 0);
+        -ms-transform: translate3d(0, -100%, 0);
+        -o-transform: translate3d(0, -100%, 0);
+        -webkit-transform: translate3d(0, -100%, 0);
+        transform: translate3d(0, -100%, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@-moz-keyframes fadeInRight {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(100%, 0, 0);
+        -ms-transform: translate3d(100%, 0, 0);
+        -o-transform: translate3d(100%, 0, 0);
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@-webkit-keyframes fadeInRight {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(100%, 0, 0);
+        -ms-transform: translate3d(100%, 0, 0);
+        -o-transform: translate3d(100%, 0, 0);
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@keyframes fadeInRight {
+    0% {
+        opacity: 0;
+        -moz-transform: translate3d(100%, 0, 0);
+        -ms-transform: translate3d(100%, 0, 0);
+        -o-transform: translate3d(100%, 0, 0);
+        -webkit-transform: translate3d(100%, 0, 0);
+        transform: translate3d(100%, 0, 0);
+    }
+
+    100% {
+        opacity: 1;
+        -moz-transform: none;
+        -ms-transform: none;
+        -o-transform: none;
+        -webkit-transform: none;
+        transform: none;
+    }
+}
+
+@-moz-keyframes fadeInPlop {
+    0% {
+        opacity: 0;
+        height: 5px;
+        width: 5px;
+    }
+}
+
+@-webkit-keyframes fadeInPlop {
+    0% {
+        opacity: 0;
+        height: 5px;
+        width: 5px;
+    }
+}
+
+@keyframes fadeInPlop {
+    0% {
+        opacity: 0;
+        height: 5px;
+        width: 5px;
+    }
+}
+
+/*
+ * CSS Page Transitions
+ * Don't forget to add vendor prefixes!
+ */
+.m-scene {
+    overflow: hidden;
+    /** Basic styles for an animated element */
+    .scene_element {
+        -moz-animation-duration: 0.25s;
+        -o-animation-duration: 0.25s;
+        -webkit-animation-duration: 0.25s;
+        animation-duration: 0.25s;
+        -moz-transition-timing-function: ease-in;
+        -o-transition-timing-function: ease-in;
+        -webkit-transition-timing-function: ease-in;
+        transition-timing-function: ease-in;
+        -o-animation-fill-mode: both;
+        -webkit-animation-fill-mode: both;
+        -moz-animation-fill-mode: both;
+        animation-fill-mode: both;
+    }
+    /** An element that fades in */
+    .scene_element--fadein {
+        -moz-animation-name: fadeIn;
+        -o-animation-name: fadeIn;
+        -webkit-animation-name: fadeIn;
+        animation-name: fadeIn;
+    }
+    /** An element that fades in and slides up */
+    .scene_element--fadeinup {
+        -moz-animation-name: fadeInUp;
+        -o-animation-name: fadeInUp;
+        -webkit-animation-name: fadeInUp;
+        animation-name: fadeInUp;
+    }
+    /** An element that fades in and slides down */
+    .scene_element--fadeindown {
+        -moz-animation-name: fadeInDown;
+        -o-animation-name: fadeInDown;
+        -webkit-animation-name: fadeInDown;
+        animation-name: fadeInDown;
+    }
+    /** An element that fades in and slides from the right */
+    .scene_element--fadeinright {
+        -moz-animation-name: fadeInRight;
+        -o-animation-name: fadeInRight;
+        -webkit-animation-name: fadeInRight;
+        animation-name: fadeInRight;
+    }
+
+    .scene_element--fadeinplop {
+        -moz-animation-name: fadeInPlop;
+        -o-animation-name: fadeInPlop;
+        -webkit-animation-name: fadeInPlop;
+        animation-name: fadeInPlop;
+    }
+}

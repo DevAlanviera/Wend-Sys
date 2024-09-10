@@ -1,0 +1,797 @@
+﻿@using WendlandtVentas.Core.Entities.Enums
+@using WendlandtVentas.Core.Models.OrderViewModels
+@model OrderViewModel
+
+<h4 class="mb-3">
+    <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-sm btn-secondary">
+        <i class="fa fa-fw fa-arrow-left"></i>
+    </a>
+    @ViewData["Title"]
+    <br />
+</h4>
+
+<form id="forma-order" asp-action="@ViewData["Action"]" asp-antiforgery="true" class="forma-ajax">
+    @Html.HiddenFor(c => c.IsInvoice)
+    @Html.HiddenFor(c => c.Type)
+    @Html.HiddenFor(c => c.Address)
+    @Html.HiddenFor(c => c.AddressName)
+
+    @if (Model.Id > 0)
+    {
+        @Html.HiddenFor(c => c.Id)
+        ;
+    }
+
+    <div class="row">
+        <div class="col-9">
+            <div class="card card-body">
+                <div class="row">
+                    @if (Model.IsInvoice != OrderType.Export && Model.IsInvoice != OrderType.Return)
+                    {
+                        <div class="col-5 col-lg-3 col-xl-2 mr-5 mr-sm-auto">
+                            <div class="form-group">
+                                <label asp-for="IsInvoice" class="pb-1"></label>
+                                <br />
+                                <div class="form-check">
+                                    <label class="form-check-label">
+                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
+                                    </label>
+                                </div>
+                                @if (Model.Id == 0)
+                                {
+                                    <div id="export-check" class="form-check">
+                                        <label class="form-check-label">
+                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
+                                        </label>
+                                    </div>
+                                }
+                                <div class="form-check">
+                                    <label class="form-check-label">
+                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
+                                    </label>
+                                </div>
+                                @if (Model.Id == 0)
+                                {
+                                    <div id="return-check" class="form-check">
+                                        <label class="form-check-label">
+                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @*La remisión se volvio automatica si se llega a querer manual descomentar esto y acomodar con UI*@
+                    @*<div class="col-6 col-lg-4 col-xl-3">
+                    <div class="form-group">
+                    <label asp-for="RemissionCode"></label>
+                    <input asp-for="RemissionCode" class="form-control" />
+                    <span asp-validation-for="RemissionCode" class="text-danger"></span>
+                    </div>
+                    </div>*@
+                    <div class="col-6 col-lg-4 col-xl-3" id="invoice" @(Model.IsInvoice == OrderType.Invoice ? string.Empty : "hidden")>
+                        <div class="form-group">
+                            <label asp-for="InvoiceCode"></label>
+                            <input asp-for="InvoiceCode" class="form-control" readonly />
+                            <span asp-validation-for="InvoiceCode" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col col-lg col-xl">
+                        <div class="form-group">
+                            <label asp-for="ClientId"></label> <b class="text-danger">*</b>
+                            @Html.DropDownListFor(m => m.ClientId, Model.Clients, "Seleccionar cliente", new { @class = "form-control select2", @style = "width:100%;" })
+                            <span asp-validation-for="ClientId" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <section id="noreturn" class="@(Model.IsInvoice == OrderType.Return ? "d-none" : "")">
+                    <div class="row">
+                        <div class="col col-lg col-xl">
+                            <div class="form-group">
+                                <label asp-for="AddressId"></label>
+                                @Html.DropDownListFor(m => m.AddressId, Model.Addresses, "Seleccionar dirección", new { @class = "form-control select2", @style = "width:100%;" })
+                                <span asp-validation-for="AddressId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        @*<div class="col-6 col-lg-6 col-xl-6">
+                        <div class="form-group">
+                        <label asp-for="Delivery"></label>
+                        <input asp-for="Delivery" class="form-control" />
+                        <span asp-validation-for="Delivery" class="text-danger"></span>
+                        </div>
+                        </div>*@
+                        <div class="col col-lg col-xl">
+                            <div class="form-group">
+                                <label asp-for="DeliverySpecification"></label>
+                                <input asp-for="DeliverySpecification" class="form-control" />
+                                <span asp-validation-for="DeliverySpecification" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-2 col-lg-2 col-xl-2">
+                            <div class="form-group">
+                                <label asp-for="PaymentPromiseDate"></label>
+                                <input asp-for="PaymentPromiseDate" class="form-control date-picker" />
+                                <span asp-validation-for="PaymentPromiseDate" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-2 col-lg-2 col-xl-2">
+                            <div class="form-group">
+                                <label asp-for="PaymentDate"></label>
+                                <input asp-for="PaymentDate" class="form-control date-picker" />
+                                <span asp-validation-for="PaymentDate" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-2 col-lg-2 col-xl-2">
+                            <div class="form-group">
+                                <label asp-for="DeliveryDay"></label>
+                                <input asp-for="DeliveryDay" class="form-control date-picker" />
+                                <span asp-validation-for="DeliveryDay" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-3 col-lg-3 col-xl-3">
+                            <div class="form-group">
+                                <label asp-for="PayType"></label>
+                                @Html.DropDownListFor(m => m.PayType, Model.PayTypes, new { @class = "form-control select2", @style = "width:100%;" })
+                                @*<input asp-for="PayType" class="form-control" readonly />*@
+                                <span asp-validation-for="PayType" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-3 col-lg-3 col-xl-3">
+                            <div class="form-group">
+                                <label asp-for="CurrencyType"></label>
+                                @Html.DropDownListFor(m => m.CurrencyTypes, Model.CurrencyTypes, new { @class = "form-control select2", @style = "width:100%;" })
+                                <input asp-for="CurrencyType" value="@Model.CurrencyType" class="form-control" type="hidden" />
+                                <span asp-validation-for="CurrencyType" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 col-lg-12 col-xl-12">
+                            <div class="form-group">
+                                <label asp-for="Comment"></label>
+                                <input asp-for="Comment" class="form-control" />
+                                <span asp-validation-for="Comment" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section id="return" class="@(Model.IsInvoice != OrderType.Return ? "d-none" : "")">
+                    <div class="row">
+                        <div class="col-3">
+                            <div class="form-group">
+                                <label asp-for="ReturnRemisionNumber"></label>
+                                @Html.DropDownListFor(m => m.ReturnRemisionNumber, Model.ReturnRemisionNumberOptions, new { @class = "form-control select2", @style = "width:100%;" })
+                                <span asp-validation-for="ReturnRemisionNumber" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-9">
+                            <div class="form-group">
+                                <label asp-for="ReturnReason"></label>
+                                <input asp-for="ReturnReason" value="@Model.ReturnReason" class="form-control" />
+                                <span asp-validation-for="ReturnReason" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <div class="card">
+                <div class="card-header bg-gray-200">
+                    <h4 style="display:inline">Productos</h4>
+                    @if (Model.CanEditProducts)
+                    {
+                        <div class="float-right">
+                            <button type="button" id="addProduct" class="btn btn-link"><i class="fa fa-plus"></i> Agregar producto</button>
+                        </div>
+                    }
+                </div>
+                <div class="card-body">
+                    <div class="p-3 border">
+                        <div class="row border-bottom p-2">
+                            <div class="col-4"><b>Producto</b></div>
+                            <div class="col-2"><b class="float-right">Precio</b></div>
+                            <div class="col-2"><b class="float-right">Cantidad</b></div>
+                            <div class="col-2"><b class="float-right">Subtotal</b></div>
+                            <div class="col-2"></div>
+                        </div>
+                        <div id="content-products" class="pt-2">
+                            @if (Model.ProductsEdit.Any())
+                            {
+                                foreach (var item in Model.ProductsEdit)
+                                {
+                                    @await Html.PartialAsync("_RowProduct", item)
+                                }
+                            }
+                            else
+                            {
+                                <label>No se encontraron elementos</label>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header bg-gray-200">
+                    <h4>Promociones aplicadas</h4>
+                </div>
+                <div id="content-promotions" class="card-body">
+                    @if (Model.PresentationPromotionsEdit.Any())
+                    {
+                        foreach (var item in Model.PresentationPromotionsEdit)
+                        {
+                            @await Html.PartialAsync("_RowPromotion", item)
+                        }
+                    }
+                    else
+                    {
+                        <label>No se encontraron elementos</label>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="sticky-top">
+                <div class="d-none d-xl-block">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5>Subtotal</h5>
+                                </div>
+                                <div class="col text-right p-0">
+                                    <h5 class="subtotal-order">$0.00 MXN</h5>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <h5>Descuentos</h5>
+                                </div>
+                                <div class="col text-right p-0">
+                                    <h5 class="discount-order">$0.00 MXN</h5>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <h class="mt-3">Total</h>
+                                </div>
+                                <div class="col text-right p-0">
+                                    <h5 class="text-success total-order">$0.00 MXN</h5>
+                                </div>
+                            </div>
+                            <div class="text-muted mb-2.">
+                                Total antes de impuestos.
+                            </div>
+                            <div class="text-center pt-3">
+                                <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-secondary">
+                                    Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-primary ml-3">Guardar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-xl-none">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row justify-content-center">
+                                <h5>Subtotal</h5>
+                            </div>
+                            <div class="row justify-content-center">
+                                <h5 style="text-align:center" class="subtotal-order">$0.00</h5>
+                            </div>
+                            <div class="row justify-content-center">
+                                <h5>Descuentos</h5>
+                            </div>
+                            <div class="row justify-content-center">
+                                <h5 class="discount-order">$0.00</h5>
+                            </div>
+                            <div class="row justify-content-center">
+                                <h4>Total</h4>
+                            </div>
+                            <div class="row justify-content-center">
+                                <h4 class="text-success total-order">$0.00</h4>
+                            </div>
+                            <div class="text-muted mb-2.">
+                                Total antes de impuestos.
+                            </div>
+                            <br />
+                            <div class="row justify-content-center">
+                                <button type="submit" class="btn btn-primary">Guardar</button>
+                            </div>
+                            <br />
+                            <div class="row justify-content-center">
+                                <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-secondary">
+                                    Cancelar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-errores text-danger"></div>
+                <div class="alerts"></div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Modals{
+    <div class="modal" id="addProductModal" tabindex="false" role="dialog" aria-labelledby="addProductModal-label"></div>
+    <div class="modal modal-focus-first" id="addPromotionsModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddPromotions")"></div>
+    <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
+}
+@section Scripts{
+    <script>
+        $(document).ready(function () {
+            $("#addProduct").on("click", function () {
+                var currencyType = $('#CurrencyType').val();
+                $.get("@Url.Action("AddProduct", "Order")", { currencyType: currencyType })
+                    .done(function (data) {
+                        $('#addProductModal').html(data);
+                        $('#addProductModal').modal('show');
+                    });
+            });
+
+            $('#CurrencyTypes').attr('disabled', 'disabled');
+
+            $('#CurrencyTypes').on('change', function () {
+                $('#content-promotions').html('');
+                $('#CurrencyType').val($(this).val());
+                CalculateTotals();
+            });
+        });
+    </script>
+    <script>
+        $('#addProductModal').on('show.coreui.modal', function () {
+            $(document).on("change", "#ProductPresentationId", function () {
+                var selectKeyValues = $(this).val().split("-");
+                var id = selectKeyValues[0];
+                var currencyType = $('#CurrencyType').val();
+                $.get("@Url.Action("GetProductPrice", "Order")", { currencyType: currencyType, id: id })
+                    .done(function (data) {
+                        $('#Price').val(data);
+                    });
+            });
+        });
+    </script>
+    <script>
+        $(function () {
+            $(".date-picker").datepicker({
+                autoclose: true,
+                format: 'dd/mm/yyyy',
+                theme: 'bootstrap4'
+            });
+            $(".select2").select2({
+                placeholder: $(this).attr('placeholder'),
+                allowClear: true,
+                theme: 'bootstrap4'
+            });
+
+            CalculateTotals();
+        });
+
+        $('.radio-invoice').change(function () {
+            $('#IsInvoice').val($(this).val());
+            $('#CurrencyType').val('MXN');
+            $('#CurrencyTypes').val('MXN').change();
+
+            if ($(this).val() == "Remission") {
+                $('#CurrencyTypes').removeAttr('disabled');
+            }
+            else if ($(this).val() == "Export") {
+                $('#CurrencyTypes').val('USD').change();
+                $('#CurrencyType').val('USD');
+                $('#CurrencyTypes').attr('disabled', 'disabled');
+            }
+            else if ($(this).val() == "Invoice") {
+                $('#CurrencyTypes').attr('disabled', 'disabled');
+            }
+        });
+
+        $(".forma-ajax").ajaxForm(opcionesForma);
+
+        var opcionesForma = {
+            beforeSubmit: prepararPeticion,
+            success: ejecutarRespuestaFormaCustom,
+            error: mostrarError
+        };
+
+        function ejecutarRespuestaFormaCustom(responseText, statusText, xhr, $form) {
+            var json = responseText;
+            $form.find('button[type="submit"]').prop("disabled", false);
+            monoloading('hide');
+            $form.find(".modal-errores").html("");
+            $form.find(".alerts").html("");
+            switch (json.status) {
+                case 'ok':
+                    $form.resetForm();
+                    window.location.href = '/Order';
+                    monotoast(json.body);
+                    break;
+                case 'error':
+                    $form.find(".modal-errores").html(`<p>${json.body}</p>`);
+                    break;
+                case 'warning':
+                    $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                                             <strong>Acción inválida: </strong>
+                                                               ${json.body}
+                                                               <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                  <span aria-hidden="true">&times;</span>
+                                                               </button>
+                                                           </div>`);
+                    $form.find(".alert").alert()
+                    break;
+            }
+        }
+
+        $('input:radio[name=IsInvoice]').on('change', function () {
+            if ($(this).parent('label').text().includes('Facturación'))
+                $('#invoice').removeAttr('hidden');
+            else
+                $('#invoice').attr('hidden', '');
+
+            if ($(this).parent('label').text().includes('Devolución')) {
+                $('#return').removeClass('d-none');
+                $('#noreturn').addClass('d-none');
+
+            }
+            else {
+                $('#return').addClass('d-none');
+                $('#noreturn').removeClass('d-none');
+            }
+
+        });
+    </script>
+    <script>
+        $('#ClientId').change(function () {
+            //Comentado temporalmente para poder cambiar de cliente al editar orden
+            //$('#content-promotions').html('');
+            //$('#content-products').html('<label>No se encontraron elementos</label>');
+            //$('.subtotal-order').text('$0.00 ' + $('#CurrencyType').val());
+            //$('.discount-order').text('$0.00 ' + $('#CurrencyType').val());
+            //$('.total-order').text('$0.00 ' + $('#CurrencyType').val());
+            //$(".modal-errores").html("");
+            //$(".alerts").html("");
+            const clientId = $(this).val();
+            monoloading("show");
+
+            $.get("@Url.Action("ValidateClientOrders", "Order")", { clientId: clientId }, function (responseText) {
+                var json = responseText;
+                var $form = $('#forma-order');
+                $form.find('button[type="submit"]').prop("disabled", false);
+                monoloading('hide');
+                $form.find(".alerts").html("");
+
+                switch (json.status) {
+                    case 'ok':
+                        $.get("@Url.Action("GetClientAddresses", "Order")", { clientId: clientId },
+                            function (data) {
+                                const addressSelect = $('#AddressId');
+                                addressSelect.empty();
+                                if (data.status == 'Ok') {
+                                    $.each(data.body, function () {
+                                        addressSelect.append($('<option/>').val(this.value).text(this.text));
+                                    });
+                                } else {
+                                    addressSelect.append($('<option/>').val(null).text("Seleccionar dirección"));
+                                    monotoast(data.body);
+                                }
+                                monoloading("hide");
+                            });
+
+                        $.get("@Url.Action("GetBalances", "Order")", { clientId: clientId })
+                            .done(function (data) {
+                                $('#balanceModal').html(data);
+                                $('#balanceModal').modal({ show: true, backdrop: 'static', keyboard: false });
+                            });
+                        break;
+                    case 'error':
+                        break;
+                    case 'warning':
+                        $form.find('button[type="submit"]').prop("disabled", true);
+                        $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                                         <strong>Acción inválida: </strong>
+                                                           ${json.body}
+                                                           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                              <span aria-hidden="true">&times;</span>
+                                                           </button>
+                                                       </div>`);
+                        $form.find(".alert").alert()
+                        break;
+                }
+            });
+        });
+
+        //Agregar elementos a la tabla productos
+        $('#addProductModal').on('submit', '#form-addProduct', function (e) {
+            e.preventDefault();
+            monoloading("show");
+            var error = "Ha ocurrido un error inesperado.";
+            const $form = $(this);
+            const $modal = $('#addProductModal');
+            var isValid = $form.valid();
+            var $container = $('#content-products');
+            var selectKeyValues = $form.find("#ProductPresentationId").val().split("-");
+            var clientId = $('#ClientId').val();
+            const productPresentationId = selectKeyValues[0];
+            const presentationId = selectKeyValues[1];
+            const quantity = $form.find("#Quantity").val();
+            const isPresent = $form.find("#IsPresent").is(":checked");
+            const price = $form.find("#Price").val();
+            var existPresentation = false;
+            var currencyType = $('#CurrencyType').val();
+
+            if ($('.presentation-' + presentationId)[0]) {
+                existPresentation = true;
+            }
+
+            if (clientId <= 0) {
+                isValid = false;
+                error = "Es necesario seleccionar un cliente.";
+            }
+
+            $.each($container.find('.row-product'), function (key, value) {
+                if ($(this).attr('id') == productPresentationId) {
+                    isValid = false;
+                    error = "Este producto ya se encuentra registrado.";
+                }
+            });
+
+            if (isValid) {
+                if ($container.find('.row-product').length == 0) {
+                    $container.html("");
+                }
+                $.post("@Url.Action("AddProductRow", "Order")",
+                    { ProductPresentationId: productPresentationId, Quantity: quantity, ExistPresentation: existPresentation, IsPresent: isPresent, Price: price, CurrencyType: currencyType },
+                    function (data) {
+                        monoloading("hide");
+                        $modal.modal("hide");
+
+                        if (existPresentation == true) {
+                            if (isPresent) {
+                                $('#content-' + presentationId).append(data);
+                            } else {
+                                var element = $('#content-' + presentationId).find("a").first();
+                                $(data).insertAfter(element);
+                            }
+                        } else {
+                            $container.append(data);
+                        }
+                        CheckPromotions();
+                    });
+            } else {
+                monoloading("hide");
+                monotoast(error);
+            }
+        });
+
+        //Borrar elementos de la tabla productos
+        $('#content-products').on('click', '.btn-delete-row', function () {
+            var $containerPresentation = $(this).parents('.presentation');
+            var $containerProducts = $('#content-products');
+            var presentationId = $containerPresentation.data('presentation');
+
+            $(this).parents('.row-product').remove();
+
+            if ($containerPresentation.find('.row-product').length == 0) {
+                $containerPresentation.remove();
+            }
+
+            if ($containerProducts.find('.row-product').length == 0) {
+                $containerProducts.html(" <label>No se encontraron elementos</label>");
+            }
+
+            DeletePromotions(presentationId);
+            CheckPromotions();
+        });
+
+        //Promociones
+        function CheckPromotions() {
+            var presentationQuantities = GetQuantityPresentation('.presentation');
+            var clientId = $('#ClientId').val();
+            var currencyType = $('#CurrencyType').val();
+
+            $.post("@Url.Action("CheckPromotions", "Order")", { clientId: clientId, presentationQuantities: presentationQuantities, currencyType: currencyType },
+                function (data) {
+                    monoloading("hide");
+                    $('.btn-promotion').addClass('d-none');
+                    $.each(data, function (key, item) {
+                        $('#btn-promotion-' + item.Value).removeClass('d-none')
+                    });
+                });
+
+            CalculateTotals();
+        }
+
+        function GetQuantityPresentation(content) {
+            var presentationQuantities = [];
+            $(content).each(function () {
+                var productQuantities = [];
+                $(this).find('.row-product').each(function () {
+                    productQuantities.push({
+                        productId: $(this).data('product'),
+                        quantity: $(this).data('quantity'),
+                        isPresent: $(this).find('input[name ="ProductIsPresent"]').val(),
+                        price: $(this).data('price')
+                    })
+                });
+                presentationQuantities.push({
+                    presentationId: $(this).data('presentation'),
+                    productQuantities: productQuantities
+                });
+            });
+            return presentationQuantities;
+        }
+
+        function CalculateQuantityPresentation(presentationId) {
+            var quantity = 0;
+            $('#content-' + presentationId).find('.row-product').each(function () {
+                quantity = quantity + parseInt($(this).data('quantity'));
+            });
+            return quantity;
+        }
+
+        //Borrar promociones de la sección de promociones.
+        function DeletePromotions(presentationId) {
+            var $content = $('#content-promotions');
+            $content.find('#promotion-presentation-' + presentationId).remove();
+
+            if ($content.find('#promotion-presentation').length == 0) {
+                $content.html(" <label>No se encontraron elementos</label>");
+            }
+        }
+        ///// fin promociones
+
+        //Abir modal de promociones
+        $('#content-products').on('click', '.btn-promotion', function (e) {
+            e.preventDefault();
+            var clientId = $('#ClientId').val();
+            var $containerPresentation = $(this).parents('.presentation');
+            var presentationId = $containerPresentation.data('presentation');
+            var presentationQuantities = GetQuantityPresentation('#content-' + presentationId);
+            var $btn = $(this);
+            var modalId = $btn.attr("href");
+            var $modal = $(modalId);
+            var $container = $modal;
+            var currencyType = $('#CurrencyType').val();
+            monoloading("show");
+            $.post('@Url.Action("AddPromotions", "Order")', { clientId: clientId, presentationQuantities: presentationQuantities, currencyType: currencyType },
+                function (data) {
+                    monoloading("hide");
+                    $container.html(data);
+
+                    var $form = $modal.find("form");
+                    if (!$.isEmptyObject($form)) {
+                        $.validator.unobtrusive.parse($form);
+                    }
+                    $container.find(".forma-ajax--modal").ajaxForm(opcionesFormaModal);
+                    $modal.on('hidden.bs.modal',
+                        function () {
+                            $container.html(null);
+                        });
+
+                    $modal.modal("show");
+                }).fail(mostrarErrorSnack);
+        });
+
+        //Calcular cantidad disponible en modal de promociones
+        $('#addPromotionsModal').on('click', '.check-promotion', function () {
+            var $tagAvailable = $('#available-quantity');
+            var totalBuy = parseInt($(this).data('totalbuy'));
+            var available = parseInt($tagAvailable.text());
+
+            if ($(this).is(':checked')) {
+                available = available - totalBuy;
+                $tagAvailable.text(available);
+            } else {
+                available = available + totalBuy;
+                $tagAvailable.text(available);
+            }
+            ValidatePromotionModal(available);
+        });
+
+        function ValidatePromotionModal(available) {
+            if (available == 0) {
+                $('.check-promotion:checkbox').each(function () {
+                    if (!$(this).is(':checked')) {
+                        $(this).attr("disabled", true);
+                    }
+                });
+            } else {
+                $('.check-promotion:checkbox').each(function () {
+                    if (!$(this).is(':checked')) {
+                        var totalBuy = parseInt($(this).data('totalbuy'));
+                        if (totalBuy > available) {
+                            $(this).attr("disabled", true);
+                        } else {
+                            $(this).attr("disabled", false);
+                        }
+                    }
+                });
+            }
+        }
+
+        //Agregar promociones a la sección de promociones
+        $('#addPromotionsModal').on('submit', '#form-addPromotions', function (e) {
+            e.preventDefault();
+            monoloading("show");
+            var $form = $(this);
+            var $modal = $('#addPromotionsModal');
+            var isValid = $form.valid();
+            var $containerPromotions = $('#content-promotions');
+            var presentation = $modal.find('#presentation').val();
+            var presentationId = $modal.find('#presentationId').val();
+            var promotions = [];
+            $('.check-promotion:checkbox:checked').each(function () {
+                var products = [];
+                $('.products-promotion-' + $(this).data('i') + '-' + $(this).val()).each(function () {
+                    products.push({
+                        id: $(this).data('id'),
+                        name: $(this).data('name'),
+                        price: $(this).data('price'),
+                        quantity: $(this).data('quantity'),
+                        presentationId: presentationId
+                    })
+                });
+                promotions.push({
+                    id: $(this).val(),
+                    name: $(this).data('name'),
+                    Products: products,
+                    presentationId: presentationId
+                });
+            });
+
+            if (isValid) {
+
+                if ($containerPromotions.find('.promotion-presentation').length == 0) {
+                    $containerPromotions.html("");
+                }
+                $.post("@Url.Action("AddPromotionsRow", "Order")", { PresentationId: presentationId, Presentation: presentation, Promotions: promotions },
+                    function (data) {
+                        var $containerPromotionPresentation = $('#promotion-presentation-' + presentationId);
+                        if ($containerPromotionPresentation[0]) {
+                            $containerPromotionPresentation.html('');
+                            $containerPromotionPresentation.append(data)
+                        } else {
+                            $containerPromotions.append(data)
+                        }
+                        CalculateTotals();
+                        monoloading("hide");
+                        $modal.modal("hide");
+                    });
+            } else {
+                monoloading("hide");
+                $modal.find(".modal-errors").html(error);
+            }
+        });
+
+        //Calcular totales de la orden
+        function CalculateTotals() {
+            var formatter = new Intl.NumberFormat('es-MX', {
+                style: 'currency',
+                currency: 'MXN'
+            });
+            var subtotal = 0;
+            var discount = 0;
+            var total = 0;
+
+            $('.row-product').each(function () {
+
+                var isPresent = $(this).find('input[name ="ProductIsPresent"]').val();
+
+                if (isPresent === "false") {
+                    subtotal = subtotal + parseFloat($(this).data('subtotal'));
+                }
+            });
+            $('.discount-presentation').each(function () {
+                discount = discount + parseFloat($(this).val());
+            });
+            total = subtotal - discount;
+            $('.subtotal-order').text(formatter.format(subtotal.toFixed(2)) + ' ' + $('#CurrencyType').val());
+            $('.discount-order').text(formatter.format(discount.toFixed(2)) + ' ' + $('#CurrencyType').val());
+            $('.total-order').text(formatter.format(total.toFixed(2)) + ' ' + $('#CurrencyType').val());
+        }
+    </script>
+}

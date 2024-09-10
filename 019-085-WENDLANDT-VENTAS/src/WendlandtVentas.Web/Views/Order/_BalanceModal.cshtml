@@ -1,0 +1,77 @@
+﻿@using WendlandtVentas.Web.Models.ClientViewModels
+
+@model BalanceViewModel
+
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="table-responsive mt-2">
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-sm table-bordered text-center">
+                        <thead>
+                            <tr>
+                                <th>Remisión</th>
+                                <th>Factura</th>
+                                <th>Fecha de entrega</th>
+                                <th>Fecha de vencimiento</th>
+                                <th>Total de factura</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Balances)
+                            {
+                                <tr>
+                                    <td><text class="float-right text-danger">@item.RemissionCode</text></td>
+                                    <td><text class="float-right text-danger">@item.InvoiceCode</text></td>
+                                    <td>@item.DeliveryDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@item.DueDate.ToString("dd/MM/yyyy")</td>
+                                    <td><text class="float-right text-success">@item.AmountString</text></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <table class="table table-sm table-bordered text-center mt-1">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Total por pagar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            @{
+                                var rowspan = Model.PendingAmountUsd > 0 ? 2 : 1;
+                            }
+                            <td rowspan="@rowspan">@Model.ClientName</td>
+                            @if (Model.PendingAmount > 0)
+                            {
+                                <td><text class="float-right">@Model.PendingAmount.ToString("C2") MXN</text></td>
+                            }
+                            @if (Model.PendingAmount == 0 && Model.PendingAmountUsd == 0)
+                            {
+                                <td></td>
+                            }
+                        </tr>
+                        @if (Model.PendingAmountUsd > 0)
+                        {
+                            <tr>
+                                <td><text class="float-right">@Model.PendingAmountUsd.ToString("C2") USD</text></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a class="btn btn-outline-primary" href="/Client" target="_blank">Editar crédito</a>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+        </div>
+    </div>
+</div>

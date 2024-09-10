@@ -1,0 +1,93 @@
+﻿@using Humanizer
+@using WendlandtVentas.Core.Entities.Enums
+@using WendlandtVentas.Web.Controllers
+@model WendlandtVentas.Web.Models.UserViewModel
+@{
+    var esEditar = (string)ViewData["Action"] != nameof(UsersController.Add);
+}
+<div class="modal-dialog" role="document">
+    <form asp-action="@ViewData["Action"]" asp-antiforgery="true" class="modal-content forma-ajax--modal">
+        <div class="modal-header">
+            <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            @if (esEditar)
+            {
+                @Html.HiddenFor(t => t.Id)
+            }
+            <p class="text-muted">
+                Todos los campos son requeridos
+            </p>
+            <div class="form-group">
+                <label asp-for="Email"></label>
+                @if (esEditar)
+                {
+                    <input asp-for="Email" class="form-control" placeholder="Correo electrónico" readonly disabled />
+                }
+                else
+                {
+                    <input asp-for="Email" class="form-control" placeholder="Correo electrónico" />
+                }
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Name"></label>
+                <input asp-for="Name" class="form-control" placeholder="Nombre" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            @if (esEditar)
+            {
+                <p class="text-muted">
+                    La contraseña solo puede ser editada por el usuario.
+                    Por favor usa la página de
+                    <a target="_blank" asp-controller="Account" asp-action="ForgotPassword">
+                        Olvide contraseña
+                    </a> para cambiarla.
+                </p>
+            }
+            else
+            {            
+                <div class="form-group">
+                    <label asp-for="Password"></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="far fa-key"></i></span>
+                        </div>
+                        <input asp-for="Password" class="form-control" placeholder="Contraseña" />
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                    <div class="text-muted">
+                        La contraseña debe tener una longitud mínima de 6 caracteres.
+                    </div>
+                </div>
+            }
+            <div class="form-group">
+                <label>Roles</label>
+                <div>
+                    @foreach (var role in Enum.GetValues(typeof(Role)).OfType<Role>())
+                    {
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" name="Roles" value="@role" type="checkbox" id="role-@role" @(esEditar && Model.Roles.Contains(role.ToString()) ? "checked" : "")>
+                            <label class="form-check-label" for="role-@role">
+                                <b>@role.Humanize()</b>
+                            </label>
+                        </div>
+                    }
+                </div>
+                <span asp-validation-for="Roles" class="text-danger"></span>
+                <div class="text-muted">
+                    Cada rol tiene sus propios privilegios y determina que puede ver
+                </div>
+            </div>
+            <div class="modal-errores text-danger"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+    </form>
+</div>

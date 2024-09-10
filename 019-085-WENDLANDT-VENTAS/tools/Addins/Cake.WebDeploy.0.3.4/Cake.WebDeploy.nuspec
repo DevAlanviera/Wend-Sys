@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Cake.WebDeploy</id>
+    <version>0.3.4</version>
+    <title>Cake.WebDeploy</title>
+    <authors>Phillip Sharpe</authors>
+    <owners>Phillip Sharpe</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/SharpeRAD/Cake.WebDeploy/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/SharpeRAD/Cake.WebDeploy</projectUrl>
+    <iconUrl>https://cdn.jsdelivr.net/gh/cake-contrib/graphics/png/cake-contrib-medium.png</iconUrl>
+    <description>Cake Build addon for publishing websites via WebDeploy.</description>
+    <summary>WebDeploy addon for cake build.</summary>
+    <releaseNotes>Initial Release[Improvement] Update to Cake.Core v0.33</releaseNotes>
+    <copyright>Copyright (c) 2015 - 2019 Phillip Sharpe</copyright>
+    <tags>Cake Script Build WebDeploy</tags>
+  </metadata>
+</package>
