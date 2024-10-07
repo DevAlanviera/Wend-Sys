@@ -6,6 +6,7 @@ using WendlandtVentas.Core.Models.ProductViewModels;
 using WendlandtVentas.Core.Models.PromotionViewModels;
 using WendlandtVentas.Core.Models.ClientViewModels;
 using System;
+using WendlandtVentas.Core.Models.BitacoraViewModel;
 
 namespace WendlandtVentas.Core.Models.OrderViewModels
 {
@@ -67,6 +68,9 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public ClientItemModel Client { get; set; }
         public IEnumerable<ProductItemModel> Products { get; set; }
         public IEnumerable<PromotionItemModel> Promotions { get; set; }
+
+        //Agregamos la referencia de bitacoraItemModel
+        public List<BitacoraItemModel> BitacoraEntries { get; set; }
 
     }
 }

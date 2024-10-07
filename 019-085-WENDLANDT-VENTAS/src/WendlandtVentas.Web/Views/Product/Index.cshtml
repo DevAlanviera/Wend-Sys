@@ -32,6 +32,7 @@
             <e-grid-column template="#tasting" headerText="Tasting 1 lt" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
             <e-grid-column template="#bottle" headerText="Botella 0.355 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
             <e-grid-column template="#can" headerText="Lata 0.355 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+                <!--Agregamos para obtener los datos del doce pack-->
             <e-grid-column template="#botelladocepack" headerText="Botella 12 pack" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
             <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
         </e-grid-columns>
@@ -116,6 +117,7 @@
             ${/if}
         </div>
     </script>
+    <!--Agregamos el script para obtener los datos del doce pack-->
      <script id="botelladocepack" type="text/x-template">
         <div>
              ${if(priceBotellaDoce !== "undefined" && priceBotellaDoce !== "")}

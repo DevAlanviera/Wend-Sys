@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Monobits.SharedKernel\Monobits.SharedKernel.csproj" />
+	<ProjectReference Include="..\Monobits.SharedKernel\Monobits.SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>

@@ -203,8 +203,28 @@
                             <td><text class="float-right"><b>@Model.Promotions.Sum(c => c.DiscountMoney).FormatCurrency()</b></text></td>
                         </tr>
                     </table>
+                   
                 </div>
             }
+                <h5 class="mt-4 mb-2">BITÁCORA</h5>
+                 <div class="table-responsive">
+                    <table class="table table-sm table-bordered ">
+                        <tr>
+                            <th>Última modificación</th>
+                            <th>Fecha</th>
+                            <th>Acción</th>
+                        </tr>
+                    @foreach (var entry in Model.BitacoraEntries)
+                    {
+                        <tr>
+                            <td>@entry.Usuario</td>
+                            <td>@entry.FechaModificacion.ToString("g")</td> <!-- Formato deseado aquí -->
+                            <td>@entry.Accion</td>
+                        </tr>
+                    }
+                    </table>
+                 </div>
+            
         </div>
     </div>
 </div>

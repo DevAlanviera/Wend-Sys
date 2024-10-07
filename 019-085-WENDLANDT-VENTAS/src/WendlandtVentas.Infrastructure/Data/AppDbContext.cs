@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Interfaces;
 
+
+//WendlandtVentas.Infraestructure.Data
+
 namespace WendlandtVentas.Infrastructure.Data
 {
     public class AppDbContext : DbContext
@@ -42,6 +45,9 @@ namespace WendlandtVentas.Infrastructure.Data
         public DbSet<Contact> Contacts { get; set; }
         public DbSet<Address> Addresses { get; set; }
 
+        //Referencia de la clase bitacora
+        public DbSet<Bitacora> Bitacora { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
 
@@ -60,6 +66,7 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Entity<PresentationPromotion>(ConfigureExecution);
             builder.Entity<Promotion>(ConfigureExecution);
             builder.Entity<State>(ConfigureExecution);
+            builder.Entity<Bitacora>(ConfigureExecution);
         }
 
         private void ConfigureExecution(EntityTypeBuilder<Client> builder)
@@ -95,6 +102,20 @@ namespace WendlandtVentas.Infrastructure.Data
                 .IsRequired();
             builder.Property(c => c.QuantityOld)
                 .IsRequired();
+        }
+
+    private void ConfigureExecution(EntityTypeBuilder<Bitacora> builder)
+    {
+        builder.HasKey(b => b.Id);
+        builder.Property(b => b.Usuario)
+            .HasMaxLength(255)
+            .IsRequired();
+        builder.Property(b => b.Fecha_modificacion)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            builder.HasOne<Order>()
+            .WithMany() // Una Orden puede tener muchas entradas en Bitacora
+            .HasForeignKey(b => b.Registro_id);
         }
 
         private void ConfigureExecution(EntityTypeBuilder<Notification> builder)

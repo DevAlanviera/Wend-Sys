@@ -18,6 +18,7 @@ using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Interfaces;
 using WendlandtVentas.Core.Models;
+using WendlandtVentas.Core.Models.BitacoraViewModel;
 using WendlandtVentas.Core.Models.ClientViewModels;
 using WendlandtVentas.Core.Models.OrderViewModels;
 using WendlandtVentas.Core.Models.ProductPresentationViewModels;
@@ -30,6 +31,7 @@ using WendlandtVentas.Core.Specifications.ProductPresentationSpecifications;
 using WendlandtVentas.Core.Specifications.ProductSpecifications;
 using WendlandtVentas.Core.Specifications.PromotionSpecifications;
 using WendlandtVentas.Infrastructure.Commons;
+using WendlandtVentas.Infrastructure.Repositories;
 using WendlandtVentas.Web.Extensions;
 using WendlandtVentas.Web.Libs;
 using WendlandtVentas.Web.Models.ClientViewModels;
@@ -51,6 +53,8 @@ namespace WendlandtVentas.Web.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IExcelReadService _excelReadService;
         private readonly ITreasuryApi _treasuryApi;
+        private readonly IBitacoraService _bitacoraService;
+        private readonly IBitacoraRepository _bitacoraRepository;
 
         public OrderController(IAsyncRepository repository,
             ILogger<ProductController> logger,
@@ -60,7 +64,9 @@ namespace WendlandtVentas.Web.Controllers
             INotificationService notificationService,
             IInventoryService inventoryService,
             IExcelReadService excelReadService,
-            ITreasuryApi treasuryApi)
+            ITreasuryApi treasuryApi,
+            IBitacoraService bitacoraService,
+            IBitacoraRepository bitacoraRepository)
         {
             _repository = repository;
             _logger = logger;
@@ -70,7 +76,9 @@ namespace WendlandtVentas.Web.Controllers
             _notificationService = notificationService;
             _inventoryService = inventoryService;
             _excelReadService = excelReadService;
+            _bitacoraService = bitacoraService;
             _treasuryApi = treasuryApi;
+            _bitacoraRepository = bitacoraRepository;
         }
 
         public async Task<IActionResult> Index(FilterViewModel filter)
@@ -101,6 +109,7 @@ namespace WendlandtVentas.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm, FilterViewModel filter)
         {
+            
             var users = _userManager.Users.ToDictionary(c => c.Id, c => c.Name);
             var filteredOrders = (await _orderService.FilterValues(filter)).ToList();
             var dataSource = filteredOrders
@@ -652,7 +661,20 @@ namespace WendlandtVentas.Web.Controllers
             var response = await _orderService.UpdateOrderAsync(model, User.Identity.Name);
 
             if (response.IsSuccess)
+            {
+                Console.WriteLine("USER INDENTITY NAME: " + User.Identity.Name);
+                var user = await _userManager.FindByNameAsync(User.Identity.Name); // Asegúrate de que _userManager esté inyectado en tu controlador
+                var bitacora = new Bitacora(model.Id, user.Name, "Editar pedido");
+                Console.WriteLine("Orden edidata: " + model.Id);
+                Console.WriteLine("Usuario: " + user.Name);
+                Console.WriteLine("Accion: Edito pedido. ");
+
+
+                await _bitacoraService.AddAsync(bitacora);
+
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, response.Message));
+            }
+               
 
             _logger.LogError($"Error: {response.Message}");
             return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo editar el pedido"));
@@ -729,6 +751,10 @@ namespace WendlandtVentas.Web.Controllers
             {
                 var email = User.Identity.Name;
                 var order = await _repository.GetAsync(new OrderExtendedSpecification(model.OrderId));
+                //Aqui esta obteniendo el id de la persona que tiene el nombre por medio del id registrado en la orden
+                var user = await _userManager.FindByIdAsync(order.UserId);
+
+               
 
                 var orderTotal = order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total;
                 if (orderTotal < model.InitialAmount)
@@ -805,7 +831,18 @@ namespace WendlandtVentas.Web.Controllers
 
                 var success = await _notificationService.NotifyChangeOrderStateAsync(order.Id, order.OrderStatus, email);
                 if (success)
+                {
+                    var usuario = await _userManager.FindByNameAsync(User.Identity.Name);
+                    Console.WriteLine("AGREGANDO A BITACORA");
+                    Console.WriteLine("ORDEN: " + order.Id);
+                    Console.WriteLine("USUARIO: " + usuario.Name);
+                    Console.WriteLine("ACCION: " + "Cambio status");
+                    var bitacora = new Bitacora(order.Id, usuario.Name, "Cambio status");
+                    await _bitacoraRepository.AddAsync(bitacora);
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. Inventario actualizado"));
+                
+                }
+                    
                 //return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. {messageDiscountInventory}"));
 
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, $"Cambio de estado guardado. Notificación no enviada. Inventario actualizado"));
@@ -824,6 +861,9 @@ namespace WendlandtVentas.Web.Controllers
             var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
             var user = await _userManager.FindByIdAsync(order.UserId);
             var weight = await CalcOrderWeight(id);
+
+            var bitacoraEntries = await _bitacoraRepository.GetBitacorasByOrderIdAsync(id);
+
             var model = new OrderDetailsViewModel
             {
                 Id = order.Id,
@@ -888,8 +928,16 @@ namespace WendlandtVentas.Web.Controllers
                         ? d.ProductPresentation.Price
                         : d.ProductPresentation.PriceUsd
                     }).ToList()
-                })
+                }),
+                BitacoraEntries = bitacoraEntries.Select(b => new BitacoraItemModel
+                {
+                    Id = b.Id,
+                    Usuario = b.Usuario,
+                    FechaModificacion = b.Fecha_modificacion.ToLocalTime(), // Formatear la fecha
+                     Accion = b.Accion,
+                }).ToList()
             };
+        
 
             return PartialView("_DetailsModal", model);
         }

@@ -31,16 +31,19 @@ namespace WendlandtVentas.Core.Services
         private readonly IInventoryService _inventoryService;
         private readonly ILogger<OrderService> _logger;
 
-        public OrderService(UserManager<ApplicationUser> userManager, IAsyncRepository repository, INotificationService notificationService, IInventoryService inventoryService, ILogger<OrderService> logger)
+        private readonly IBitacoraService _bitacoraService;
+
+        public OrderService(UserManager<ApplicationUser> userManager, IAsyncRepository repository, INotificationService notificationService, IBitacoraService bitacoraService, IInventoryService inventoryService, ILogger<OrderService> logger)
         {
             _userManager = userManager;
             _repository = repository;
             _notificationService = notificationService;
             _inventoryService = inventoryService;
+            _bitacoraService = bitacoraService;
             _logger = logger;
         }
 
-        public async Task<Response> AddOrderAsync(OrderViewModel model, string currrentUserEmail)
+       public async Task<Response> AddOrderAsync(OrderViewModel model, string currrentUserEmail)
         {
             var user = await _userManager.FindByEmailAsync(currrentUserEmail);
             var rolesUser = await _userManager.GetRolesAsync(user);
@@ -101,6 +104,7 @@ namespace WendlandtVentas.Core.Services
                 {
                     order.GenerateRemisionCode();
                 }
+
                 await _repository.UpdateAsync(order);
 
                 var clientName = client != null ? client.Name : string.Empty;
@@ -109,6 +113,12 @@ namespace WendlandtVentas.Core.Services
                 var message = $"{orderTypeName} nuevo: #{order.Id} - {clientName} - {order.Total:C2}";
 
                 await _notificationService.AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
+
+               
+
+                var bitacora = new Bitacora(order.Id, user.Name,"Crear pedido");
+
+                await _bitacoraService.AddAsync(bitacora);
 
                 return new Response(true, "Pedido guardado");
             }

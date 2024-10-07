@@ -23,6 +23,7 @@ using WendlandtVentas.Core.Services;
 using WendlandtVentas.Infrastructure.Data;
 using WendlandtVentas.Infrastructure.Identity;
 using WendlandtVentas.Infrastructure.Services;
+using WendlandtVentas.Infrastructure.Repositories;
 using WendlandtVentas.Web.Libs; 
 
 namespace WendlandtVentas.Web
@@ -70,6 +71,8 @@ namespace WendlandtVentas.Web
             services.AddDbContext<AppIdentityDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")));
 
+                
+
             ConfigureServices(services);
         }
 
@@ -104,6 +107,8 @@ namespace WendlandtVentas.Web
             services.Configure<OneSignalConfiguration>(Configuration.GetSection("OneSignalConfiguration"));
             services.Configure<TreasuryServerSettings>(Configuration.GetSection("TreasuryServer"));
             services.AddScoped<IOrderService, OrderService>();
+            services.AddScoped<IBitacoraRepository, BitacoraRepository>();
+            services.AddScoped<IBitacoraService, BitacoraService>();
             services.AddScoped<IInventoryService, InventoryService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddTransient<ITreasuryApi, TreasuryApi>();
@@ -130,6 +135,7 @@ namespace WendlandtVentas.Web
             services.AddTransient<ILogBookService,LogBookService>();
             services.AddTransient<IUserResolverService, UserResolverService>();
             services.AddScoped<SfGridOperations>();
+           
 
             services.AddMemoryCache();
 

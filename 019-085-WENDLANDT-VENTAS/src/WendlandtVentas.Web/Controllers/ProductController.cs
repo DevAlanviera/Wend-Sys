@@ -78,6 +78,8 @@ namespace WendlandtVentas.Web.Controllers
                         TastingUsd = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Tasting"))?.PriceUsd.FormatCurrency() ?? string.Empty,
                         TastingWeight = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Tasting"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
                     
+
+                            //Obtenemos los datos del doce pack-
                         PriceBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.Price.FormatCurrency() ?? string.Empty,
                         PriceUsdBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.PriceUsd.FormatCurrency() ?? string.Empty,
                         WeightBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
