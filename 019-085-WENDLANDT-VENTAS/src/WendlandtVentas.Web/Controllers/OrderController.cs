@@ -662,12 +662,12 @@ namespace WendlandtVentas.Web.Controllers
 
             if (response.IsSuccess)
             {
-                Console.WriteLine("USER INDENTITY NAME: " + User.Identity.Name);
+                
                 var user = await _userManager.FindByNameAsync(User.Identity.Name); // Asegúrate de que _userManager esté inyectado en tu controlador
                 var bitacora = new Bitacora(model.Id, user.Name, "Editar pedido");
-                Console.WriteLine("Orden edidata: " + model.Id);
-                Console.WriteLine("Usuario: " + user.Name);
-                Console.WriteLine("Accion: Edito pedido. ");
+               
+              
+               
 
 
                 await _bitacoraService.AddAsync(bitacora);
@@ -833,10 +833,6 @@ namespace WendlandtVentas.Web.Controllers
                 if (success)
                 {
                     var usuario = await _userManager.FindByNameAsync(User.Identity.Name);
-                    Console.WriteLine("AGREGANDO A BITACORA");
-                    Console.WriteLine("ORDEN: " + order.Id);
-                    Console.WriteLine("USUARIO: " + usuario.Name);
-                    Console.WriteLine("ACCION: " + "Cambio status");
                     var bitacora = new Bitacora(order.Id, usuario.Name, "Cambio status");
                     await _bitacoraRepository.AddAsync(bitacora);
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. Inventario actualizado"));

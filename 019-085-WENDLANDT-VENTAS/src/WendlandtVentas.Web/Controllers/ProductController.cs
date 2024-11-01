@@ -79,18 +79,22 @@ namespace WendlandtVentas.Web.Controllers
                         TastingWeight = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Tasting"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
                     
 
-                            //Obtenemos los datos del doce pack-
+                          //Obtenemos los datos del doce pack-
                         PriceBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.Price.FormatCurrency() ?? string.Empty,
                         PriceUsdBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.PriceUsd.FormatCurrency() ?? string.Empty,
                         WeightBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
                        
+                        //Obtenemos los datos del Six Pack-
+                        PriceSmallCanSix = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Small Can 6-Pack"))?.Price.FormatCurrency() ?? string.Empty,
+                        PriceUsdSmallCanSix = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Small Can 6-Pack"))?.PriceUsd.FormatCurrency() ?? string.Empty,
+                        WeightSmallCanSix = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Small Can 6-Pack"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
                        
                     
                     };
                 });
 
                 
-
+            
             var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
             return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
         }

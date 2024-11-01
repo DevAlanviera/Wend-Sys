@@ -34,6 +34,10 @@
         public string PriceUsdBotellaDoce { get; set; }
         public string WeightBotellaDoce { get; set; }
 
+        public string PriceSmallCanSix { get; set; }
+        public string PriceUsdSmallCanSix { get; set; }
+        public string WeightSmallCanSix { get; set; }
+
 
     }
 }

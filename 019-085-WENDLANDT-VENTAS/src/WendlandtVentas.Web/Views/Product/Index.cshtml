@@ -34,6 +34,9 @@
             <e-grid-column template="#can" headerText="Lata 0.355 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
                 <!--Agregamos para obtener los datos del doce pack-->
             <e-grid-column template="#botelladocepack" headerText="Botella 12 pack" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            <!--Agregamos para obtener los datos del small can six-->
+            <e-grid-column template="#smallcansix" headerText="Small Can 6-pack" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
+            
             <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
         </e-grid-columns>
     </ejs-grid>
@@ -127,12 +130,26 @@
             ${/if}
         </div>
     </script>
+
+    <!--Agregamos el script para obtener los datos del small six pack-->
+    <script id="smallcansix" type="text/x-template">
+        <div>
+             ${if(priceSmallCanSix !== "undefined" && priceSmallCanSix !== "")}
+                 <span>${priceSmallCanSix} MXN &bull; ${priceUsdSmallCanSix} USD &bull; ${weightSmallCanSix} KG</span>
+            ${else}
+            <span class="text-secondary"><b>-</b></span>
+            ${/if}
+        </div>
+    </script>
+    
     <script id="actionButtons" type="text/x-template">
         <div>
             <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
             <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
         </div>
     </script>
+
+
     <script>
         var $modal = $('#addModal, #editModal');
 
