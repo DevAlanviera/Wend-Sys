@@ -188,6 +188,7 @@ namespace WendlandtVentas.Web.Controllers
             var addresses = new List<Address>() { };
             // return remision number options
             var remissionsForReturn = await _orderService.GetInvoiceRemissionNumbersAsync();
+            
 
             var model = new OrderViewModel
             {
@@ -242,6 +243,7 @@ namespace WendlandtVentas.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> AddProduct([FromQuery] CurrencyType currencyType)
         {
+            //De aqui se muestran los productos al front
             try
             {
                 ViewData["Action"] = nameof(AddProduct);
@@ -254,7 +256,8 @@ namespace WendlandtVentas.Web.Controllers
                     productsInStock = productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
                 var model = new OrderAddProductViewModel
                 {
-                    ProductsPresentations = new SelectList(productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }), "Value", "Text")
+                    ProductsPresentations = new SelectList(productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }), "Value", "Text"),
+                    
                 };
 
                 return PartialView("_AddProductModal", model);
@@ -280,7 +283,12 @@ namespace WendlandtVentas.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> AddProductRow(OrderAddProductViewModel model)
         {
+
+            //Este metodo agrega mi producto al row despues de dar click en aceptar
+
             var productPresentation = await _repository.GetAsync(new ProductPresentationExtendedSpecification(model.ProductPresentationId));
+
+           
 
             var item = new ProductPresentationItem
             {
@@ -297,8 +305,9 @@ namespace WendlandtVentas.Web.Controllers
                 ExistPresentation = model.ExistPresentation,
                 IsSeason = productPresentation.Product.Distinction == Distinction.Season,
                 IsPresent = model.IsPresent,
-                CanDelete = true
+                CanDelete = true,
             };
+
 
             return PartialView("_RowProduct", item);
         }
@@ -624,7 +633,7 @@ namespace WendlandtVentas.Web.Controllers
                     PresentationName = c.ProductPresentation.Presentation.Name,
                     ProductId = c.ProductPresentation.ProductId,
                     IsPresent = c.IsPresent,
-                    CanDelete = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess
+                    CanDelete = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
                 }),
                 PresentationPromotionsEdit = presentationPromotions,
                 Clients = new SelectList(clients.Select(x => new { Value = x.Id, Text = $"{x.Name}" }), "Value", "Text"),

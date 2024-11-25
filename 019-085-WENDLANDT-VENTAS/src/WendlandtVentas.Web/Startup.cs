@@ -112,6 +112,7 @@ namespace WendlandtVentas.Web
             services.AddScoped<IInventoryService, InventoryService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddTransient<ITreasuryApi, TreasuryApi>();
+            services.AddScoped<IProductPresentationRepository, ProductPresentationRepository>();
 
             SyncfusionLicenseProvider.RegisterLicense(
                 "MzM1MTk0QDMxMzgyZTMzMmUzMGo4MzR5cUI3Mit5cnlzamROck1RL0dEQXFobGNNY1BMNndPTC9hbHoxL3c9;MzM1MTk1QDMxMzgyZTMzMmUzMEcrS2Z4T2FtcGtzY25FQngvd3ZEMFdUT3o1QmxlbTZqOEdZMXZ2OG9sa0U9;MzM1MTk2QDMxMzgyZTMzMmUzMExsellHQ3VEMTFNTmVtdE5xTkk1c1M3ZFgvLyt3eFY4anpkMEVXTVdLbFk9;MzM1MTk3QDMxMzgyZTMzMmUzMFkrSDZDSDlrSjhlajZ4YXc4anNVVWIvNGt0bkdVS2w4U1hoWm4yTkJkczA9;MzM1MTk4QDMxMzgyZTMzMmUzMEZMd3U5cWZjSTh5emNiRDhBc3BqVmZiQlNUSjRZYk9nUXd1OUk3c001dFE9");

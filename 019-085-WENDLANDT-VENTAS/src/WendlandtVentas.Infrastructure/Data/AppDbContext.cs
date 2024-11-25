@@ -152,6 +152,7 @@ namespace WendlandtVentas.Infrastructure.Data
                 .IsRequired();
             builder.Property(c => c.Quantity)
                 .IsRequired();
+
         }
 
         private void ConfigureExecution(EntityTypeBuilder<OrderPromotion> builder)

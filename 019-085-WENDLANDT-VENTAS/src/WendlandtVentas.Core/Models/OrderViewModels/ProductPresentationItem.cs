@@ -17,5 +17,9 @@
         public bool ExistPresentation { get; set; }
         public bool IsSeason { get; set; }
         public bool CanDelete { get; set; }
+
+        //Agregamos la propiedad litros para despues pivotearla
+
+        public double LitersPresentation { get; set; }
     }
 }

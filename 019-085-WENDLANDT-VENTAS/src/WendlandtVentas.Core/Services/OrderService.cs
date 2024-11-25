@@ -1,4 +1,7 @@
-﻿using LinqKit;
+﻿using DocumentFormat.OpenXml.Office2010.Excel;
+using DocumentFormat.OpenXml.Validation;
+using Humanizer;
+using LinqKit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +16,7 @@ using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Interfaces;
+using WendlandtVentas.Core.Models;
 using WendlandtVentas.Core.Models.Enums;
 using WendlandtVentas.Core.Models.OrderViewModels;
 using WendlandtVentas.Core.Models.ProductPresentationViewModels;
@@ -43,7 +47,8 @@ namespace WendlandtVentas.Core.Services
             _logger = logger;
         }
 
-       public async Task<Response> AddOrderAsync(OrderViewModel model, string currrentUserEmail)
+
+        public async Task<Response> AddOrderAsync(OrderViewModel model, string currrentUserEmail)
         {
             var user = await _userManager.FindByEmailAsync(currrentUserEmail);
             var rolesUser = await _userManager.GetRolesAsync(user);
@@ -56,6 +61,7 @@ namespace WendlandtVentas.Core.Services
             var orderPromotions = new List<OrderPromotion>();
             var orderPromotionsItems = new List<PromotionItemModel>();
 
+
             foreach (var productPresentation in productPresentations)
             {
                 var i = model.ProductPresentationIds.FindIndex(x => x == productPresentation.Id);
@@ -64,6 +70,8 @@ namespace WendlandtVentas.Core.Services
                 var price = model.ProductPrices[i];
                 orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price));
             }
+
+
 
             if (model.Promotions != null)
             {
@@ -114,8 +122,6 @@ namespace WendlandtVentas.Core.Services
 
                 await _notificationService.AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
 
-               
-
                 var bitacora = new Bitacora(order.Id, user.Name,"Crear pedido");
 
                 await _bitacoraService.AddAsync(bitacora);
@@ -145,6 +151,7 @@ namespace WendlandtVentas.Core.Services
                 var currentOrderProduct = new OrderProduct();
                 var orderPromotions = new List<OrderPromotion>();
                 var orderPromotionsItems = new List<PromotionItemModel>();
+                
 
                 if (order.InventoryDiscount)
                 {
@@ -169,7 +176,8 @@ namespace WendlandtVentas.Core.Services
                     }
                     else
                     {
-                        orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price));
+                        //Agregamos liters a la orden
+                        //orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price, liters));
                     }
                 }
 

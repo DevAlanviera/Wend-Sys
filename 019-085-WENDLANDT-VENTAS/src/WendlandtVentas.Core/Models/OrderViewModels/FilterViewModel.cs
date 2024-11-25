@@ -52,5 +52,12 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         [Display(Name = "Usuarios")]
         public List<string> UserId { get; set; } = new List<string>();
         public SelectList Users { get; set; }
+
+        [Display(Name = "Litros")]
+        public decimal? Liters { get; set; }
+
+        public int? Liters_Presentation { get; set; }
+
+
     }  
 }

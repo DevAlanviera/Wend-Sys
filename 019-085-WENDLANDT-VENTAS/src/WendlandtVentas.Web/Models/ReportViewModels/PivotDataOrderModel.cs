@@ -18,5 +18,8 @@
         public string CreationDate { get; set; }
         public int Month { get; set; }
         public string User { get; set; }
+
+        //Trabajando con las medidas de litros por pedido
+        public double LitersPresentation { get; set; }
     }
 }

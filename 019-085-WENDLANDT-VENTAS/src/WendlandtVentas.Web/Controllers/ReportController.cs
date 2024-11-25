@@ -82,7 +82,7 @@ namespace WendlandtVentas.Web.Controllers
             {
                 products = products.Where(c => filter.ProductId.Any(d => c.ProductPresentation.ProductId.Equals(d))).ToList();
             }
-            
+
             if (filter.PresentationId.Any())
             {
                 products = products.Where(c => filter.PresentationId.Any(d => c.ProductPresentationId.Equals(d))).ToList();
@@ -105,7 +105,7 @@ namespace WendlandtVentas.Web.Controllers
                         var iva = (baseAmount + ieps) * 0.16M; //Formula anterior (baseAmount + distribution + ieps) * 0.16M;
                         totalProduct = baseAmount + ieps + iva; //Formula anterior baseAmount + distribution + ieps + iva;
                     }
-                
+
                 return new PivotDataOrderModel
                 {
                     OrderId = c.OrderId,
@@ -123,7 +123,8 @@ namespace WendlandtVentas.Web.Controllers
                     CreationDate = $"{c.CreatedAt.AddHours(-8):dd MMM yyyy}",
                     Month = c.CreatedAt.AddHours(-8).Month,
                     User = users.FirstOrDefault(d => d.Key.Equals(c.Order.UserId)).Value,
-                    Liters = c.ProductPresentation.Presentation.Liters * qty
+                    Liters = c.ProductPresentation.Presentation.Liters * qty,
+                    LitersPresentation = c.ProductPresentation.Presentation.Liters
                 };
             }).ToList();
 

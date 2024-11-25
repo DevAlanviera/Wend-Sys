@@ -1,4 +1,4 @@
-﻿@using WendlandtVentas.Core.Models
+﻿﻿@using WendlandtVentas.Core.Models
 @model ProductPresentationItem
 
 @if (Model.ExistPresentation)
@@ -7,7 +7,7 @@
         <input name="ProductPresentationIds" value="@Model.ProductPresentationId" type="hidden" />
         <input name="ProductPresentationQuantities" value="@Model.Quantity" type="hidden" />
         <input name="ProductIsPresent" @(Model.IsPresent ? "value=true" : "value=false") type="hidden" />
-        <input name="ProductPrices"value="@Model.Price" type="hidden" />
+        <input name="ProductPrices" value="@Model.Price" type="hidden" />
         <div class="row">
             @if (Model.IsPresent)
             {

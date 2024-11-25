@@ -44,6 +44,9 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public List<bool> ProductIsPresent { get; set; }
         public List<decimal> ProductPrices { get; set; }
 
+        //Agregamos la propiedad para los litros que va a manejar
+        public List<double> PresentationLiters { get; set; }
+
         [Display(Name = "Comentario")]
         public string Comment { get; set; }
 

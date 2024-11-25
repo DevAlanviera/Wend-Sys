@@ -14,6 +14,7 @@ namespace WendlandtVentas.Core.Entities
         public bool IsPresent { get; private set; }
         public decimal Price { get; private set; }
 
+
         public OrderProduct() { }
 
         public OrderProduct(ProductPresentation productPresentation, int quantity, bool isPresent, decimal price)
@@ -26,6 +27,7 @@ namespace WendlandtVentas.Core.Entities
             Quantity = quantity;
             IsPresent = isPresent;
             Price = price;
+
         }
 
         public void EditPrice(decimal price)
