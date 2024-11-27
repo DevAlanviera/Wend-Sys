@@ -177,7 +177,7 @@ namespace WendlandtVentas.Core.Services
                     else
                     {
                         //Agregamos liters a la orden
-                        //orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price, liters));
+                        orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price));
                     }
                 }
 
