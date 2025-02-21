@@ -51,6 +51,36 @@ namespace WendlandtVentas.Infrastructure.Data.Migrations
                     b.ToTable("Addresses");
                 });
 
+            modelBuilder.Entity("WendlandtVentas.Core.Entities.Bitacora", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("Accion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Fecha_modificacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("Registro_id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Usuario")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(255)")
+                        .HasMaxLength(255);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Registro_id");
+
+                    b.ToTable("Bitacora");
+                });
+
             modelBuilder.Entity("WendlandtVentas.Core.Entities.Client", b =>
                 {
                     b.Property<int>("Id")
@@ -331,6 +361,9 @@ namespace WendlandtVentas.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("OrderStatus")
                         .HasColumnType("int");
@@ -686,6 +719,15 @@ namespace WendlandtVentas.Infrastructure.Data.Migrations
                     b.HasOne("WendlandtVentas.Core.Entities.Client", null)
                         .WithMany("Addresses")
                         .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WendlandtVentas.Core.Entities.Bitacora", b =>
+                {
+                    b.HasOne("WendlandtVentas.Core.Entities.Order", null)
+                        .WithMany()
+                        .HasForeignKey("Registro_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

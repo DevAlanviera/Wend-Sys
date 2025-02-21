@@ -65,11 +65,13 @@ namespace WendlandtVentas.Web
             // Requires LocalDB which can be installed with SQL Server Express 2016
             // https://www.microsoft.com/en-us/download/details.aspx?id=54284
             services.AddDbContext<AppDbContext>(c =>
-                c.UseSqlServer(Configuration.GetConnectionString("CatalogConnection")));
+                c.UseSqlServer(Configuration.GetConnectionString("CatalogConnection")),
+    ServiceLifetime.Scoped);
 
             // Add Identity DbContext
             services.AddDbContext<AppIdentityDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")));
+                options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")),
+    ServiceLifetime.Scoped);
 
                 
 
@@ -150,6 +152,15 @@ namespace WendlandtVentas.Web
 
         public void ConfigureContainer(ContainerBuilder builder)
         {
+
+            // Registrar CacheService
+            builder.RegisterType<CacheService>()
+                   .AsSelf()  // o .As<ICacheService>() si tienes una interfaz
+                   .InstancePerLifetimeScope();  // o el ciclo de vida adecuado para tu servicio
+
+            // Registrar otros servicios
+            builder.RegisterType<OrderService>()
+                   .As<IOrderService>();
             // Add any Autofac modules or registrations.
             // This is called AFTER ConfigureServices so things you
             // register here OVERRIDE things registered in ConfigureServices.

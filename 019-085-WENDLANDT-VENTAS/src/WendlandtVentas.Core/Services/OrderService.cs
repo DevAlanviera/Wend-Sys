@@ -1,10 +1,12 @@
-﻿using DocumentFormat.OpenXml.Office2010.Excel;
+﻿using DocumentFormat.OpenXml.InkML;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Validation;
 using Humanizer;
 using LinqKit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Monobits.SharedKernel.Interfaces;
 using Newtonsoft.Json;
@@ -29,6 +31,7 @@ namespace WendlandtVentas.Core.Services
 {
     public class OrderService : IOrderService
     {
+        private readonly CacheService _cacheService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IAsyncRepository _repository;
         private readonly INotificationService _notificationService;
@@ -37,7 +40,11 @@ namespace WendlandtVentas.Core.Services
 
         private readonly IBitacoraService _bitacoraService;
 
-        public OrderService(UserManager<ApplicationUser> userManager, IAsyncRepository repository, INotificationService notificationService, IBitacoraService bitacoraService, IInventoryService inventoryService, ILogger<OrderService> logger)
+        public OrderService(UserManager<ApplicationUser> userManager,
+            IAsyncRepository repository, INotificationService notificationService,
+            IBitacoraService bitacoraService,
+            IInventoryService inventoryService, ILogger<OrderService> logger,
+            CacheService cacheService)
         {
             _userManager = userManager;
             _repository = repository;
@@ -45,6 +52,7 @@ namespace WendlandtVentas.Core.Services
             _inventoryService = inventoryService;
             _bitacoraService = bitacoraService;
             _logger = logger;
+            _cacheService = cacheService;
         }
 
 
@@ -113,6 +121,8 @@ namespace WendlandtVentas.Core.Services
                     order.GenerateRemisionCode();
                 }
 
+                
+
                 await _repository.UpdateAsync(order);
 
                 var clientName = client != null ? client.Name : string.Empty;
@@ -125,6 +135,8 @@ namespace WendlandtVentas.Core.Services
                 var bitacora = new Bitacora(order.Id, user.Name,"Crear pedido");
 
                 await _bitacoraService.AddAsync(bitacora);
+                //Eliminamos el cache de la tabla
+                _cacheService.InvalidateOrderCache();
 
                 return new Response(true, "Pedido guardado");
             }
@@ -211,13 +223,17 @@ namespace WendlandtVentas.Core.Services
                     order.UpdateReturnInformation(model.ReturnRemisionNumber, model.ReturnReason);
                 }
 
+                // Actualizar la fecha de LastModified antes de guardar la orden
+                 // Establecer el valor de LastModified a la hora actual
+
+
                 await _repository.UpdateAsync(order);
 
                 if (order.InventoryDiscount)
                 {
                     await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
                 }
-
+                _cacheService.InvalidateOrderCache();
                 return new Response(true, "Pedido editado");
             }
             catch (Exception e)

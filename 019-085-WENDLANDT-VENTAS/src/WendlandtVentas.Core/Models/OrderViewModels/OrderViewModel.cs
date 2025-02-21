@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Models.PromotionViewModels;
+using System;
 
 namespace WendlandtVentas.Core.Models.OrderViewModels
 {
@@ -27,9 +28,11 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public bool Paid { get; set; }
 
         [Display(Name = "Promesa de pago")]
+        [Required(ErrorMessage = "La fecha de promesa de pago es obligatoria.")]
         public string PaymentPromiseDate { get; set; }
 
         [Display(Name = "Fecha de pago")]
+        [Required(ErrorMessage = "La fecha de pago es obligatoria.")]
         public string PaymentDate { get; set; }
 
         [Required(ErrorMessage = "El campo {0} es requerido")]
@@ -69,6 +72,7 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public string Address { get; set; }
 
         [Display(Name = "Día de entrega")]
+        [Required(ErrorMessage = "El día de entrega es obligatorio.")]
         public string DeliveryDay { get; set; }
 
         [Display(Name = "Tipo de pago")]
@@ -89,5 +93,6 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public string ReturnRemisionNumber { get; set; }
         [Display(Name = "Motivo de devolución")]
         public string ReturnReason { get; set; }
+
     }
 }

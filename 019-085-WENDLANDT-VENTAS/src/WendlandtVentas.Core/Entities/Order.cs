@@ -54,6 +54,7 @@ namespace WendlandtVentas.Core.Entities
         public decimal IEPS => BaseAmount * 0.265M;
         public decimal IVA => (BaseAmount + IEPS) * 0.16M; //Fórmula anterior (BaseAmount + Distribution + IEPS) * 0.16M
 
+
         public Order() { }
 
         public Order(string invoiceCode, OrderType type, OrderStatus orderStatus,

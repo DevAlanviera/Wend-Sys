@@ -144,6 +144,7 @@ namespace WendlandtVentas.Infrastructure.Data
                 .HasColumnType("decimal(18,2)");
         }
 
+
         private void ConfigureExecution(EntityTypeBuilder<OrderProduct> builder)
         {
             builder.Property(c => c.OrderId)

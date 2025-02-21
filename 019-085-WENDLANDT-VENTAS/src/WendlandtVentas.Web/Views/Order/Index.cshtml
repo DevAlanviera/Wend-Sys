@@ -121,23 +121,24 @@
 
 <div class="datatable-container">
     <ejs-grid id="Grid" class="datatable" locale="es-MX" allowTextWrap="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search","Print"})">
-        @*<e-grid-pagesettings pageCount="50"></e-grid-pagesettings>*@
+        <!-- Configuración del DataManager -->
         <e-data-manager url="@targetUrl" adaptor="UrlAdaptor"></e-data-manager>
-        <e-grid-sortsettings columns="@cols"></e-grid-sortsettings>
-        <e-grid-pagesettings pageSize="50" pageSizes="@(new[] {"50", "100", "200", "500", "1000", "All"})"></e-grid-pagesettings>
+
+        <!-- Configuración de la paginación -->
+        <e-grid-pagesettings pageSize="10" pageSizes="@(new[] {"50", "100", "200"})"></e-grid-pagesettings>
+
+        <!-- Configuración de búsqueda -->
         <e-grid-searchsettings fields="@(new[] {"Id", "CreateDate", "Type", "RemissionCode", "InvoiceCode", "Total", "Client", "User", "Status", "Comment","Address"})"></e-grid-searchsettings>
+
+        <!-- Columnas de la tabla -->
         <e-grid-columns>
             <e-grid-column field="id" headerText="ID" width="50"></e-grid-column>
             <e-grid-column field="client" headerText="Cliente" width="200"></e-grid-column>
-            <e-grid-column field="address" headerText="Dirección" width="150" all></e-grid-column>
+            <e-grid-column field="address" headerText="Dirección" width="150"></e-grid-column>
             <e-grid-column field="total" headerText="Total" width="150" textAlign="Right" template="#totalTemplate"></e-grid-column>
             <e-grid-column field="createDate" headerText="Fecha de creación" width="150"></e-grid-column>
             <e-grid-column field="type" headerText="Tipo" width="150"></e-grid-column>
-            @*<e-grid-column field="remissionCode" headerText="Remisión" width="150"></e-grid-column>*@
-            @*<e-grid-column field="invoiceCode" headerText="Factura" width="150"></e-grid-column>*@
-            @*<e-grid-column field="user" headerText="Usuario" width="200"></e-grid-column>*@
             <e-grid-column field="status" headerText="Estatus" width="150"></e-grid-column>
-            @*<e-grid-column field="comment" headerText="Comentario" width="150"></e-grid-column>*@
             <e-grid-column headerText="" width="200" template="#actionButtons" textAlign="Left"></e-grid-column>
         </e-grid-columns>
     </ejs-grid>

@@ -4,6 +4,7 @@ using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Humanizer;
@@ -11,8 +12,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Monobits.SharedKernel.Interfaces;
+using Newtonsoft.Json;
 using Syncfusion.EJ2.Base;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
@@ -24,6 +28,7 @@ using WendlandtVentas.Core.Models.OrderViewModels;
 using WendlandtVentas.Core.Models.ProductPresentationViewModels;
 using WendlandtVentas.Core.Models.ProductViewModels;
 using WendlandtVentas.Core.Models.PromotionViewModels;
+using WendlandtVentas.Core.Services;
 using WendlandtVentas.Core.Specifications.ClientSpecifications;
 using WendlandtVentas.Core.Specifications.OrderExtendedSpecifications;
 using WendlandtVentas.Core.Specifications.OrderSpecifications;
@@ -31,6 +36,7 @@ using WendlandtVentas.Core.Specifications.ProductPresentationSpecifications;
 using WendlandtVentas.Core.Specifications.ProductSpecifications;
 using WendlandtVentas.Core.Specifications.PromotionSpecifications;
 using WendlandtVentas.Infrastructure.Commons;
+using WendlandtVentas.Infrastructure.Data;
 using WendlandtVentas.Infrastructure.Repositories;
 using WendlandtVentas.Web.Extensions;
 using WendlandtVentas.Web.Libs;
@@ -44,6 +50,9 @@ namespace WendlandtVentas.Web.Controllers
     [Authorize]
     public class OrderController : Controller
     {
+        private readonly CacheService _cacheService;
+        private readonly IMemoryCache _memoryCache;
+        private readonly AppDbContext _dbContext;
         private readonly IOrderService _orderService;
         private readonly IInventoryService _inventoryService;
         private readonly INotificationService _notificationService;
@@ -66,7 +75,10 @@ namespace WendlandtVentas.Web.Controllers
             IExcelReadService excelReadService,
             ITreasuryApi treasuryApi,
             IBitacoraService bitacoraService,
-            IBitacoraRepository bitacoraRepository)
+            IBitacoraRepository bitacoraRepository,
+            AppDbContext dbContext,
+            IMemoryCache memoryCache,
+            CacheService cacheService)
         {
             _repository = repository;
             _logger = logger;
@@ -79,22 +91,48 @@ namespace WendlandtVentas.Web.Controllers
             _bitacoraService = bitacoraService;
             _treasuryApi = treasuryApi;
             _bitacoraRepository = bitacoraRepository;
+            _dbContext = dbContext;
+            _memoryCache = memoryCache;
+            _cacheService = cacheService;
         }
+
+        public class CachedDataResult
+        {
+            public object DataResult { get; set; }
+            public int? Count { get; set; }
+        }
+
+
 
         public async Task<IActionResult> Index(FilterViewModel filter)
         {
-            var orderTypes = Enum.GetValues(typeof(OrderType)).Cast<OrderType>().Where(c => c != OrderType.Return);
-            var orderStatus = Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>().Where(c => !(c == OrderStatus.ReadyDeliver || c == OrderStatus.Faceted)).AsEnumerable();
+            // Invalida el caché antes de obtener los datos frescos
+            
+
+            // Obtiene los datos desde el repositorio (sin caché)
+            var orderTypes = Enum.GetValues(typeof(OrderType))
+                                 .Cast<OrderType>()
+                                 .Where(c => c != OrderType.Return);
+
+            var orderStatus = Enum.GetValues(typeof(OrderStatus))
+                                  .Cast<OrderStatus>()
+                                  .Where(c => !(c == OrderStatus.ReadyDeliver || c == OrderStatus.Faceted));
+
             var products = await _repository.ListAllExistingAsync<Product>();
             var presentations = await _repository.ListAllExistingAsync<Presentation>();
             var states = await _repository.ListAllExistingAsync<State>();
             var clients = await _repository.ListAllExistingAsync<Client>();
+
+            // Obtiene las ciudades distintas de los clientes
             var cities = clients.Select(d => d.City).Distinct();
 
-            if (filter.StateId.Any())
-                clients = clients.Where(c => filter.StateId.Any(s => s == c.StateId)).ToList();
+            // Aplica los filtros al obtener los clientes por estado
+            if (filter.StateId?.Any() == true)
+            {
+                clients = clients.Where(c => filter.StateId.Contains(c.StateId)).ToList();
+            }
 
-            filter.FilterDate = filter.FilterDate;
+            // Configura las listas para los filtros en la vista
             filter.OrderStatusAll = new SelectList(orderStatus.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text", filter.OrderStatus);
             filter.OrderTypeAll = new SelectList(orderTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text");
             filter.Products = new SelectList(products.Select(x => new { Value = x.Id, Text = x.Name }), "Value", "Text");
@@ -103,39 +141,63 @@ namespace WendlandtVentas.Web.Controllers
             filter.Clients = new SelectList(clients.Select(x => new { Value = x.Id, Text = x.Name }), "Value", "Text");
             filter.CityAll = new SelectList(cities.Select(x => new { Value = x, Text = x }), "Value", "Text");
 
+            // Retorna la vista con los filtros aplicados
             return View(filter);
         }
 
         [HttpPost]
         public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm, FilterViewModel filter)
         {
-            
-            var users = _userManager.Users.ToDictionary(c => c.Id, c => c.Name);
-            var filteredOrders = (await _orderService.FilterValues(filter)).ToList();
-            var dataSource = filteredOrders
-                .Where(c => c.Type != OrderType.Return)
-                .Select(c => new OrderTableModel
-                {
-                    Id = c.Id,
-                    Type = c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize(),
-                    InvoiceCode = c.InvoiceCode ?? string.Empty,
-                    RemissionCode = c.RemissionCode,
-                    IsPaid = c.Paid,
-                    PaymentDate = c.PaymentDate == DateTime.MinValue ? string.Empty : c.PaymentDate.ToLocalTime().FormatDateShortMx(),
-                    PaymentPromiseDate = c.PaymentPromiseDate == DateTime.MinValue ? string.Empty : c.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
-                    CreateDate = c.CreatedAt.ToLocalTime().FormatDateShortMx(),
-                    Total = c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency(),
-                    //User = users[c.UserId],
-                    Client = c.Client.Name,
-                    StatusEnum = c.OrderStatus,
-                    Comment = c.Comment,
-                    Address = c.Address ?? string.Empty,
-                    CanEdit = c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString())
-                });
+            // Clave única para el caché basada en los filtros
+            var cacheKey = $"OrderTableData_{System.Text.Json.JsonSerializer.Serialize(filter)}";
 
-            var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
-            return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
+            // Intentar obtener datos del caché
+            if (!_memoryCache.TryGetValue(cacheKey, out List<OrderTableModel> cachedData))
+            {
+                // Si no está en caché, recuperar datos desde la fuente
+                var users = _userManager.Users.ToDictionary(c => c.Id, c => c.Name); // Sin consulta async
+                var filteredOrders = (await _orderService.FilterValues(filter)).ToList();
+
+                // Mapear datos al modelo de la tabla
+                cachedData = filteredOrders
+                    .Where(c => c.Type != OrderType.Return) // Filtrar órdenes de tipo "Return"
+                    .Select(c => new OrderTableModel
+                    {
+                        Id = c.Id,
+                        Type = c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize(),
+                        InvoiceCode = c.InvoiceCode ?? string.Empty,
+                        RemissionCode = c.RemissionCode,
+                        IsPaid = c.Paid,
+                        PaymentDate = c.PaymentDate == DateTime.MinValue ? string.Empty : c.PaymentDate.ToLocalTime().FormatDateShortMx(),
+                        PaymentPromiseDate = c.PaymentPromiseDate == DateTime.MinValue ? string.Empty : c.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
+                        CreateDate = c.CreatedAt.ToLocalTime().FormatDateShortMx(),
+                        Total = c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency(),
+                        Client = c.Client.Name,
+                        StatusEnum = c.OrderStatus,
+                        Comment = c.Comment,
+                        Address = c.Address ?? string.Empty,
+                        CanEdit = c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString())
+                    })
+                    .OrderByDescending(c => c.Id) // Ordenar por Id en orden descendente
+                    .ToList();
+
+                // Guardar en caché con duración de 10 minutos
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(10)); // Duración de 10 minutos
+                _memoryCache.Set(cacheKey, cachedData, cacheEntryOptions);
+
+               
+            }
+
+            // Filtrar, ordenar y paginar correctamente
+            var dataResult = _sfGridOperations.FilterDataSource(cachedData.AsQueryable(), dm);
+
+            // Retornar los datos con la cuenta requerida
+            return dm.RequiresCounts
+                ? new JsonResult(new { result = dataResult.DataResult, count = dataResult.Count }) // La cuenta debe venir de dataResult.Count
+                : new JsonResult(dataResult.DataResult);
         }
+   
 
         [HttpGet]
         public async Task<IActionResult> ValidateClientOrders(int clientId)
@@ -243,21 +305,33 @@ namespace WendlandtVentas.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> AddProduct([FromQuery] CurrencyType currencyType)
         {
-            //De aqui se muestran los productos al front
             try
             {
                 ViewData["Action"] = nameof(AddProduct);
                 ViewData["ModalTitle"] = "Agregar producto";
 
-                var productsInStock = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
-                if (currencyType == CurrencyType.MXN)
-                    productsInStock = productsInStock.Where(c => !c.Price.Equals(decimal.Zero)).ToList();
-                else
-                    productsInStock = productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
+                // Clave única para el caché, diferenciando por tipo de moneda
+                string cacheKey = $"ProductsInStock_{currencyType}";
+
+                if (!_memoryCache.TryGetValue(cacheKey, out List<ProductPresentation> productsInStock))
+                {
+                    // Consultar la base de datos si no está en caché
+                    productsInStock = (List<ProductPresentation>)await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
+
+                    // Filtrar por moneda
+                    productsInStock = currencyType == CurrencyType.MXN
+                        ? productsInStock.Where(c => !c.Price.Equals(decimal.Zero)).ToList()
+                        : productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
+
+                    // Almacenar en caché con una duración de 10 minutos
+                    _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
+                }
+
                 var model = new OrderAddProductViewModel
                 {
-                    ProductsPresentations = new SelectList(productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }), "Value", "Text"),
-                    
+                    ProductsPresentations = new SelectList(
+                        productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }),
+                        "Value", "Text")
                 };
 
                 return PartialView("_AddProductModal", model);
@@ -439,7 +513,7 @@ namespace WendlandtVentas.Web.Controllers
                 var apiResult = await _treasuryApi.GetBalancesAsync(income);
                 if (apiResult.IsSuccess)
                 {
-                    var res = JsonSerializer.Deserialize<List<OrdersIncomeDto>>(apiResult.Response);
+                    var res = System.Text.Json.JsonSerializer.Deserialize<List<OrdersIncomeDto>>(apiResult.Response);
 
                     model.PendingAmount += res.Where(c => c.CurrencyType.Equals(CurrencyType.MXN)).Sum(c => c.Amount);
                     model.PendingAmountUsd += res.Where(c => c.CurrencyType.Equals(CurrencyType.USD)).Sum(c => c.Amount);
@@ -484,115 +558,53 @@ namespace WendlandtVentas.Web.Controllers
         {
             ViewData["Action"] = nameof(Edit);
             ViewData["Title"] = "Editar pedido";
+
+            // Ejecutar las consultas de manera secuencial para evitar conflictos con DbContext
             var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
-            var remissionsForReturn = await _orderService.GetInvoiceRemissionNumbersAsync();
-            var presentationPromotions = new List<PresentationPromotionModel>();
-            var productPresentationList = order.OrderPromotions.SelectMany(c => c.OrderPromotionProducts).Select(d => d.ProductPresentation).Distinct();
-
-            foreach (var presentation in productPresentationList)
-            {
-                presentationPromotions.Add(new PresentationPromotionModel
-                {
-                    PresentationId = presentation.PresentationId,
-                    Presentation = $"{presentation.Presentation.Name} {presentation.Presentation.Liters} lts.",
-                    Quantity = order.OrderPromotions.SelectMany(d => d.OrderPromotionProducts).Where(d => presentation.Id == d.ProductPresentationId).Count(),
-                    Promotions = order.OrderPromotions.Where(c => presentation.Id == c.OrderPromotionProducts.FirstOrDefault().ProductPresentationId).Select(f =>
-                    {
-                        return new PromotionItemModel
-                        {
-                            Id = f.PromotionId,
-                            Buy = f.Promotion.Buy,
-                            Discount = f.Promotion.Discount,
-                            Name = f.Promotion.Name,
-                            Present = f.Promotion.Present,
-                            PresentationId = presentation.Id,
-                            Products = f.OrderPromotionProducts.Select(d =>
-                            {
-                                return new ProductItemModel
-                                {
-                                    Id = d.ProductPresentationId,
-                                    Name = d.ProductPresentation.Product.Name,
-                                    Price = order.CurrencyType == CurrencyType.MXN ? d.ProductPresentation.Price : d.ProductPresentation.PriceUsd,
-                                    Quantity = d.Quantity
-                                };
-                            }).ToList()
-                        };
-                    })
-                }); ;
-            }
-
-            var clients = (await _repository.ListAllExistingAsync<Client>()).OrderBy(c => c.Name);
-
-            #region PRODUCTSCOMMENTED
-            //var presentationPromotions = order.OrderPromotions
-            //     .SelectMany(d => d.OrderPromotionProducts)
-            //     .Select(d => d.ProductPresentation)
-            //     .GroupBy(c => c.Presentation,
-            //     c => c, (Presentation, Products) =>
-            //     {
-            //         return new PresentationPromotionModel
-            //         {
-            //             PresentationId = Presentation.Id,
-            //             Presentation = Presentation.NameExtended(),
-            //             Quantity = Products.Count(),
-            //             //Promotions = order.OrderPromotions.Select(f =>
-            //             Promotions = order.OrderPromotions.Where(c => Presentation.Id == c.Promotion.PresentationPromotions.FirstOrDefault().PresentationId).Select(f =>
-            //             {
-            //                 return new PromotionItemModel
-            //                 {
-            //                     Id = f.PromotionId,
-            //                     Buy = f.Promotion.Buy,
-            //                     Discount = f.Promotion.Discount,
-            //                     Name = f.Promotion.Name,
-            //                     Present = f.Promotion.Present,
-            //                     Products = f.OrderPromotionProducts.Select(d => 
-            //                     {
-            //                        return new ProductItemModel 
-            //                        {
-            //                        Id = d.ProductPresentation.ProductId,
-            //                        Name = d.ProductPresentation.Product.Name,
-            //                        Price = d.ProductPresentation.Price,
-            //                        Quantity = d.Quantity
-            //                        };
-            //                     }).ToList()
-            //                 };
-            //             })
-
-            //Promotions =  Products.Select(d => d.Presentation).SelectMany(e => e.PresentationPromotions).Select(f =>
-            //{
-            //    return new PromotionItemModel
-            //    {
-            //        Id = f.PromotionId,
-            //        Buy = f.Promotion.Buy,
-            //        Discount = f.Promotion.Discount,
-            //        Name = f.Promotion.Name,
-            //        Present = f.Promotion.Present,
-            //        Products = Products.Where(p => p.Presentation.PresentationPromotions.Any(pp => pp.Id == f.Id)).Select(g =>
-            //        {
-            //            return new ProductItemModel
-            //            {
-            //                Id = g.Id,
-            //                Name = g.NameExtended(),
-            //                Price = g.Price,
-            //                Quantity = 1
-            //            };
-            //        }).ToList(),
-            //    };
-            //})
-            //    };
-            //}).ToList();
-            #endregion
-
+            var remissionsForReturn = await _orderService.GetInvoiceRemissionNumbersAsync(); // No usa DbContext
+            var clients = await _repository.ListAllExistingAsync<Client>();
             var addresses = await _repository.ListAsync(new AddressesByClientIdSpecification(order.ClientId));
-            if (addresses == null)
-                addresses = new List<Address>() { };
-            else
-                addresses = addresses.Where(c => !c.IsDeleted).ToList();
 
-            var payTypes = Enum.GetValues(typeof(PayType)).Cast<PayType>().AsEnumerable();
-            var currencyTypes = Enum.GetValues(typeof(CurrencyType)).Cast<CurrencyType>().Where(c => c.Equals(order.CurrencyType)).AsEnumerable();
-            var address = order.Address != null ? addresses.FirstOrDefault(c => c.AddressLocation == order.Address && c.ClientId == order.ClientId && c.Name == order.AddressName) : null;
+            var isMxnCurrency = order.CurrencyType == CurrencyType.MXN;
 
+            // Transformación de promociones
+            var presentationPromotions = order.OrderPromotions
+                .SelectMany(op => op.OrderPromotionProducts)
+                .GroupBy(pp => pp.ProductPresentation)
+                .Select(g => new PresentationPromotionModel
+                {
+                    PresentationId = g.Key.PresentationId,
+                    Presentation = $"{g.Key.Presentation.Name} {g.Key.Presentation.Liters} lts.",
+                    Quantity = g.Count(),
+                    Promotions = order.OrderPromotions
+                        .Where(p => g.Key.Id == p.OrderPromotionProducts.FirstOrDefault()?.ProductPresentationId)
+                        .Select(p => new PromotionItemModel
+                        {
+                            Id = p.PromotionId,
+                            Buy = p.Promotion.Buy,
+                            Discount = p.Promotion.Discount,
+                            Name = p.Promotion.Name,
+                            Present = p.Promotion.Present,
+                            PresentationId = g.Key.Id,
+                            Products = p.OrderPromotionProducts.Select(pp => new ProductItemModel
+                            {
+                                Id = pp.ProductPresentationId,
+                                Name = pp.ProductPresentation.Product.Name,
+                                Price = isMxnCurrency ? pp.ProductPresentation.Price : pp.ProductPresentation.PriceUsd,
+                                Quantity = pp.Quantity
+                            }).ToList()
+                        }).ToList()
+                }).ToList();
+
+            // Filtrar direcciones que no estén eliminadas
+            var filteredAddresses = addresses?.Where(c => !c.IsDeleted).ToList() ?? new List<Address>();
+
+            // Buscar la dirección asociada al pedido
+            var address = order.Address != null
+                ? filteredAddresses.FirstOrDefault(c => c.AddressLocation == order.Address && c.ClientId == order.ClientId && c.Name == order.AddressName)
+                : null;
+
+            // Construir el modelo de vista
             var model = new OrderViewModel
             {
                 Id = id,
@@ -603,56 +615,41 @@ namespace WendlandtVentas.Web.Controllers
                 ReturnRemisionNumberOptions = new SelectList(remissionsForReturn, "Value", "Text"),
                 InvoiceCode = order.InvoiceCode,
                 Paid = order.Paid,
-                PaymentPromiseDate = order.PaymentPromiseDate.ToLocalTime() != DateTime.MinValue ? order.PaymentPromiseDate.ToLocalTime().FormatDateShortMx() : string.Empty,
-                PaymentDate = order.PaymentDate.ToLocalTime() != DateTime.MinValue ? order.PaymentDate.ToLocalTime().FormatDateShortMx() : string.Empty,
-                DeliveryDay = order.DeliveryDate.ToLocalTime() != DateTime.MinValue ? order.DeliveryDate.ToLocalTime().FormatDateShortMx() : string.Empty,
+                PaymentPromiseDate = order.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
+                PaymentDate = order.PaymentDate.ToLocalTime().FormatDateShortMx(),
+                DeliveryDay = order.DeliveryDate.ToLocalTime().FormatDateShortMx(),
                 ClientId = order.ClientId,
-                AddressId = address != null ? address.Id : 0,
+                AddressId = address?.Id ?? 0,
                 PayType = order.PayType ?? PayType.Cash,
                 CurrencyType = order.CurrencyType,
                 Delivery = order.Delivery,
                 DeliverySpecification = order.DeliverySpecification,
-                ProductsEdit = order.OrderProducts.Where(c => !c.IsDeleted).Select(c => new ProductPresentationItem
-                {
-                    ProductPresentationId = c.ProductPresentationId,
-                    ProductName = c.ProductPresentation.NameExtended(),
-                    PriceString = c.Price != 0 ? c.Price.FormatCurrency() : order.CurrencyType == CurrencyType.MXN
-                    ? c.ProductPresentation.Price.FormatCurrency()
-                    : c.ProductPresentation.PriceUsd.FormatCurrency(),
-                    Price = c.Price != 0 ? c.Price : order.CurrencyType == CurrencyType.MXN
-                    ? c.ProductPresentation.Price
-                    : c.ProductPresentation.PriceUsd,
-                    Quantity = c.Quantity,
-                    Subtotal = c.Price != 0 ? (c.Price * c.Quantity).FormatCurrency() : order.CurrencyType == CurrencyType.MXN
-                    ? (c.ProductPresentation.Price * c.Quantity).FormatCurrency()
-                    : (c.ProductPresentation.PriceUsd * c.Quantity).FormatCurrency(),
-                    SubtotalDouble = c.Price != 0 ? c.Price * c.Quantity : order.CurrencyType == CurrencyType.MXN
-                    ? c.ProductPresentation.Price * c.Quantity
-                    : c.ProductPresentation.PriceUsd * c.Quantity,
-                    PresentationId = c.ProductPresentation.PresentationId,
-                    PresentationName = c.ProductPresentation.Presentation.Name,
-                    ProductId = c.ProductPresentation.ProductId,
-                    IsPresent = c.IsPresent,
-                    CanDelete = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
-                }),
+                ProductsEdit = order.OrderProducts
+                    .Where(c => !c.IsDeleted)
+                    .Select(c => new ProductPresentationItem
+                    {
+                        ProductPresentationId = c.ProductPresentationId,
+                        ProductName = c.ProductPresentation.NameExtended(),
+                        Price = c.Price != 0 ? c.Price : (isMxnCurrency ? c.ProductPresentation.Price : c.ProductPresentation.PriceUsd),
+                        Quantity = c.Quantity,
+                        SubtotalDouble = c.Price * c.Quantity,
+                        PresentationId = c.ProductPresentation.PresentationId,
+                        PresentationName = c.ProductPresentation.Presentation.Name,
+                        ProductId = c.ProductPresentation.ProductId,
+                        IsPresent = c.IsPresent,
+                        CanDelete = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
+                    })
+                    .OrderBy(d => d.PresentationId)
+                    .ThenBy(d => d.IsPresent)
+                    .ToList(),
                 PresentationPromotionsEdit = presentationPromotions,
-                Clients = new SelectList(clients.Select(x => new { Value = x.Id, Text = $"{x.Name}" }), "Value", "Text"),
-                Addresses = new SelectList(addresses.Select(x => new { Value = x.Id, Text = string.IsNullOrEmpty(x.AddressLocation) ? string.Empty : $"{x.Name} - {x.AddressLocation}" }), "Value", "Text"),
-                PayTypes = new SelectList(payTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
-                CurrencyTypes = new SelectList(currencyTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
+                Clients = new SelectList(clients.OrderBy(c => c.Name), "Id", "Name"),
+                Addresses = new SelectList(filteredAddresses, "Id", "AddressLocation"),
+                PayTypes = new SelectList(Enum.GetValues(typeof(PayType)).Cast<PayType>().Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
+                CurrencyTypes = new SelectList(new[] { order.CurrencyType }.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CanEditProducts = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
                 Comment = order.Comment
             };
-
-            model.ProductsEdit = model.ProductsEdit.OrderBy(d => d.PresentationId).ThenBy(d => d.IsPresent).ToList();
-
-            for (var counter = 1; counter < model.ProductsEdit.Count(); counter++)
-            {
-                if (model.ProductsEdit.ElementAt(counter).PresentationId == model.ProductsEdit.ElementAt(counter - 1).PresentationId)
-                {
-                    model.ProductsEdit.ElementAt(counter).ExistPresentation = true;
-                }
-            }
 
             return View("AddEdit", model);
         }
@@ -675,9 +672,7 @@ namespace WendlandtVentas.Web.Controllers
                 var user = await _userManager.FindByNameAsync(User.Identity.Name); // Asegúrate de que _userManager esté inyectado en tu controlador
                 var bitacora = new Bitacora(model.Id, user.Name, "Editar pedido");
                
-              
-               
-
+   
 
                 await _bitacoraService.AddAsync(bitacora);
 
@@ -844,6 +839,7 @@ namespace WendlandtVentas.Web.Controllers
                     var usuario = await _userManager.FindByNameAsync(User.Identity.Name);
                     var bitacora = new Bitacora(order.Id, usuario.Name, "Cambio status");
                     await _bitacoraRepository.AddAsync(bitacora);
+                    _cacheService.InvalidateOrderCache();
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. Inventario actualizado"));
                 
                 }
@@ -1126,6 +1122,10 @@ namespace WendlandtVentas.Web.Controllers
 
                 order.AddCollectionComment(model.Comments);
                 await _repository.UpdateAsync(order);
+                var usuario = await _userManager.FindByNameAsync(User.Identity.Name);
+                var bitacora = new Bitacora(order.Id, usuario.Name, "Agregar Comentario");
+                await _bitacoraRepository.AddAsync(bitacora);
+                _cacheService.InvalidateOrderCache();
 
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Comentario guardado exitosamente"));
             }
