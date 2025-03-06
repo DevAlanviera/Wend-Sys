@@ -235,6 +235,15 @@ namespace WendlandtVentas.Web
                     pattern: "{controller=Order}/{action=Index}" );
                 endpoints.MapDefaultControllerRoute();
             });
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "estadoCuenta",
+                    pattern: "ClientStateAccount/{clientId?}",
+                    defaults: new { controller = "ClientStateAccount", action = "Index" });
+            });
+
         }
 
         private static void CreateIdentityIfNotCreated(IServiceCollection services)

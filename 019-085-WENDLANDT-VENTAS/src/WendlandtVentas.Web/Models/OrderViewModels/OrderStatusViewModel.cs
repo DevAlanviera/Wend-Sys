@@ -28,5 +28,11 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
 
         [Display(Name = "Día de entrega")]
         public string DeliveryDay { get; set; }
+
+        // Nuevas propiedades para calcular pronto pago
+        public bool IsProntoPago { get; set; } // Checkbox para "Pronto Pago"
+        public double NuevoTotal { get; set; } // Nuevo total con descuento
+        public double TotalOriginal { get; set; } // Total original de la orden
+
     }
 }

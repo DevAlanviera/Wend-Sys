@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace WendlandtVentas.Infrastructure.Data
 {
-    public class EfRepository : IRepository, IAsyncRepository
+    public class EfRepository : IAsyncRepository
     {
         private readonly AppDbContext _dbContext;
 

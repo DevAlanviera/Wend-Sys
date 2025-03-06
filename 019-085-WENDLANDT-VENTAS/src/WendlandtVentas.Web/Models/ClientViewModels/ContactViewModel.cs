@@ -15,6 +15,9 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         public string Cellphone { get;  set; }
         [Display(Name = "Número de oficina")]
         public string OfficePhone { get;  set; }
+
+        [Required(ErrorMessage = "El correo electrónico es obligatorio.")]
+        [EmailAddress(ErrorMessage = "Debe ser un correo válido.")]
         public string Email { get;  set; }
         [Display(Name = "Comentarios")]
         public string Comments { get;  set; }

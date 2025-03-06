@@ -1,0 +1,95 @@
+﻿@model WendlandtVentas.Web.Models.ClientViewModels.ClientOrdersViewModel
+
+@{
+    Layout = "~/Views/Shared/_ClientLayout.cshtml";
+    ViewData["Title"] = "Estado de Cuenta";
+}
+
+<link rel="stylesheet" href="~/css/ClientLayout.css" />
+
+<!-- Campo de Búsqueda y Botón de Filtro -->
+<div class="row mb-4 mt-3">
+    <div class="col-md-6 m-auto">
+        <input type="text" class="form-control" placeholder="Buscar cliente por nombre o ID" id="searchField" />
+    </div>
+    <div class="col-md-6">
+        <button class="btn btn-primary" id="filterButton">Filtrar</button>
+    </div>
+</div>
+
+<!-- Cuatro Cards para mostrar resumen de cuenta -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm text-center">
+            <div class="card-body">
+                <h5 class="card-title">Total Pagado</h5>
+                <p class="card-text">@Model.PaidAmount.ToString("C2")</p> <!-- Mostrar total pagado -->
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm text-center">
+            <div class="card-body">
+                <h5 class="card-title">Devoluciones</h5>
+                <p class="card-text">$0</p> <!-- Mostrar cantidad de devoluciones -->
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm text-center">
+            <div class="card-body">
+                <h5 class="card-title">Cuentas Pendientes</h5>
+                <p class="card-text text-center">@Model.TotalPendientes</p> <!-- Cuantas cuentas pendientes por pagar -->
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm text-center">
+            <div class="card-body">
+                <h5 class="card-title">Total por Pagar</h5>
+                <p class="card-text">@Model.TotalPorPagar.ToString("C2")</p> <!-- Mostrar total por pagar -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Balances -->
+<h2>Estado de Cuenta - @Model.ClientName</h2>
+
+<div class="table-container">
+    <table class="table table-striped shadow-sm">
+        <thead>
+            <tr>
+                <th>Remisión</th>
+                <th>Factura</th>
+                <th>Fecha de Entrega</th>
+                <th>Fecha de Vencimiento</th>
+                <th>Monto</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Balances)
+            {
+                <tr>
+                    <td>@item.RemissionCode</td>
+                    <td>@item.InvoiceCode</td>
+                    <td>@item.DeliveryDate.ToString("dd/MM/yyyy")</td>
+                    <td>@item.DueDate.ToString("dd/MM/yyyy")</td>
+                    <td>@item.AmountString</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- JavaScript para el botón de filtro -->
+<script>
+    document.getElementById("filterButton").addEventListener("click", function () {
+        var searchField = document.getElementById("searchField").value;
+        // Aquí puedes redirigir o hacer una llamada AJAX con el valor de searchField para filtrar los resultados
+        alert("Filtrar por: " + searchField);
+    });
+</script>

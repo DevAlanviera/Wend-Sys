@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Monobits.SharedKernel.Interfaces
 {
@@ -19,5 +20,6 @@ namespace Monobits.SharedKernel.Interfaces
         void Delete<T>(T entity) where T : BaseEntity, IAggregateRoot;
 
         int Count<T>(ISpecification<T> spec) where T : BaseEntity, IAggregateRoot;
+       
     }
 }
