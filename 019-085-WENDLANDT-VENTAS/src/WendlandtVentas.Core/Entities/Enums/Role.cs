@@ -7,6 +7,7 @@ namespace WendlandtVentas.Core.Entities.Enums
         [Display(Name = "Administrador")] Administrator,
         [Display(Name = "Almacenista")] Storekeeper,
         [Display(Name = "Facturación")] Billing,
+        [Display(Name = "Auxiliar Facturación")] BillingAssistant,
         [Display(Name = "Ventas")] Sales,
         [Display(Name = "Auxiliar Administrador")] AdministratorAssistant,
         [Display(Name = "Administrador Comercial")] AdministratorCommercial,

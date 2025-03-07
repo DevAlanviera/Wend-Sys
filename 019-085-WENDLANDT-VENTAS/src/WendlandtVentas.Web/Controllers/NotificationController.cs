@@ -17,7 +17,7 @@ using WendlandtVentas.Web.Models.TableModels;
 
 namespace WendlandtVentas.Web.Controllers
 {
-    [Authorize(Roles = "Administrator, AdministratorCommercial, Billing")]
+    [Authorize(Roles = "Administrator, AdministratorCommercial, Billing, BillingAssistant")]
     public class NotificationController : Controller
     {
         private readonly ILogger<NotificationController> _logger;

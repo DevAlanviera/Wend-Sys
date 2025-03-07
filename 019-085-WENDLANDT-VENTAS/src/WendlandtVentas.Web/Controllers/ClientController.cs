@@ -21,7 +21,7 @@ using WendlandtVentas.Web.Models.TableModels;
 
 namespace WendlandtVentas.Web.Controllers
 {
-    [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Storekeeper, Billing, Sales, Distributor")]
+    [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Storekeeper, Billing, BillingAssistant, Sales, Distributor")]
     public class ClientController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;

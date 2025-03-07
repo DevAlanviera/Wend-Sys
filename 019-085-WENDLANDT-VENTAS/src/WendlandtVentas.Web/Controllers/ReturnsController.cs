@@ -276,7 +276,7 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing, BillingAssistant")]
         [HttpGet]
         public async Task<IActionResult> ChangeStatus(int id)
         {
@@ -310,7 +310,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_ChangeStatusModal", model);
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing, BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeStatus(OrderStatusViewModel model)

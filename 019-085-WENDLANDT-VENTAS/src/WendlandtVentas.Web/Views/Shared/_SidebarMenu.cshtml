@@ -30,7 +30,7 @@
                     <i class="c-sidebar-nav-icon far fa-users-class"></i> Clientes
                 </a>
             </li>
-            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing"))
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
             {
                 <li class="c-sidebar-nav-item @(currentPath.Equals("/product") ? "active" : "")">
                     <a class="c-sidebar-nav-link" asp-controller="Product" asp-action="Index">
@@ -43,7 +43,7 @@
                     </a>
                 </li>
             }
-            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing"))
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
             {
                 <li class="c-sidebar-nav-item @(currentPath.Equals("/users") ? "active" : "")">
                     <a class="c-sidebar-nav-link" asp-controller="Users" asp-action="Index">
@@ -72,7 +72,7 @@
                     <i class="c-sidebar-nav-icon far fa-book"></i> Devoluciones
                 </a>
             </li>
-            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing"))
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
             {
                 <li class="c-sidebar-nav-item @(currentPath.Equals("/inventory") ? "active" : "")">
                     <a class="c-sidebar-nav-link" asp-controller="Inventory" asp-action="Index">
@@ -80,14 +80,14 @@
                     </a>
                 </li>
             }
-            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing") || User.IsInRole("Sales"))
+            if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant") || User.IsInRole("Sales"))
             {
                 <li class="c-sidebar-nav-item @(currentPath.Equals("/report") ? "active" : "")">
                     <a class="c-sidebar-nav-link" asp-controller="Report" asp-action="Index">
                         <i class="c-sidebar-nav-icon far fa-chart-line"></i> Reportes
                     </a>
                 </li>
-                if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing"))
+                if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
                 {
                     <li class="c-sidebar-nav-item @(currentPath.Equals("/notification") ? "active" : "")">
                         <a class="c-sidebar-nav-link" asp-controller="Notification" asp-action="Index">

@@ -19,7 +19,7 @@ using WendlandtVentas.Web.Models.TableModels;
 
 namespace WendlandtVentas.Web.Controllers
 {
-    [Authorize(Roles = "Administrator, AdministratorCommercial, Storekeeper, Billing")]
+    [Authorize(Roles = "Administrator, AdministratorCommercial, Storekeeper, Billing, BillingAssistant")]
     public class PromotionController : Controller
     {
         private readonly IAsyncRepository _repository;

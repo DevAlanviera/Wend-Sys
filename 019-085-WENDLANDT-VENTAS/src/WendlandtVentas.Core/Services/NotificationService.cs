@@ -42,15 +42,17 @@ namespace WendlandtVentas.Core.Services
                 switch (orderStatus)
                 {
                     case OrderStatus.New:
-                        roles.AddRange(new List<Role>() { Role.Storekeeper, Role.Billing });
+                        roles.AddRange(new List<Role>() { Role.Storekeeper, Role.Billing, Role.BillingAssistant });
                         send = await AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
                         result.Add(send);
                         break;
                     case OrderStatus.ReadyDeliver:
                         roles.Add(Role.Billing);
+                        roles.Add(Role.BillingAssistant);
                         send = await AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
                         result.Add(send);
                         break;
+                        
                     case OrderStatus.Delivered:
                         roles.Add(Role.Storekeeper);
                         send = await AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
