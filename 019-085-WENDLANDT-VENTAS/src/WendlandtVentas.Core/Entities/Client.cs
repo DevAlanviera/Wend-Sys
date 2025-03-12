@@ -3,6 +3,7 @@ using Monobits.SharedKernel;
 using Monobits.SharedKernel.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using WendlandtVentas.Core.Entities.Enums;
 
 namespace WendlandtVentas.Core.Entities
@@ -15,7 +16,7 @@ namespace WendlandtVentas.Core.Entities
         public int? StateId { get; set; }
         public State State { get; set; }
         public string RFC { get; set; }
-        [Obsolete]
+       // [Obsolete]
         public string Address { get; set; }
         public string City { get; set; }
         public string SellerId { get; set; }
@@ -24,6 +25,10 @@ namespace WendlandtVentas.Core.Entities
         public ICollection<ClientPromotion> ClientPromotions { get; private set; }
         public ICollection<Address> Addresses { get; private set; }
         public ICollection<Contact> Contacts { get; private set; }
+
+        //Solo se utiliza cuando el tipo de cliente es deistribuidor
+       /* [Range(0, 100, ErrorMessage = "El porcentaje de descuento debe estar entre 0 y 100")]
+        public decimal? DiscountPercentage { get; set; }*/
 
         public Client()
         {

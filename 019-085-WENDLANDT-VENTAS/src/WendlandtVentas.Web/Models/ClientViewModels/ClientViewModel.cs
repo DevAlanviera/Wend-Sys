@@ -45,5 +45,7 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         [Display(Name = "Días de crédito")]
         [Range(0, int.MaxValue, ErrorMessage = "Favor de introducir un número válido")]
         public int CreditDays { get; set; } = 15;
+
+       
     }
 }

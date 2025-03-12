@@ -74,6 +74,24 @@ namespace WendlandtVentas.Web.Controllers
             return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
         }
 
+        /*public async Task<IActionResult> GetDistributorsData([FromBody] DataManagerRequest dm)
+        {
+            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification());
+            var distributors = clients
+                .Where(c => c.DiscountPercentage.HasValue) // Solo distribuidores con descuento
+                .ToList(); // Convertir a lista para usar Where
+
+            var dataSource = distributors.Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.DiscountPercentage
+            });
+
+            var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
+            return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, count = dataResult.Count }) : new JsonResult(dataResult.DataResult);
+        }*/
+
         [HttpPost]
         public async Task<IActionResult> GetDataContacts([FromBody] DataManagerRequest dm, int id)
         {

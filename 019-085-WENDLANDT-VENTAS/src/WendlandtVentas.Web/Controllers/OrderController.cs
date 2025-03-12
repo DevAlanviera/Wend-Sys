@@ -272,33 +272,47 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Add(OrderViewModel model)
         {
+            // Validar el modelo
             if (!ModelState.IsValid)
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, string.Join("; ", ModelState.Values
-                    .SelectMany(x => x.Errors)
-                    .Select(x => x.ErrorMessage))));
+            {
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
+                    string.Join("; ", ModelState.Values
+                        .SelectMany(x => x.Errors)
+                        .Select(x => x.ErrorMessage))));
+            }
+            //Manda a llamar el metodo para verificar si el cliente tiene RFC registrado
+            var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
+            if (rfcValidationResult != null)
+            {
+                return rfcValidationResult;
+            }
+
+            // Verificar si hay pedidos pendientes para el cliente
             var filters = new Dictionary<string, string>
             {
-                {
-                    nameof(model.ClientId),
-                    $"{model.ClientId}"
-                },
-                {
-                    "StatusList",
-                    $"{OrderStatus.OnRoute},{OrderStatus.InProcess}"
-                }
+                { nameof(model.ClientId), $"{model.ClientId}" },
+                { "StatusList", $"{OrderStatus.OnRoute},{OrderStatus.InProcess}" }
             };
             var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
 
             if (ordersPending.Any() && model.Type != OrderType.Return)
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
+            {
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning,
+                    "Existe un pedido previo sin entregar."));
+            }
 
+            // Guardar el pedido
             var response = await _orderService.AddOrderAsync(model, User.Identity.Name);
 
             if (response.IsSuccess)
+            {
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, response.Message));
+            }
 
+            // Loggear el error y devolver mensaje de error
             _logger.LogError($"Error: {response.Message}");
-            return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el pedido"));
+            return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
+                "No se pudo guardar el pedido"));
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
@@ -341,6 +355,26 @@ namespace WendlandtVentas.Web.Controllers
                 _logger.LogError(e, $"Error en método AddProduct: {e.Message}");
                 return PartialView("_AddProductModal");
             }
+        }
+
+        private async Task<IActionResult> ValidateClientRFCAsync(int clientId, OrderType orderType)
+        {
+            // Solo validar si el tipo de pedido es Factura (Invoice)
+            if (orderType == OrderType.Invoice)
+            {
+                // Obtener el cliente desde la base de datos
+                var client = await _repository.GetByIdAsync<Client>(clientId);
+
+                // Verificar si el cliente tiene un RFC válido
+                if (client == null || string.IsNullOrEmpty(client.RFC))
+                {
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
+                        "No se puede guardar como factura porque el cliente no tiene RFC registrado."));
+                }
+            }
+
+            // Si la validación es exitosa, devolver null
+            return null;
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
@@ -663,6 +697,13 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(AjaxFunctions.GenerateJsonError(string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
+
+            var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
+            if (rfcValidationResult != null)
+            {
+                return rfcValidationResult;
+            }
+
 
             var response = await _orderService.UpdateOrderAsync(model, User.Identity.Name);
 

@@ -445,6 +445,54 @@
         });
     </script>
     <script>
+        $(document).ready(function () {
+            // Verificar RFC al cambiar el tipo de pedido
+            $('input:radio[name=IsInvoice]').on('change', function () {
+                if ($(this).val() === "@OrderType.Invoice") { // Si se selecciona Facturación
+                    var clientId = $('#ClientId').val(); // Obtener el ID del cliente seleccionado
+
+                    if (clientId) {
+                        // Verificar si el cliente tiene RFC
+                        $.get("@Url.Action("CheckRFC", "Clients")", { clientId: clientId }, function (response) {
+                            if (!response.hasRFC) {
+                                // Mostrar mensaje de error si no tiene RFC
+                                $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
+                            } else {
+                                // Ocultar el mensaje de error si tiene RFC
+                                $('.modal-errores').hide();
+                            }
+                        });
+                    }
+                } else {
+                    // Ocultar el mensaje de error si no es Facturación
+                    $('.modal-errores').hide();
+                }
+            });
+
+            // Verificar RFC al cambiar el cliente
+            $('#ClientId').change(function () {
+                if ($('input:radio[name=IsInvoice]:checked').val() === "@OrderType.Invoice") { // Si Facturación está seleccionado
+                    var clientId = $(this).val(); // Obtener el ID del cliente seleccionado
+
+                    if (clientId) {
+                        // Verificar si el cliente tiene RFC
+                        $.get("@Url.Action("CheckRFC", "Clients")", { clientId: clientId }, function (response) {
+                            if (!response.hasRFC) {
+                                // Mostrar mensaje de error si no tiene RFC
+                                $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
+                            } else {
+                                // Ocultar el mensaje de error si tiene RFC
+                                $('.modal-errores').hide();
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+
+
+    <script>
         $('#ClientId').change(function () {
             //Comentado temporalmente para poder cambiar de cliente al editar orden
             //$('#content-promotions').html('');
