@@ -23,7 +23,7 @@ using WendlandtVentas.Web.Models.TableModels;
 
 namespace WendlandtVentas.Web.Controllers
 {
-    [Authorize(Roles = "Administrator, AdministratorCommercial, Storekeeper, Billing")]
+    [Authorize(Roles = "Administrator, AdministratorCommercial, Storekeeper, Billing, BillingAssistant")]
     public class ProductController : Controller
     {
         private readonly CacheService _cacheService;

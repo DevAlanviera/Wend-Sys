@@ -18,7 +18,7 @@ using WendlandtVentas.Web.Models.ReportViewModels;
 
 namespace WendlandtVentas.Web.Controllers
 {
-    [Authorize(Roles = "Administrator, AdministratorCommercial, Billing, Sales")]
+    [Authorize(Roles = "Administrator, AdministratorCommercial, Billing, BillingAssistant, Sales")]
     public class ReportController : Controller
     {
         private readonly ILogger<NotificationController> _logger;

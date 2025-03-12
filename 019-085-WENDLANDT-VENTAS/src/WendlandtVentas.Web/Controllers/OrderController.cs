@@ -238,7 +238,7 @@ namespace WendlandtVentas.Web.Controllers
             return new JsonResult(new { status = "Ok", body = addressesList });
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
         public async Task<IActionResult> Add()
         {
@@ -267,7 +267,7 @@ namespace WendlandtVentas.Web.Controllers
             return View("AddEdit", model);
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Add(OrderViewModel model)
@@ -315,7 +315,7 @@ namespace WendlandtVentas.Web.Controllers
                 "No se pudo guardar el pedido"));
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
         public async Task<IActionResult> AddProduct([FromQuery] CurrencyType currencyType)
         {
@@ -377,7 +377,7 @@ namespace WendlandtVentas.Web.Controllers
             return null;
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
         public async Task<decimal> GetProductPrice([FromQuery] CurrencyType currencyType, [FromQuery] int id)
         {
@@ -387,7 +387,7 @@ namespace WendlandtVentas.Web.Controllers
             return price;
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpPost]
         public async Task<IActionResult> AddProductRow(OrderAddProductViewModel model)
         {
@@ -420,7 +420,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_RowProduct", item);
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpPost]
         public async Task<IActionResult> AddPromotions(CheckPromotionModel checkPromotion)
         {
@@ -500,7 +500,7 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpPost]
         public IActionResult AddPromotionsRow(PresentationPromotionModel model)
         {
@@ -586,7 +586,7 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing, Storekeeper")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing, BillingAssistant, Storekeeper")]
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
@@ -688,7 +688,7 @@ namespace WendlandtVentas.Web.Controllers
             return View("AddEdit", model);
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing, Storekeeper")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing, BillingAssistant, Storekeeper")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(OrderViewModel model)
@@ -725,7 +725,7 @@ namespace WendlandtVentas.Web.Controllers
             return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo editar el pedido"));
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing, BillingAssistant")]
         [HttpGet]
         public async Task<IActionResult> ChangeStatus(int id)
         {
@@ -745,6 +745,11 @@ namespace WendlandtVentas.Web.Controllers
             {
                 status = status.Where(c => !c.Equals(OrderStatus.Paid) && !c.Equals(OrderStatus.PartialPayment));
             }
+            else if (User.IsInRole(Role.BillingAssistant.ToString()))
+            {
+                status = status.Where(c => !c.Equals(OrderStatus.Delivered) && !c.Equals(OrderStatus.Cancelled));
+            }
+
             var client = await _repository.GetByIdAsync<Client>(order.ClientId);
             var model = new OrderStatusViewModel
             {
@@ -773,7 +778,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_ChangeStatusModal", model);
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing, BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeStatus(OrderStatusViewModel model)
@@ -1081,7 +1086,7 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing, BillingAssistant")]
         [HttpGet("{controller}/Delete/{id}")]
         public IActionResult DeleteView(int id)
         {
@@ -1092,7 +1097,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_DeleteModal", $"{id}");
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, , BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -1139,7 +1144,7 @@ namespace WendlandtVentas.Web.Controllers
         }
 
 
-        [Authorize(Roles = "Administrator, AdministratorAssistant, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorAssistant, Billing, BillingAssistant")]
         [HttpGet]
         public async Task<IActionResult> AddCollectionComment(int id)
         {
@@ -1152,7 +1157,7 @@ namespace WendlandtVentas.Web.Controllers
         }
 
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Billing, BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddCollectionComment(OrderStatusViewModel model)

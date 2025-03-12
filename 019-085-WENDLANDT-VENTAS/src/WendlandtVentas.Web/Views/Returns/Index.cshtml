@@ -13,7 +13,7 @@
     @ViewData["Title"]
 </h4>
 @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper")
-|| User.IsInRole("Billing") || User.IsInRole("Sales") || User.IsInRole("CashIncomes") || User.IsInRole("Distributor"))
+|| User.IsInRole("Billing") || User.IsInRole("BillingAssistant") || User.IsInRole("Sales") || User.IsInRole("CashIncomes") || User.IsInRole("Distributor"))
 {
     <section class="mt-3">
         <ul class="list-inline">
@@ -146,7 +146,7 @@
             ${if(status != "Entregado")}
             <a href="#changeStatusModal" data-id="${id}" title="Cambiar estado" class="tip ml-2 btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-sync-alt"></i></a>
             ${/if}
-            @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Sales") || User.IsInRole("Billing") || User.IsInRole("Storekeeper"))
+            @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Sales") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant") || User.IsInRole("Storekeeper"))
             {
                 <text>
                     ${if(canEdit)}

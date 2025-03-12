@@ -87,7 +87,8 @@ namespace WendlandtVentas.Web.Controllers
                     roles.Contains(Role.Sales.ToString()) ||
                     roles.Contains(Role.Storekeeper.ToString()) || 
                     roles.Contains(Role.Distributor.ToString()) ||
-                    roles.Contains(Role.Billing.ToString()))
+                    roles.Contains(Role.Billing.ToString()) ||
+                    roles.Contains(Role.BillingAssistant.ToString()) )
                 {
                     _logger.LogInformation("User logged in.");
 
