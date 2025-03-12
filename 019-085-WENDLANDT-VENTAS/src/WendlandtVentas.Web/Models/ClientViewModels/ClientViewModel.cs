@@ -48,6 +48,8 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         [Range(0, int.MaxValue, ErrorMessage = "Favor de introducir un número válido")]
         public int CreditDays { get; set; } = 15;
 
-       
+        [Range(0, 100, ErrorMessage = "El porcentaje de descuento debe estar entre 0 y 100")]
+        public decimal? DiscountPercentage { get; set; }
+
     }
 }

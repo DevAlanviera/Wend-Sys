@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
@@ -7,9 +8,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Monobits.SharedKernel.Interfaces;
 using Syncfusion.EJ2.Base;
+using Syncfusion.EJ2.Linq;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Interfaces;
@@ -46,51 +49,72 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm)
+        public async Task<IActionResult> GetClientsData([FromBody] DataManagerRequest dm)
         {
-            var dataSource = (await _repository.ListExistingAsync(new ClientExtendedSpecification()))
-                .Select(c =>
-                {
-                    var seller = "";//string.IsNullOrEmpty(c.SellerId) || c.SellerId == "0" ? "Ninguno" : (await _userManager.FindByIdAsync(c.SellerId)).Name;
-                    return new ClientTableModel
-                    {
-                        Id = c.Id,
-                        Name = c.Name,
-                        Classification = c.Classification == null ? "-" : c.Classification.Humanize(),
-                        Channel = c.Channel == null ? "-" : c.Channel.Humanize(),
-                        State = c.State == null ? "-" : c.State.Name,
-                        RFC = string.IsNullOrEmpty(c.RFC) ? "-" : c.RFC,
-                        Addresses = c.Addresses.Where(d => !d.IsDeleted).Count(),
-                        City = string.IsNullOrEmpty(c.City) ? "-" : c.City,
-                        CreationDate = $"{c.CreatedAt:dd MMM yyyy}",
-                        PayType = c.PayType == null ? "-" : c.PayType.Humanize(),
-                        Seller = seller,
-                        Contacts = c.Contacts.Where(d => !d.IsDeleted).Count(),
-                        CreditDays = c.CreditDays
-                    };
-                });
+            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification());
+            var dataSource = clients.Select(c => new
+            {
+                c.Id,
+                c.Name,
+                Classification = c.Classification?.Humanize() ?? "-",
+                Channel = c.Channel?.Humanize() ?? "-",
+                State = c.State?.Name ?? "-",
+                c.RFC,
+                c.City,
+                CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                PayType = c.PayType?.Humanize() ?? "-",
+                c.CreditDays,
+                c.SellerId,
+                Addresses = c.Addresses.Count,
+                Contacts = c.Contacts.Count
+            });
 
             var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
             return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
         }
 
-        /*public async Task<IActionResult> GetDistributorsData([FromBody] DataManagerRequest dm)
+
+        public async Task<IActionResult> GetDistributorsData([FromBody] DataManagerRequest dm)
         {
-            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification());
-            var distributors = clients
-                .Where(c => c.DiscountPercentage.HasValue) // Solo distribuidores con descuento
-                .ToList(); // Convertir a lista para usar Where
-
-            var dataSource = distributors.Select(c => new
+            try
             {
-                c.Id,
-                c.Name,
-                c.DiscountPercentage
-            });
+                if (dm == null)
+                {
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+                }
 
-            var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
-            return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, count = dataResult.Count }) : new JsonResult(dataResult.DataResult);
-        }*/
+                // Obtener y filtrar distribuidores directamente en la base de datos
+                var distributorsQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Distributor));
+
+                // Aplicar paginación
+                int skip = dm.Skip; // Número de registros a saltar
+                int take = dm.Take; // Número de registros a tomar
+                distributorsQuery = distributorsQuery.Skip(skip).Take(take);
+
+                // Ejecutar la consulta paginada
+                var distributors = await distributorsQuery.ToListAsync();
+
+                // Proyectar los datos necesarios
+                var dataSource = distributors.Select(c => new
+                {
+                    c.Id,
+                    c.Name,
+                    Channel = c.Channel?.Humanize() ?? "-", // Usar Humanize para el nombre del canal
+                    DiscountPercentage = c.DiscountPercentage ?? 0
+                });
+
+                // Obtener el conteo total de distribuidores (sin paginación)
+                var totalCount = await _repository.CountAsync(new ClientExtendedSpecification(c => c.Channel == Channel.Distributor));
+
+                // Devolver el resultado con paginación
+                return dm.RequiresCounts ? new JsonResult(new { result = dataSource, count = totalCount }) : new JsonResult(dataSource);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetDistributorsData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
 
         [HttpPost]
         public async Task<IActionResult> GetDataContacts([FromBody] DataManagerRequest dm, int id)
