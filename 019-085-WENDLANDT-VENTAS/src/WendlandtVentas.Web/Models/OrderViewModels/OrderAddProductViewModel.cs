@@ -39,8 +39,9 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
 
 
         public bool IsAuthorized(ClaimsPrincipal user)
-        {
-            return user.IsInRole("Administrator") || user.IsInRole("AdministratorCommercial") || user.IsInRole("Storekeeper") || user.IsInRole("Billing") || user.IsInRole("BillingAssistant");
+        {//Se quito al AdministratorCommercial y Billing
+
+            return user.IsInRole("Administrator") || user.IsInRole("Storekeeper");
         }
     }
 }

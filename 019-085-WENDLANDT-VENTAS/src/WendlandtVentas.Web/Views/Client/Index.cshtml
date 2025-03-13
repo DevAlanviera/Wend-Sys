@@ -42,7 +42,7 @@
                 <e-grid-searchsettings fields="@(new[] { "Name", "Classification", "Channel", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
                 <e-grid-columns>
                     <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
-                    <e-grid-column field="classification" headerText="Clasificación" width="200"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
                     <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
                     <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
                     <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
@@ -143,13 +143,13 @@
     </script>
     <script type="text/x-template" id="classificationTemplate">
         ${if(classification == "Oro")}
-        <i class="fas fa-circle" style="color:gold"></i>
+            <i class="fas fa-circle" style="color:gold"></i>
         ${/if}
         ${if(classification == "Plata")}
-        <i class="fas fa-circle" style="color:silver"></i>
+            <i class="fas fa-circle" style="color:silver"></i>
         ${/if}
         ${if(classification == "Bronce")}
-        <i class="fas fa-circle" style="color:saddlebrown"></i>
+            <i class="fas fa-circle" style="color:saddlebrown"></i>
         ${/if}
         <span class="ml-1">
             ${classification}

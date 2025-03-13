@@ -92,7 +92,9 @@ namespace WendlandtVentas.Web.Controllers
                 {
                     _logger.LogInformation("User logged in.");
 
-                    return RedirectToLocal(returnUrl);
+                    return Redirect("/");
+                    /*Antes
+                    return RedirectToLocal(returnUrl);*/
                 }
                 else
                 {

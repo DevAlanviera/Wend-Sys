@@ -778,7 +778,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_ChangeStatusModal", model);
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing, BillingAssistant")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeStatus(OrderStatusViewModel model)
@@ -804,7 +804,7 @@ namespace WendlandtVentas.Web.Controllers
                 //Aqui esta obteniendo el id de la persona que tiene el nombre por medio del id registrado en la orden
                 var user = await _userManager.FindByIdAsync(order.UserId);
 
-               
+
 
                 var orderTotal = order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total;
                 if (orderTotal < model.InitialAmount)
@@ -887,9 +887,9 @@ namespace WendlandtVentas.Web.Controllers
                     await _bitacoraRepository.AddAsync(bitacora);
                     _cacheService.InvalidateOrderCache();
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. Inventario actualizado"));
-                
+
                 }
-                    
+
                 //return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. {messageDiscountInventory}"));
 
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, $"Cambio de estado guardado. Notificación no enviada. Inventario actualizado"));
