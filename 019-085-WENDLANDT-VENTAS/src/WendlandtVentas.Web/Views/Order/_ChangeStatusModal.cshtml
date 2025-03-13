@@ -68,11 +68,26 @@
                     <span asp-validation-for="DeliveryDay" class="text-danger"></span>
                 </div>
             </div>
+            <!-- Agregamos el checkbox para agregar el descuento del 5% en el caso de que sea pago parcial-->
+            <div class="form-group" id="prontoPago" hidden>
+                <div class="form-check">
+                    <input asp-for="IsProntoPago" class="form-check-input" id="prontoPagoCheckbox" />
+                    <label class="form-check-label" for="prontoPagoCheckbox">Pronto Pago (5% de descuento)</label>
+                </div>
+            </div>
+
             <div class="form-group" id="initialAmount" hidden>
                 <label asp-for="InitialAmount"></label>
-                <input asp-for="InitialAmount" class="form-control" type="number" min="0" step="0.01" />
+                <input asp-for="InitialAmount" class="form-control" type="number" min="0" step="0.01" id="InitialAmount" />
                 <span asp-validation-for="InitialAmount" class="text-danger"></span>
             </div>
+
+            <div class="form-group" id="nuevoMonto" hidden>
+                <label>Nuevo Monto (con descuento)</label>
+                <input asp-for="NuevoTotal" class="form-control" readonly id="NuevoTotal" />
+            </div>
+
+
             <div class="form-group">
                 <label asp-for="Comments"></label>
                 <textarea asp-for="Comments" maxlength="300" class="form-control" rows="3"></textarea>
@@ -92,9 +107,14 @@
 
 <script>
     $(function () {
-        if ($("#Status").find('option:selected').text() == "Pago parcial")
+        // Inicialización del modal
+        if ($("#Status").find('option:selected').text() == "Pago parcial") {
             $('#initialAmount').removeAttr('hidden');
+            $('#prontoPago').removeAttr('hidden');
+            $('#nuevoMonto').removeAttr('hidden');
+        }
 
+        // Inicializar el datepicker
         $(".date-picker").datepicker({
             autoclose: true,
             format: 'dd/mm/yyyy',
@@ -102,20 +122,50 @@
         });
     });
 
+    // Manejar el cambio de estado
     $("#Status").on('change', function () {
-        if ($(this).find('option:selected').text() == "En ruta" && $('#Type').val() == 'Invoice')
+        if ($(this).find('option:selected').text() == "En ruta" && $('#Type').val() == 'Invoice') {
             $('#invoicecode').removeAttr('hidden');
-        else
+        } else {
             $('#invoicecode').attr('hidden', '');
+        }
 
-        if ($(this).find('option:selected').text() == "Pago parcial")
+        if ($(this).find('option:selected').text() == "Pago parcial") {
             $('#initialAmount').removeAttr('hidden');
-        else
+            $('#prontoPago').removeAttr('hidden');
+            $('#nuevoMonto').removeAttr('hidden');
+        } else {
             $('#initialAmount').attr('hidden', '');
+            $('#prontoPago').attr('hidden', '');
+            $('#nuevoMonto').attr('hidden', '');
+        }
 
-        if ($(this).find('option:selected').text() == "Entregado")
+        if ($(this).find('option:selected').text() == "Entregado") {
             $('#deliveryDay').removeAttr('hidden');
-        else
+        } else {
             $('#deliveryDay').attr('hidden', '');
+        }
     });
+
+    // Listener para el campo InitialAmount
+    $('#InitialAmount').on('input', function () {
+        aplicarDescuento();
+    });
+
+    // Listener para el checkbox de "Pronto Pago"
+    $('#prontoPagoCheckbox').on('change', function () {
+        aplicarDescuento();
+    });
+
+    // Función para aplicar el descuento
+    function aplicarDescuento() {
+        var montoIngresado = parseFloat($('#InitialAmount').val()) || 0; // Obtener el monto ingresado
+        if ($('#prontoPagoCheckbox').is(':checked')) {
+            var descuento = montoIngresado * 0.05; // 5% de descuento
+            var montoConDescuento = montoIngresado - descuento;
+            $('#NuevoTotal').val(montoConDescuento.toFixed(2));
+        } else {
+            $('#NuevoTotal').val(montoIngresado.toFixed(2));
+        }
+    }
 </script>
