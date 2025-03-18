@@ -315,6 +315,18 @@ namespace WendlandtVentas.Web.Controllers
                 "No se pudo guardar el pedido"));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetClientType(int clientId)
+        {
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+            {
+                return NotFound();
+            }
+
+            return Json(new { channel = client.Channel.HasValue ? client.Channel.Value.Humanize() : "No especificado" });
+        }
+
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
         public async Task<IActionResult> AddProduct([FromQuery] CurrencyType currencyType)
@@ -778,7 +790,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_ChangeStatusModal", model);
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing, BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeStatus(OrderStatusViewModel model)

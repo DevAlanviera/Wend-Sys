@@ -25,6 +25,8 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         [Display(Name = "Estado")]
         public int? StateId { get; set; }
         public SelectList States { get; set; }
+
+        [Display(Name = "¿Factura?")]
         public bool RequiereFactura { get; set; } // Propiedad para el checkbox
 
         [RequiredIf("RequiereFactura", true, ErrorMessage = "El RFC es obligatorio cuando se requiere factura.")]

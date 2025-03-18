@@ -21,6 +21,7 @@ using WendlandtVentas.Infrastructure.Commons;
 using WendlandtVentas.Web.Libs;
 using WendlandtVentas.Web.Models.ClientViewModels;
 using WendlandtVentas.Web.Models.TableModels;
+using System.Text.Json;
 
 namespace WendlandtVentas.Web.Controllers
 {
@@ -51,7 +52,9 @@ namespace WendlandtVentas.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> GetClientsData([FromBody] DataManagerRequest dm)
         {
-            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification());
+            // Filtrar clientes excluyendo a los distribuidores
+            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification(c => c.Channel != Channel.Distributor));
+
             var dataSource = clients.Select(c => new
             {
                 c.Id,
@@ -73,7 +76,7 @@ namespace WendlandtVentas.Web.Controllers
             return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
         }
 
-
+        [HttpPost]
         public async Task<IActionResult> GetDistributorsData([FromBody] DataManagerRequest dm)
         {
             try
@@ -83,31 +86,43 @@ namespace WendlandtVentas.Web.Controllers
                     return BadRequest("DataManagerRequest no puede ser nulo.");
                 }
 
-                // Obtener y filtrar distribuidores directamente en la base de datos
+                // Consulta base a la base de datos con los distribuidores
                 var distributorsQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Distributor));
 
-                // Aplicar paginación
-                int skip = dm.Skip; // Número de registros a saltar
-                int take = dm.Take; // Número de registros a tomar
-                distributorsQuery = distributorsQuery.Skip(skip).Take(take);
-
-                // Ejecutar la consulta paginada
-                var distributors = await distributorsQuery.ToListAsync();
-
-                // Proyectar los datos necesarios
-                var dataSource = distributors.Select(c => new
+                // Aplicar búsqueda en la base de datos si hay criterios de búsqueda
+                if (dm.Search != null && dm.Search.Count > 0)
                 {
-                    c.Id,
-                    c.Name,
-                    Channel = c.Channel?.Humanize() ?? "-", // Usar Humanize para el nombre del canal
-                    DiscountPercentage = c.DiscountPercentage ?? 0
-                });
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda: {searchValue}");
 
-                // Obtener el conteo total de distribuidores (sin paginación)
-                var totalCount = await _repository.CountAsync(new ClientExtendedSpecification(c => c.Channel == Channel.Distributor));
+                    distributorsQuery = distributorsQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
 
-                // Devolver el resultado con paginación
-                return dm.RequiresCounts ? new JsonResult(new { result = dataSource, count = totalCount }) : new JsonResult(dataSource);
+                // Obtener el total de registros antes de aplicar paginación
+                var totalCount = await distributorsQuery.CountAsync();
+
+                // Aplicar paginación en la base de datos
+                var paginatedResults = await distributorsQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Channel = c.Channel.ToString(), // Evita Humanize() aquí para mejorar rendimiento
+                        DiscountPercentage = c.DiscountPercentage ?? 0,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count
+                    })
+                    .ToListAsync();
+
+                // Devolver resultado con paginación
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
             }
             catch (Exception ex)
             {
@@ -115,6 +130,7 @@ namespace WendlandtVentas.Web.Controllers
                 return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
             }
         }
+
 
         [HttpPost]
         public async Task<IActionResult> GetDataContacts([FromBody] DataManagerRequest dm, int id)
@@ -383,10 +399,19 @@ namespace WendlandtVentas.Web.Controllers
                 client.StateId = model.StateId;
                 client.PayType = model.PayType;
                 client.RFC = string.IsNullOrEmpty(model.RFC) ? model.RFC : model.RFC.ToUpper();
-                //client.Address = model.Address;
                 client.City = string.IsNullOrEmpty(model.City) ? model.City : model.City.Trim();
                 client.SellerId = model.SellerId;
                 client.CreditDays = model.CreditDays;
+
+                // Asignar el descuento solo si el canal es "Distribuidor"
+                if (model.Channel == Channel.Distributor)
+                {
+                    client.DiscountPercentage = model.DiscountPercentage;
+                }
+                else
+                {
+                    client.DiscountPercentage = null; // O cualquier valor por defecto
+                }
 
                 await _repository.AddAsync(client);
 
@@ -414,6 +439,7 @@ namespace WendlandtVentas.Web.Controllers
             var channels = Enum.GetValues(typeof(Channel)).Cast<Channel>().OrderBy(x => x).AsEnumerable();
             var payTypes = Enum.GetValues(typeof(PayType)).Cast<PayType>().OrderBy(x => x).AsEnumerable();
             var states = await _repository.ListAllExistingAsync<State>();
+
             var model = new ClientViewModel
             {
                 Id = client.Id,
@@ -427,10 +453,10 @@ namespace WendlandtVentas.Web.Controllers
                 PayType = client.PayType,
                 PayTypes = new SelectList(payTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 RFC = client.RFC,
-                //Address = client.Address,
                 City = client.City,
                 SellerId = client.SellerId,
-                CreditDays = client.CreditDays
+                CreditDays = client.CreditDays,
+                DiscountPercentage = client.DiscountPercentage // Incluir el descuento del distribuidor
             };
 
             model.Sellers = _userManager.Users.Select(s => new SelectListItem
@@ -461,16 +487,26 @@ namespace WendlandtVentas.Web.Controllers
                 if (client == null)
                     return Json(AjaxFunctions.GenerateJsonError("El cliente no existe"));
 
+                // Actualizar los campos del cliente
                 client.Edit(model.Name);
                 client.Channel = model.Channel;
                 client.Classification = model.Classification;
                 client.StateId = model.StateId;
                 client.PayType = model.PayType;
                 client.RFC = string.IsNullOrEmpty(model.RFC) ? model.RFC : model.RFC.ToUpper();
-                //client.Address = model.Address;
                 client.City = model.City;
                 client.SellerId = model.SellerId;
                 client.CreditDays = model.CreditDays;
+
+                // Actualizar el descuento del distribuidor
+                if (model.Channel == Channel.Distributor)
+                {
+                    client.DiscountPercentage = model.DiscountPercentage;
+                }
+                else
+                {
+                    client.DiscountPercentage = null; // Si no es distribuidor, el descuento es nulo
+                }
 
                 await _repository.UpdateAsync(client);
 

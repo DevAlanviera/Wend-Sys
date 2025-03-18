@@ -83,6 +83,12 @@
                             <span asp-validation-for="ClientId" class="text-danger"></span>
                         </div>
                     </div>
+
+                    <!-- Campo para mostrar el tipo de cliente seleccionado -->
+                    <div class="form-group">
+                        <label>Tipo de Cliente:</label>
+                        <span id="client-type" class="font-weight-bold"></span>
+                    </div>
                 </div>
                 <section id="noreturn" class="@(Model.IsInvoice == OrderType.Return ? "d-none" : "")">
                     <div class="row">
@@ -841,5 +847,28 @@
             $('.discount-order').text(formatter.format(discount.toFixed(2)) + ' ' + $('#CurrencyType').val());
             $('.total-order').text(formatter.format(total.toFixed(2)) + ' ' + $('#CurrencyType').val());
         }
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('#ClientId').change(function () {
+                var clientId = $(this).val();
+
+                if (clientId) {
+                    $.ajax({
+                        url: '/Order/GetClientType', // Ruta del endpoint en el controlador
+                        type: 'GET',
+                        data: { clientId: clientId },
+                        success: function (response) {
+                            $('#client-type').text(response.channel); // Mostrar el tipo de cliente
+                        },
+                        error: function () {
+                            $('#client-type').text('Error al obtener el tipo de cliente');
+                        }
+                    });
+                } else {
+                    $('#client-type').text('');
+                }
+            });
+        });
     </script>
 }
