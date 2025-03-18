@@ -377,6 +377,19 @@ namespace WendlandtVentas.Web.Controllers
             return null;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> CheckClientRFC(int clientId)
+        {
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+            {
+                return Json(new { hasRFC = false, message = "Cliente no encontrado." });
+            }
+
+            bool hasRFC = !string.IsNullOrEmpty(client.RFC);
+            return Json(new { hasRFC, message = hasRFC ? "" : "Este cliente no tiene RFC registrado." });
+        }
+
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
         public async Task<decimal> GetProductPrice([FromQuery] CurrencyType currencyType, [FromQuery] int id)

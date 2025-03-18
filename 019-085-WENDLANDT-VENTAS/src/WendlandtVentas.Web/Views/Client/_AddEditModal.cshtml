@@ -25,8 +25,14 @@
             </div>
             <div class="form-group">
                 <label asp-for="Channel"></label>
-                @Html.DropDownListFor(m => m.Channel, Model.Channels, "Seleccionar canal", new { @class = "form-control" })
+                @Html.DropDownListFor(m => m.Channel, Html.GetEnumSelectList<WendlandtVentas.Core.Entities.Enums.Channel>(), "Seleccionar canal", new { @class = "form-control", id = "Channel" })
                 <span asp-validation-for="Channel" class="text-danger"></span>
+            </div>
+            <!-- Campo descuentoDistribuidor (oculto inicialmente) -->
+            <div class="form-group" id="descuentoDistribuidorGroup" hidden>
+                <label for="DiscountPercentage">Descuento Distribuidor (%)</label> <b class="text-danger">*</b>
+                <input asp-for="DiscountPercentage" id="DiscountPercentage" class="form-control" type="number" step="0.01" min="0" max="100" required />
+                <span asp-validation-for="DiscountPercentage" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="StateId"></label>
@@ -39,6 +45,11 @@
                 <span asp-validation-for="PayType" class="text-danger"></span>
             </div>
             <div class="form-group">
+                <label>
+                    <input asp-for="RequiereFactura" id="RequiereFactura" /> ¿Factura?
+                </label>
+            </div>
+            <div class="form-group">
                 <label asp-for="RFC"></label>
                 <input asp-for="RFC" class="form-control" maxlength="13" />
                 <span asp-validation-for="RFC" class="text-danger"></span>
@@ -48,15 +59,9 @@
                 @Html.DropDownListFor(m => m.SellerId, Model.Sellers, new { @class = "form-control" })
                 <span asp-validation-for="SellerId" class="text-danger"></span>
             </div>
-            @*<div class="form-group">
-            <label asp-for="Address"></label>
-            <input asp-for="Address" class="form-control" />
-            <span asp-validation-for="Address" class="text-danger"></span>
-            </div>*@
             <div class="form-group">
                 <label asp-for="City"></label>
                 <input asp-for="City" class="form-control" />
-                <span asp-validation-for="City" class="text-danger"></span>
                 <span asp-validation-for="City" class="text-danger"></span>
             </div>
             @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorAssistant") || User.IsInRole("Billing"))
@@ -75,3 +80,57 @@
         </div>
     </form>
 </div>
+
+<script>
+    $(document).ready(function () {
+
+        // Función para mostrar u ocultar el campo RFC basado en el estado del checkbox
+        function toggleRFCField() {
+            // Si el checkbox "Factura" está marcado o el RFC tiene un valor, mostrar el campo RFC
+            if ($('#RequiereFactura').is(':checked') || $('#RFC').val().trim() !== "") {
+                $('#RFC').closest('.form-group').show(); // Mostrar el campo RFC
+            } else {
+                $('#RFC').closest('.form-group').hide(); // Ocultar el campo RFC
+            }
+        }
+
+        // Escuchar cambios en el checkbox de "RequiereFactura"
+        $('#RequiereFactura').change(function () {
+            toggleRFCField();  // Ejecutar la función cada vez que se cambia el checkbox
+        });
+
+        // Ejecutar la función al cargar la página para manejar el caso de RFC ya existente o el checkbox marcado
+        toggleRFCField();
+
+        // Función para verificar si el RFC no está vacío y marcar el checkbox
+        function checkAndMarkFactura() {
+            var rfc = $('#RFC').val(); // Obtener el valor del RFC
+            if (rfc && rfc.trim() !== "") {
+                $('#RequiereFactura').prop('checked', true); // Marcar el checkbox de factura si RFC tiene valor
+            }
+        }
+
+        // Ejecutar la función para verificar el RFC y marcar el checkbox si es necesario
+        checkAndMarkFactura();
+
+        // Función para validar el descuento
+        function validarDescuento() {
+            var descuento = parseFloat($('#DiscountPercentage').val());
+            if (isNaN(descuento)) {
+                return false; // No es un número válido
+            }
+            return descuento >= 0 && descuento <= 100; // Debe estar entre 0 y 100
+        }
+
+        // Evento para validar antes de enviar el formulario
+        $('form').on('submit', function (e) {
+            if ($('#Channel').val() === "@((int)WendlandtVentas.Core.Entities.Enums.Channel.Distributor)") {
+                if (!validarDescuento()) {
+                    e.preventDefault(); // Detener el envío del formulario
+                    alert('El descuento debe ser un porcentaje válido entre 0 y 100.');
+                }
+            }
+        });
+    });
+</script>
+

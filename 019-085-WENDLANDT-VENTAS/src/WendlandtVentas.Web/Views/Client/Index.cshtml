@@ -72,6 +72,8 @@
                     <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
                     <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
                     <e-grid-column field="discountPercentage" headerText="Porcentaje de descuento" width="200" textAlign="Right"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
                     <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
                 </e-grid-columns>
             </ejs-grid>
@@ -95,7 +97,7 @@
         box-shadow: inset 0 0 1px #e0e0e0, inset 0 0 14px rgba(0, 0, 0, 0.2);
     }
 </style>
-@section Modals{
+@section Modals {
     <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Add")"></div>
     <div class="modal" id="editModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Edit")"></div>
     <div class="modal" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Delete")"></div>
@@ -112,7 +114,7 @@
     <div class="modal" id="deleteAddress" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("DeleteAddressView")"></div>
 }
 
-@section Scripts{
+@section Scripts {
     <script id="actionButtons" type="text/x-template">
         <div>
             <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
@@ -160,6 +162,5 @@
 
 
 }
-
 
 

@@ -25,6 +25,8 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         [Display(Name = "Estado")]
         public int? StateId { get; set; }
         public SelectList States { get; set; }
+
+        [Display(Name = "¿Factura?")]
         public bool RequiereFactura { get; set; } // Propiedad para el checkbox
 
         [RequiredIf("RequiereFactura", true, ErrorMessage = "El RFC es obligatorio cuando se requiere factura.")]
@@ -48,7 +50,9 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         [Range(0, int.MaxValue, ErrorMessage = "Favor de introducir un número válido")]
         public int CreditDays { get; set; } = 15;
 
-        [Range(0, 100, ErrorMessage = "El porcentaje de descuento debe estar entre 0 y 100")]
+        [RequiredIf(nameof(Channel), "Distributor", ErrorMessage = "El descuento distribuidor es obligatorio.")]
+        [Range(0, 100, ErrorMessage = "El descuento debe ser un porcentaje entre 0 y 100.")]
+        [RegularExpression(@"^\d+(\.\d{1,2})?$", ErrorMessage = "El descuento debe ser un número decimal válido (ej. 10.5).")]
         public decimal? DiscountPercentage { get; set; }
 
     }
