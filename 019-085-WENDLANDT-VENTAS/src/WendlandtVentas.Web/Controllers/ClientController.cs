@@ -112,10 +112,19 @@ namespace WendlandtVentas.Web.Controllers
                     {
                         c.Id,
                         c.Name,
-                        Channel = c.Channel.ToString(), // Evita Humanize() aquí para mejorar rendimiento
-                        DiscountPercentage = c.DiscountPercentage ?? 0,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.ToString().Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.ToString().Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+
+                        c.CreditDays,
+                        c.SellerId,
                         Addresses = c.Addresses.Count,
-                        Contacts = c.Contacts.Count
+                        Contacts = c.Contacts.Count,
+                        DiscountPercentage = c.DiscountPercentage ?? 0
                     })
                     .ToListAsync();
 
