@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Interfaces;
+using WendlandtVentas.Web.Models.ProductViewModels;
 
 
 //WendlandtVentas.Infraestructure.Data
@@ -48,6 +49,9 @@ namespace WendlandtVentas.Infrastructure.Data
         //Referencia de la clase bitacora
         public DbSet<Bitacora> Bitacora { get; set; }
 
+        // DbSet para la tabla PreciosEspeciales
+        public DbSet<PrecioEspecial> PreciosEspeciales { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
 
@@ -67,6 +71,30 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Entity<Promotion>(ConfigureExecution);
             builder.Entity<State>(ConfigureExecution);
             builder.Entity<Bitacora>(ConfigureExecution);
+            builder.Entity<PrecioEspecial>(ConfigureExecution);
+        }
+
+        private void ConfigureExecution(EntityTypeBuilder<PrecioEspecial> builder)
+        {
+            // Definir la clave primaria compuesta
+            builder.HasKey(pe => new { pe.ClienteId, pe.ProductoId });
+
+            // Relación con Cliente
+            builder.HasOne(pe => pe.Cliente)
+                .WithMany(c => c.PreciosEspeciales) // Si Cliente tiene una colección de PreciosEspeciales
+                .HasForeignKey(pe => pe.ClienteId)
+                .OnDelete(DeleteBehavior.Cascade); // Opcional: Define el comportamiento al eliminar
+
+            // Relación con Producto
+            builder.HasOne(pe => pe.Producto)
+                .WithMany(p => p.PreciosEspeciales) // Si Producto tiene una colección de PreciosEspeciales
+                .HasForeignKey(pe => pe.ProductoId)
+                .OnDelete(DeleteBehavior.Cascade); // Opcional: Define el comportamiento al eliminar
+
+            // Configuración del campo Precio
+            builder.Property(pe => pe.Precio)
+                .HasColumnType("decimal(18, 2)") // Tipo de dato en la base de datos
+                .IsRequired(); // Campo obligatorio
         }
 
         private void ConfigureExecution(EntityTypeBuilder<Client> builder)
