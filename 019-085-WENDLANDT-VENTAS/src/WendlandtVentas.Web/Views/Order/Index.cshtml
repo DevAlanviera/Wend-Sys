@@ -169,7 +169,7 @@
                     <a href="/Order/Edit/${id}" title="Editar" class="tip btn btn-sm btn-light ml-2"><i class="fa fa-fw fa-edit"></i></a>
                     ${/if}
                 </text>
-                @if (!User.IsInRole("Storekeeper"))
+                @if (User.IsInRole("Admin"))
                 {
                     <text>
                         ${if(canDelete)}
