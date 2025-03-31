@@ -112,8 +112,8 @@ namespace WendlandtVentas.Web.Controllers
                     {
                         c.Id,
                         c.Name,
-                        Classification = c.Classification.HasValue ? c.Classification.Value.ToString().Humanize() : "-",
-                        Channel = c.Channel.HasValue ? c.Channel.Value.ToString().Humanize() : "-",
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
                         State = c.State != null ? c.State.Name : "-",
                         c.RFC,
                         c.City,

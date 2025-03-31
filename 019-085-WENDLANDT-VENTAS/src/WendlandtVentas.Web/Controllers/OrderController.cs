@@ -1109,7 +1109,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_DeleteModal", $"{id}");
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, , BillingAssistant")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
