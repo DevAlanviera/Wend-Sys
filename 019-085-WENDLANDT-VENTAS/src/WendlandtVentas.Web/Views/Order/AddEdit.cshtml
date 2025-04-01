@@ -855,7 +855,7 @@
 
                 if (clientId) {
                     $.ajax({
-                        url: '/Order/GetClientType', // Ruta del endpoint en el controlador
+                        url: '/Order/GetClientTypeInternal', // Ruta del endpoint en el controlador
                         type: 'GET',
                         data: { clientId: clientId },
                         success: function (response) {

@@ -280,6 +280,17 @@ namespace WendlandtVentas.Web.Controllers
                         .SelectMany(x => x.Errors)
                         .Select(x => x.ErrorMessage))));
             }
+
+
+            // Verificar tipo de cliente
+            var clientType = await GetClientTypeInternal(model.ClientId);
+            if (clientType == "Distribuidor")
+            {
+                // Guardarlo en una variable y hacer algo con ello si es necesario
+                // Ejemplo: model.SpecialDiscount = true;
+            }
+
+
             //Manda a llamar el metodo para verificar si el cliente tiene RFC registrado
             var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
             if (rfcValidationResult != null)
@@ -316,15 +327,10 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetClientType(int clientId)
+        private async Task<string> GetClientTypeInternal(int clientId)
         {
             var client = await _repository.GetByIdAsync<Client>(clientId);
-            if (client == null)
-            {
-                return NotFound();
-            }
-
-            return Json(new { channel = client.Channel.HasValue ? client.Channel.Value.Humanize() : "No especificado" });
+            return client?.Channel.HasValue ?? false ? client.Channel.Value.Humanize() : "No especificado";
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
