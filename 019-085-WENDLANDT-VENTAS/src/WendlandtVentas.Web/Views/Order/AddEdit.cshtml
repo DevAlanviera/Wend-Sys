@@ -453,7 +453,7 @@
 
                     if (clientId) {
                         // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckRFC", "Clients")", { clientId: clientId }, function (response) {
+                        $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
                             if (!response.hasRFC) {
                                 // Mostrar mensaje de error si no tiene RFC
                                 $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
@@ -476,7 +476,7 @@
 
                     if (clientId) {
                         // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckRFC", "Clients")", { clientId: clientId }, function (response) {
+                        $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
                             if (!response.hasRFC) {
                                 // Mostrar mensaje de error si no tiene RFC
                                 $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
