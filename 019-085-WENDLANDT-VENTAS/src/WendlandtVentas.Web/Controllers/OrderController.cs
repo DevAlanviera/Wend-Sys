@@ -398,12 +398,25 @@ namespace WendlandtVentas.Web.Controllers
                 if (client == null || string.IsNullOrEmpty(client.RFC))
                 {
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
-                        "No se puede guardar como factura porque el cliente no tiene RFC registradooooooooo."));
+                        "No se puede guardar como factura porque el cliente no tiene RFC registrado."));
                 }
             }
 
             // Si la validación es exitosa, devolver null
             return null;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CheckClientRFC(int clientId)
+        {
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+            {
+                return Json(new { hasRFC = false, message = "Cliente no encontrado." });
+            }
+
+            bool hasRFC = !string.IsNullOrEmpty(client.RFC);
+            return Json(new { hasRFC, message = hasRFC ? "" : "Este cliente no tiene RFC registrado." });
         }
 
 

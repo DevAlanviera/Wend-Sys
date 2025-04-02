@@ -253,6 +253,9 @@
                                     <h5 class="discount-order">$0.00 MXN</h5>
                                 </div>
                             </div>
+                            <div class="col distributor-discount" style="display: none;">
+                                <h5>Descuento Distribuidor: <span class="discount-percentage"></span>%</h5>
+                            </div>
                             <div class="row">
                                 <div class="col">
                                     <h class="mt-3">Total</h>
@@ -287,6 +290,9 @@
                             </div>
                             <div class="row justify-content-center">
                                 <h5 class="discount-order">$0.00</h5>
+                            </div>
+                            <div class="col distributor-discount" style="display: none;">
+                                <h5>Descuento Distribuidor: <span class="discount-percentage"></span>%</h5>
                             </div>
                             <div class="row justify-content-center">
                                 <h4>Total</h4>
@@ -453,7 +459,7 @@
 
                     if (clientId) {
                         // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckRFC", "Client")", { clientId: clientId }, function (response) {
+                        $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
                             if (!response.hasRFC) {
                                 // Mostrar mensaje de error si no tiene RFC
                                 $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
@@ -476,7 +482,7 @@
 
                     if (clientId) {
                         // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckRFC", "Client")", { clientId: clientId }, function (response) {
+                        $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
                             if (!response.hasRFC) {
                                 // Mostrar mensaje de error si no tiene RFC
                                 $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
@@ -816,31 +822,56 @@
         });
 
         //Calcular totales de la orden
-        function CalculateTotals() {
-            var formatter = new Intl.NumberFormat('es-MX', {
-                style: 'currency',
-                currency: 'MXN'
+        $(document).ready(function () {
+            // Calcular totales al cargar la página
+            CalculateTotals();
+
+            // Escuchar cambios en la cantidad de productos o descuentos
+            $(document).on('change keyup', '.product-quantity, .discount-presentation', function () {
+                CalculateTotals();
             });
-            var subtotal = 0;
-            var discount = 0;
-            var total = 0;
 
-            $('.row-product').each(function () {
+            // Escuchar eliminación de productos
+            $(document).on('click', '.remove-product', function () {
+                $(this).closest('.row-product').remove(); // Eliminar producto visualmente
+                CalculateTotals(); // Recalcular totales
+            });
 
-                var isPresent = $(this).find('input[name ="ProductIsPresent"]').val();
+            // Escuchar cambios en el cliente para aplicar descuento de distribuidor
+            $('#ClientId').change(function () {
+                var clientId = $(this).val();
 
-                if (isPresent === "false") {
-                    subtotal = subtotal + parseFloat($(this).data('subtotal'));
+                if (clientId) {
+                    $.ajax({
+                        url: '@Url.Action("GetClientDetails", "Client")',
+                        type: 'GET',
+                        data: { clientId: clientId },
+                        success: function (data) {
+                            console.log("Cliente:", data);
+
+                            if (data.channel === "Distributor") {
+                                $('#discountPercentage').text(data.discountPercentage);
+                                $('#distributorDiscount').show();
+                            } else {
+                                $('#distributorDiscount').hide();
+                            }
+
+                            // Recalcular totales con el descuento de distribuidor
+                            CalculateTotals();
+                        },
+                        error: function () {
+                            console.log("Error al obtener datos del cliente.");
+                        }
+                    });
+                } else {
+                    $('#distributorDiscount').hide();
+                    CalculateTotals(); // Asegurar recálculo si se borra el cliente
                 }
             });
-            $('.discount-presentation').each(function () {
-                discount = discount + parseFloat($(this).val());
-            });
-            total = subtotal - discount;
-            $('.subtotal-order').text(formatter.format(subtotal.toFixed(2)) + ' ' + $('#CurrencyType').val());
-            $('.discount-order').text(formatter.format(discount.toFixed(2)) + ' ' + $('#CurrencyType').val());
-            $('.total-order').text(formatter.format(total.toFixed(2)) + ' ' + $('#CurrencyType').val());
-        }
+        });
+
+
+
     </script>
     <!-- script para verificar si el cliente tiene RFC -->
     <script>
@@ -851,7 +882,7 @@
 
                     if (clientId) {
                         // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckClientRFC", "Controllers/Order")", { clientId: clientId }, function (response) {
+                        $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
                             if (!response.hasRFC) {
                                 // Mostrar mensaje de error si no tiene RFC
                                 $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
@@ -864,6 +895,37 @@
                 }
             });
         });
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('#ClientId').change(function () {
+                var clientId = $(this).val();
+
+                if (clientId) {
+                    $.ajax({
+                        url: '@Url.Action("GetClientDetails", "Client")',
+                        type: 'GET',
+                        data: { clientId: clientId },
+                        success: function (data) {
+                            console.log("Cliente:", data);
+
+                            if (data.channel === "Distributor") {
+                                $('.discount-percentage').text(data.discountPercentage);
+                                $('.distributor-discount').show();
+                            } else {
+                                $('.distributor-discount').hide();
+                            }
+                        },
+                        error: function () {
+                            console.log("Error al obtener datos del cliente.");
+                        }
+                    });
+                } else {
+                    $('.distributor-discount').hide();
+                }
+            });
+        });
+
     </script>
 
 }

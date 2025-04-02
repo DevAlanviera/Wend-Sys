@@ -179,7 +179,7 @@ namespace WendlandtVentas.Web.Controllers
 
             var clientDetails = new
             {
-                Channel = client.Channel.Humanize(), // Devuelve "Distribuidor", "Mayorista", etc.
+                Channel = client.Channel.ToString(),  // Convertir enum a string
                 DiscountPercentage = client.DiscountPercentage
             };
 
@@ -508,19 +508,6 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_AddEditModal", model);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> CheckRFC(int clientId)
-        {
-            // Lógica para obtener el RFC del cliente
-            var client = await _repository.GetByIdAsync<Client>(clientId);
-
-            if (client == null)
-            {
-                return NotFound(); // Retorna 404 si no se encuentra el cliente
-            }
-
-            return Json(new { rfc = client.RFC });
-        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
