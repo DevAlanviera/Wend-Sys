@@ -83,12 +83,6 @@
                             <span asp-validation-for="ClientId" class="text-danger"></span>
                         </div>
                     </div>
-
-                    <!-- Campo para mostrar el tipo de cliente seleccionado -->
-                    <div class="form-group">
-                        <label>Tipo de Cliente:</label>
-                        <span id="client-type" class="font-weight-bold"></span>
-                    </div>
                 </div>
                 <section id="noreturn" class="@(Model.IsInvoice == OrderType.Return ? "d-none" : "")">
                     <div class="row">
@@ -323,12 +317,12 @@
     </div>
 </form>
 
-@section Modals{
+@section Modals {
     <div class="modal" id="addProductModal" tabindex="false" role="dialog" aria-labelledby="addProductModal-label"></div>
     <div class="modal modal-focus-first" id="addPromotionsModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddPromotions")"></div>
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
 }
-@section Scripts{
+@section Scripts {
     <script>
         $(document).ready(function () {
             $("#addProduct").on("click", function () {
@@ -421,12 +415,12 @@
                     break;
                 case 'warning':
                     $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                                             <strong>Acción inválida: </strong>
-                                                               ${json.body}
-                                                               <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                                  <span aria-hidden="true">&times;</span>
-                                                               </button>
-                                                           </div>`);
+                                                                     <strong>Acción inválida: </strong>
+                                                                       ${json.body}
+                                                                       <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                          <span aria-hidden="true">&times;</span>
+                                                                       </button>
+                                                                   </div>`);
                     $form.find(".alert").alert()
                     break;
             }
@@ -459,7 +453,7 @@
 
                     if (clientId) {
                         // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckRFC", "Clients")", { clientId: clientId }, function (response) {
+                        $.get("@Url.Action("CheckRFC", "Client")", { clientId: clientId }, function (response) {
                             if (!response.hasRFC) {
                                 // Mostrar mensaje de error si no tiene RFC
                                 $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
@@ -482,7 +476,7 @@
 
                     if (clientId) {
                         // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckRFC", "Clients")", { clientId: clientId }, function (response) {
+                        $.get("@Url.Action("CheckRFC", "Client")", { clientId: clientId }, function (response) {
                             if (!response.hasRFC) {
                                 // Mostrar mensaje de error si no tiene RFC
                                 $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
@@ -546,12 +540,12 @@
                     case 'warning':
                         $form.find('button[type="submit"]').prop("disabled", true);
                         $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                                         <strong>Acción inválida: </strong>
-                                                           ${json.body}
-                                                           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                              <span aria-hidden="true">&times;</span>
-                                                           </button>
-                                                       </div>`);
+                                                                 <strong>Acción inválida: </strong>
+                                                                   ${json.body}
+                                                                   <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                      <span aria-hidden="true">&times;</span>
+                                                                   </button>
+                                                               </div>`);
                         $form.find(".alert").alert()
                         break;
                 }
@@ -848,27 +842,28 @@
             $('.total-order').text(formatter.format(total.toFixed(2)) + ' ' + $('#CurrencyType').val());
         }
     </script>
+    <!-- script para verificar si el cliente tiene RFC -->
     <script>
         $(document).ready(function () {
             $('#ClientId').change(function () {
-                var clientId = $(this).val();
+                if ($('input:radio[name=IsInvoice]:checked').val() === "@OrderType.Invoice") { // Si Facturación está seleccionado
+                    var clientId = $(this).val(); // Obtener el ID del cliente seleccionado
 
-                if (clientId) {
-                    $.ajax({
-                        url: '/Order/GetClientTypeInternal', // Ruta del endpoint en el controlador
-                        type: 'GET',
-                        data: { clientId: clientId },
-                        success: function (response) {
-                            $('#client-type').text(response.channel); // Mostrar el tipo de cliente
-                        },
-                        error: function () {
-                            $('#client-type').text('Error al obtener el tipo de cliente');
-                        }
-                    });
-                } else {
-                    $('#client-type').text('');
+                    if (clientId) {
+                        // Verificar si el cliente tiene RFC
+                        $.get("@Url.Action("CheckClientRFC", "Controllers/Order")", { clientId: clientId }, function (response) {
+                            if (!response.hasRFC) {
+                                // Mostrar mensaje de error si no tiene RFC
+                                $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
+                            } else {
+                                // Ocultar el mensaje de error si tiene RFC
+                                $('.modal-errores').hide();
+                            }
+                        });
+                    }
                 }
             });
         });
     </script>
+
 }

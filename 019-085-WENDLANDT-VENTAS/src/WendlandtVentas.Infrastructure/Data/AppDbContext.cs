@@ -79,15 +79,15 @@ namespace WendlandtVentas.Infrastructure.Data
             // Definir la clave primaria compuesta
             builder.HasKey(pe => new { pe.ClienteId, pe.ProductoId });
 
-            // Relación con Cliente
+            // Relación con Cliente (SIN WithMany)
             builder.HasOne(pe => pe.Cliente)
-                .WithMany(c => c.PreciosEspeciales) // Si Cliente tiene una colección de PreciosEspeciales
+                .WithMany() // Eliminamos la referencia a la colección eliminada
                 .HasForeignKey(pe => pe.ClienteId)
                 .OnDelete(DeleteBehavior.Cascade); // Opcional: Define el comportamiento al eliminar
 
             // Relación con Producto
             builder.HasOne(pe => pe.Producto)
-                .WithMany(p => p.PreciosEspeciales) // Si Producto tiene una colección de PreciosEspeciales
+                .WithMany(p => p.PreciosEspeciales)
                 .HasForeignKey(pe => pe.ProductoId)
                 .OnDelete(DeleteBehavior.Cascade); // Opcional: Define el comportamiento al eliminar
 
@@ -96,6 +96,7 @@ namespace WendlandtVentas.Infrastructure.Data
                 .HasColumnType("decimal(18, 2)") // Tipo de dato en la base de datos
                 .IsRequired(); // Campo obligatorio
         }
+
 
         private void ConfigureExecution(EntityTypeBuilder<Client> builder)
         {

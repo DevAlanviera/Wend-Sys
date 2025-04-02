@@ -31,8 +31,7 @@ namespace WendlandtVentas.Core.Entities
        [Range(0, 100, ErrorMessage = "El porcentaje de descuento debe estar entre 0 y 100")]
         public decimal? DiscountPercentage { get; set; }
 
-        // Propiedad de navegación para PrecioEspecial
-        public virtual ICollection<PrecioEspecial> PreciosEspeciales { get; set; }
+    
 
         public Client()
         {

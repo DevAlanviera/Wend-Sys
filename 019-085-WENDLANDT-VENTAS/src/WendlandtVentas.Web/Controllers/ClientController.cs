@@ -163,6 +163,31 @@ namespace WendlandtVentas.Web.Controllers
             return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetClientDetails(int clientId)
+        {
+            if (clientId == 0)
+            {
+                return BadRequest("Cliente no válido.");
+            }
+
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+            {
+                return NotFound("Cliente no encontrado.");
+            }
+
+            var clientDetails = new
+            {
+                Channel = client.Channel.Humanize(), // Devuelve "Distribuidor", "Mayorista", etc.
+                DiscountPercentage = client.DiscountPercentage
+            };
+
+            return Json(clientDetails);
+        }
+
+
+
         [HttpPost]
         public async Task<IActionResult> GetDataAddresses([FromBody] DataManagerRequest dm, int id)
         {
@@ -481,6 +506,20 @@ namespace WendlandtVentas.Web.Controllers
             });
 
             return PartialView("_AddEditModal", model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CheckRFC(int clientId)
+        {
+            // Lógica para obtener el RFC del cliente
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+
+            if (client == null)
+            {
+                return NotFound(); // Retorna 404 si no se encuentra el cliente
+            }
+
+            return Json(new { rfc = client.RFC });
         }
 
         [HttpPost]

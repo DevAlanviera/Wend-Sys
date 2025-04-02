@@ -244,18 +244,28 @@ namespace WendlandtVentas.Web.Controllers
         {
             ViewData["Action"] = nameof(Add);
             ViewData["Title"] = "Agregar pedido";
-            var clients = (await _repository.ListAllExistingAsync<Client>()).OrderBy(c => c.Name);
+
+            var clients = (await _repository.ListAllExistingAsync<Client>())
+                .OrderBy(c => c.Name)
+                .Select(x => new
+                {
+                    Value = x.Id,
+                    Text = $"{x.Name}" + (x.Classification.HasValue ? $" - {x.Classification.Humanize()}" : string.Empty),
+                    Channel = x.Channel,  // Incluimos Channel (que ya tiene ClientType)
+                    DiscountPercentage = x.DiscountPercentage
+                });
+
             var payTypes = Enum.GetValues(typeof(PayType)).Cast<PayType>().AsEnumerable();
             var currencyTypes = Enum.GetValues(typeof(CurrencyType)).Cast<CurrencyType>().AsEnumerable();
             var addresses = new List<Address>() { };
+
             // return remision number options
             var remissionsForReturn = await _orderService.GetInvoiceRemissionNumbersAsync();
-            
 
             var model = new OrderViewModel
             {
                 IsInvoice = OrderType.Invoice,
-                Clients = new SelectList(clients.Select(x => new { Value = x.Id, Text = $"{x.Name}" + (x.Classification.HasValue ? $" - {x.Classification.Humanize()}" : string.Empty) }), "Value", "Text"),
+                Clients = new SelectList(clients, "Value", "Text"), // Usamos solo Value y Text
                 Addresses = new SelectList(addresses.Select(x => new { Value = x.Id, Text = x.AddressLocation }), "Value", "Text"),
                 PayType = PayType.Cash,
                 PayTypes = new SelectList(payTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
@@ -266,6 +276,7 @@ namespace WendlandtVentas.Web.Controllers
 
             return View("AddEdit", model);
         }
+
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpPost]
@@ -387,13 +398,15 @@ namespace WendlandtVentas.Web.Controllers
                 if (client == null || string.IsNullOrEmpty(client.RFC))
                 {
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
-                        "No se puede guardar como factura porque el cliente no tiene RFC registrado."));
+                        "No se puede guardar como factura porque el cliente no tiene RFC registradooooooooo."));
                 }
             }
 
             // Si la validación es exitosa, devolver null
             return null;
         }
+
+
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
