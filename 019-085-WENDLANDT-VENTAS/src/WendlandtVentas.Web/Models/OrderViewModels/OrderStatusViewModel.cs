@@ -34,5 +34,12 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
         public double NuevoTotal { get; set; } // Nuevo total con descuento
         public double TotalOriginal { get; set; } // Total original de la orden
 
+        [Display(Name = "Monto de la orden")]
+        [DataType(DataType.Currency)]
+        public decimal? RealAmount { get; set; }
+
+        [Display(Name = "¿Precion especial?")]
+        public bool PrecioEspecial { get; set; } // Propiedad para el checkbox
+
     }
 }

@@ -293,14 +293,6 @@ namespace WendlandtVentas.Web.Controllers
             }
 
 
-            // Verificar tipo de cliente
-            var clientType = await GetClientTypeInternal(model.ClientId);
-            if (clientType == "Distribuidor")
-            {
-                // Guardarlo en una variable y hacer algo con ello si es necesario
-                // Ejemplo: model.SpecialDiscount = true;
-            }
-
 
             //Manda a llamar el metodo para verificar si el cliente tiene RFC registrado
             var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
@@ -335,13 +327,6 @@ namespace WendlandtVentas.Web.Controllers
             _logger.LogError($"Error: {response.Message}");
             return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
                 "No se pudo guardar el pedido"));
-        }
-
-        [HttpGet]
-        private async Task<string> GetClientTypeInternal(int clientId)
-        {
-            var client = await _repository.GetByIdAsync<Client>(clientId);
-            return client?.Channel.HasValue ?? false ? client.Channel.Value.Humanize() : "No especificado";
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]

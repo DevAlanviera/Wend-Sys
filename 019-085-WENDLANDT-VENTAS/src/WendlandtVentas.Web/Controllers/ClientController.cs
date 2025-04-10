@@ -124,7 +124,6 @@ namespace WendlandtVentas.Web.Controllers
                         c.SellerId,
                         Addresses = c.Addresses.Count,
                         Contacts = c.Contacts.Count,
-                        DiscountPercentage = c.DiscountPercentage ?? 0
                     })
                     .ToListAsync();
 
@@ -139,6 +138,131 @@ namespace WendlandtVentas.Web.Controllers
                 return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
             }
         }
+
+        [HttpPost]
+        public async Task<IActionResult> GetAutoServicesData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                {
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+                }
+
+                // Consulta base a la base de datos con los distribuidores
+                var autoServicesQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Autoservicio));
+
+                // Aplicar búsqueda en la base de datos si hay criterios de búsqueda
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda: {searchValue}");
+
+                    autoServicesQuery = autoServicesQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                // Obtener el total de registros antes de aplicar paginación
+                var totalCount = await autoServicesQuery.CountAsync();
+
+                // Aplicar paginación en la base de datos
+                var paginatedResults = await autoServicesQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                    })
+                    .ToListAsync();
+
+                // Devolver resultado con paginación
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetAutoServicesData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetTastingRoomData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                {
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+                }
+
+                // Consulta base a la base de datos con los distribuidores
+                var tastingRoomQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.TastingRoom));
+
+                // Aplicar búsqueda en la base de datos si hay criterios de búsqueda
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda: {searchValue}");
+
+                    tastingRoomQuery = tastingRoomQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                // Obtener el total de registros antes de aplicar paginación
+                var totalCount = await tastingRoomQuery.CountAsync();
+
+                // Aplicar paginación en la base de datos
+                var paginatedResults = await tastingRoomQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                    })
+                    .ToListAsync();
+
+                // Devolver resultado con paginación
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetAutoServicesData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
 
 
         [HttpPost]
@@ -162,30 +286,6 @@ namespace WendlandtVentas.Web.Controllers
             var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
             return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
         }
-
-        [HttpGet]
-        public async Task<IActionResult> GetClientDetails(int clientId)
-        {
-            if (clientId == 0)
-            {
-                return BadRequest("Cliente no válido.");
-            }
-
-            var client = await _repository.GetByIdAsync<Client>(clientId);
-            if (client == null)
-            {
-                return NotFound("Cliente no encontrado.");
-            }
-
-            var clientDetails = new
-            {
-                Channel = client.Channel.ToString(),  // Convertir enum a string
-                DiscountPercentage = client.DiscountPercentage
-            };
-
-            return Json(clientDetails);
-        }
-
 
 
         [HttpPost]
@@ -436,16 +536,7 @@ namespace WendlandtVentas.Web.Controllers
                 client.City = string.IsNullOrEmpty(model.City) ? model.City : model.City.Trim();
                 client.SellerId = model.SellerId;
                 client.CreditDays = model.CreditDays;
-
-                // Asignar el descuento solo si el canal es "Distribuidor"
-                if (model.Channel == Channel.Distributor)
-                {
-                    client.DiscountPercentage = model.DiscountPercentage;
-                }
-                else
-                {
-                    client.DiscountPercentage = null; // O cualquier valor por defecto
-                }
+              
 
                 await _repository.AddAsync(client);
 
@@ -490,7 +581,7 @@ namespace WendlandtVentas.Web.Controllers
                 City = client.City,
                 SellerId = client.SellerId,
                 CreditDays = client.CreditDays,
-                DiscountPercentage = client.DiscountPercentage // Incluir el descuento del distribuidor
+               
             };
 
             model.Sellers = _userManager.Users.Select(s => new SelectListItem
@@ -533,15 +624,7 @@ namespace WendlandtVentas.Web.Controllers
                 client.SellerId = model.SellerId;
                 client.CreditDays = model.CreditDays;
 
-                // Actualizar el descuento del distribuidor
-                if (model.Channel == Channel.Distributor)
-                {
-                    client.DiscountPercentage = model.DiscountPercentage;
-                }
-                else
-                {
-                    client.DiscountPercentage = null; // Si no es distribuidor, el descuento es nulo
-                }
+                
 
                 await _repository.UpdateAsync(client);
 

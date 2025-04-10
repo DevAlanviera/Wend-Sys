@@ -62,6 +62,22 @@
                     <input asp-for="InvoiceCode" class="form-control" />
                     <span asp-validation-for="InvoiceCode" class="text-danger"></span>
                 </div>
+
+
+                <!--Campo para los status en proceso y en ruta-->
+                <div class="form-group" id="realAmountGroup" @(Model.Status == OrderStatus.OnRoute || Model.Status == OrderStatus.InProcess ? "" : "hidden")>
+                    <label asp-for="RealAmount"></label> <b class="text-danger">*</b>
+                    <input asp-for="RealAmount" class="form-control" type="number" min="0" step="0.01" />
+                    <span asp-validation-for="RealAmount" class="text-danger"></span>
+                </div>
+
+                <!--Checkbox para verificar si se requiere precio especial-->
+                <div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.OnRoute || Model.Status == OrderStatus.InProcess ? "" : "hidden")>
+                    <label>
+                        <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Precio Especial?
+                    </label>
+                </div>
+
                 <div class="col mb-3" id="deliveryDay" @(Model.Status == OrderStatus.Delivered ? string.Empty : "hidden")>
                     <label asp-for="DeliveryDay"></label> <b class="text-danger">*</b>
                     <input asp-for="DeliveryDay" class="form-control date-picker" value="@Model.DeliveryDay" />
@@ -87,7 +103,6 @@
                 <input asp-for="NuevoTotal" class="form-control" readonly id="NuevoTotal" />
             </div>
 
-
             <div class="form-group">
                 <label asp-for="Comments"></label>
                 <textarea asp-for="Comments" maxlength="300" class="form-control" rows="3"></textarea>
@@ -112,6 +127,11 @@
             $('#initialAmount').removeAttr('hidden');
             $('#prontoPago').removeAttr('hidden');
             $('#nuevoMonto').removeAttr('hidden');
+        }
+
+        if ($("#Status").find('option:selected').text() == "En ruta" || $("#Status").find('option:selected').text() == "En proceso") {
+            $('#realAmountGroup').removeAttr('hidden');
+            $('#precioEspecialGroup').removeAttr('hidden'); // Mostrar también al inicio si corresponde
         }
 
         // Inicializar el datepicker
@@ -145,6 +165,15 @@
         } else {
             $('#deliveryDay').attr('hidden', '');
         }
+
+        if ($(this).find('option:selected').text() == "En ruta" || $(this).find('option:selected').text() == "En proceso") {
+            $('#realAmountGroup').removeAttr('hidden');
+            $('#precioEspecialGroup').removeAttr('hidden'); // <- Muestra el checkbox
+        } else {
+            $('#realAmountGroup').attr('hidden', '');
+            $('#precioEspecialGroup').attr('hidden', ''); // <- Oculta el checkbox
+        }
+
     });
 
     // Listener para el campo InitialAmount
@@ -168,4 +197,47 @@
             $('#NuevoTotal').val(montoIngresado.toFixed(2));
         }
     }
+    $('form').on('submit', function (e) {
+        var estadoSeleccionado = $('#Status').find('option:selected').text();
+        var realAmount = parseFloat($('#RealAmount').val());
+
+        if ((estadoSeleccionado === "En ruta" || estadoSeleccionado === "En proceso") && (!realAmount || realAmount <= 0)) {
+            e.preventDefault();
+            $('#RealAmount').addClass('is-invalid');
+            if ($('#RealAmount').next('.invalid-feedback').length === 0) {
+                $('#RealAmount').after('<div class="invalid-feedback">Debes ingresar el monto real del pedido.</div>');
+            }
+            return false;
+        } else {
+            $('#RealAmount').removeClass('is-invalid');
+            $('#RealAmount').next('.invalid-feedback').remove();
+        }
+    });
+
+    function toggleMontoRealField() {
+        if ($('#PrecioEspecial').is(':checked') || $('#RealAmount').val().trim() !== "") {
+            $('#realAmountGroup').show(); // Mostrar el input de monto real
+        } else {
+            $('#realAmountGroup').hide(); // Ocultarlo si no aplica
+        }
+    }
+
+    // Escuchar cambios en el checkbox "PrecioEspecial"
+    $('#PrecioEspecial').change(function () {
+        toggleMontoRealField();
+    });
+
+    // Ejecutar al cargar por si ya venía marcado o con valor
+    toggleMontoRealField();
+
+    // Si el campo ya tiene monto, marcar el checkbox automáticamente
+    function checkAndMarkPrecioEspecial() {
+        var monto = $('#RealAmount').val();
+        if (monto && monto.trim() !== "") {
+            $('#PrecioEspecial').prop('checked', true);
+        }
+    }
+
+    checkAndMarkPrecioEspecial();
+    
 </script>
