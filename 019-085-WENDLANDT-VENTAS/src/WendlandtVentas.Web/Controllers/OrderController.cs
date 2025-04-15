@@ -334,8 +334,8 @@ namespace WendlandtVentas.Web.Controllers
 
                     // Filtrar por moneda
                     productsInStock = currencyType == CurrencyType.MXN
-                        ? productsInStock.Where(c => !c.Price.Equals(decimal.Zero)).ToList()
-                        : productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
+                     ? productsInStock.Where(c => c.Price >= 0).ToList()
+                     : productsInStock.Where(c => c.PriceUsd >= 0).ToList();
 
                     // Almacenar en caché con una duración de 10 minutos
                     _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
