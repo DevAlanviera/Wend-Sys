@@ -346,11 +346,6 @@ namespace WendlandtVentas.Web.Controllers
                     // Consultar la base de datos si no está en caché
                     productsInStock = (List<ProductPresentation>)await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
 
-                    // Filtrar por moneda
-                    productsInStock = currencyType == CurrencyType.MXN
-                        ? productsInStock.Where(c => !c.Price.Equals(decimal.Zero)).ToList()
-                        : productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
-
                     // Almacenar en caché con una duración de 10 minutos
                     _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
                 }
@@ -1010,10 +1005,12 @@ namespace WendlandtVentas.Web.Controllers
                     Id = b.Id,
                     Usuario = b.Usuario,
                     FechaModificacion = b.Fecha_modificacion.ToLocalTime(), // Formatear la fecha
-                     Accion = b.Accion,
-                }).ToList()
+                    Accion = b.Accion,
+                }).ToList(),
+                ProntoPago = order.ProntoPago, // Agregamos el valor de ProntoPago
+                
             };
-        
+            Console.WriteLine("Es pronto pago? " + order.ProntoPago);
 
             return PartialView("_DetailsModal", model);
         }

@@ -60,9 +60,8 @@
                                 }
                                 <!-- Nuevo checkbox debajo de los radios -->
                                 <div class="form-check mt-2">
-                                    <label class="form-check-label">
-                                        <input type="checkbox" class="form-check-input" name="ProntoPago" id="early-payment-check" @(Model.ProntoPago ? "checked" : "") /> ¿Pronto pago?
-                                    </label>
+                                    <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
+                                    <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
                                 </div>
                             </div>
                         </div>

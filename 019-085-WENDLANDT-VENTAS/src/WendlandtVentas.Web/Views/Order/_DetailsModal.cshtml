@@ -152,6 +152,10 @@
                         <th><text class="float-right">Cantidad</text></th>
                         <th><text class="float-right">Precio</text></th>
                         <th><text class="float-right">Subtotal</text></th>
+                        @if (Model.ProntoPago)
+                        {
+                            <th><text class="float-right">Pronto Pago</text></th>
+                        }
                     </tr>
                     @foreach (var item in Model.Products)
                     {
@@ -160,13 +164,18 @@
                             <td><text class="float-right">@item.Quantity</text></td>
                             <td><text class="float-right">@item.Price.FormatCurrency()</text></td>
                             <td><text class="float-right">@item.Total.FormatCurrency()</text></td>
+                            @if (Model.ProntoPago)
+                            {
+                                <th><text class="float-right">5%</text></th>
+                            }
                         </tr>
                     }
                     <tr>
                         <td><b>TOTAL</b></td>
                         <td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>
                         <td></td>
-                        <td><text class="float-right"><b>@Model.SubTotal</b></text></td>
+                        <td></td>
+                        <td><text class="float-right"><b>@Model.SubTotal</b></text></td>  
                     </tr>
                 </table>
             </div>
@@ -196,12 +205,14 @@
                                 <td><text class="float-right">@promotionGroup.Sum(c => c.DiscountMoney).FormatCurrency()</text></td>
                             </tr>
                         }
+                        
                         <tr>
                             <td colspan="2"><b>TOTAL</b></td>
                             @*<td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>*@
                             <td></td>
                             <td><text class="float-right"><b>@Model.Promotions.Sum(c => c.DiscountMoney).FormatCurrency()</b></text></td>
                         </tr>
+                       
                     </table>
                    
                 </div>

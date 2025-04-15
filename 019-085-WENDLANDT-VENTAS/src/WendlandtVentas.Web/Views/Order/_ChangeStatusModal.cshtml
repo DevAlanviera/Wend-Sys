@@ -71,18 +71,20 @@
                     <span asp-validation-for="RealAmount" class="text-danger"></span>
                 </div>
 
-                <!--Checkbox para verificar si se requiere precio especial-->
-                <div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.OnRoute || Model.Status == OrderStatus.InProcess ? "" : "hidden")>
-                    <label>
-                        <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Precio Especial?
-                    </label>
-                </div>
+               
 
                 <div class="col mb-3" id="deliveryDay" @(Model.Status == OrderStatus.Delivered ? string.Empty : "hidden")>
                     <label asp-for="DeliveryDay"></label> <b class="text-danger">*</b>
                     <input asp-for="DeliveryDay" class="form-control date-picker" value="@Model.DeliveryDay" />
                     <span asp-validation-for="DeliveryDay" class="text-danger"></span>
                 </div>
+            </div>
+
+            <!--Checkbox para verificar si se requiere precio especial-->
+            <div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.OnRoute || Model.Status == OrderStatus.InProcess ? "" : "hidden")>
+                <label>
+                    <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Precio Especial?
+                </label>
             </div>
             <!-- Agregamos el checkbox para agregar el descuento del 5% en el caso de que sea pago parcial-->
             <div class="form-group" id="prontoPago" hidden>
