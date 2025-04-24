@@ -2,8 +2,10 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Monobits.SharedKernel;
 using Monobits.SharedKernel.Interfaces;
+using Syncfusion.DocIO.DLS;
 using System;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Threading;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
@@ -171,6 +173,14 @@ namespace WendlandtVentas.Infrastructure.Data
                 .HasColumnType("decimal(18,2)");
             builder.Property(c => c.Total)
                 .HasColumnType("decimal(18,2)");
+
+            builder.Property(o => o.ProntoPago)
+       .HasDefaultValue(false) // Valor por defecto
+       .HasColumnName("ProntoPago");
+
+            builder.Property(o => o.PrecioEspecial)
+        .HasDefaultValue(false)
+        .HasColumnName("PrecioEspecial");
         }
 
 

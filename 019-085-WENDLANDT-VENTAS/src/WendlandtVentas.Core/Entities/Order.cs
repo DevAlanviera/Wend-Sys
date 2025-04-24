@@ -40,6 +40,9 @@ namespace WendlandtVentas.Core.Entities
         //Agregamos campo para pronto pago
         public bool ProntoPago { get; set; }
 
+        //Agregamos propiedad para manejar precio especial
+        public bool PrecioEspecial { get; set; } = false;
+
         public decimal BaseAmount
         {
             //Fórmula anterior (SubTotal / 1.265M) * 0.8M;
@@ -184,6 +187,11 @@ namespace WendlandtVentas.Core.Entities
         {
             RemissionCode = invoiceReturnNumber;
             CollectionComment = returnReason;
+        }
+
+        public void ActualizarTotal(decimal nuevoTotal)
+        {
+            Total = nuevoTotal;
         }
     }
 }

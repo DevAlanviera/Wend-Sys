@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Drawing.Charts;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -44,6 +45,7 @@ using WendlandtVentas.Web.Models.ClientViewModels;
 using WendlandtVentas.Web.Models.OrderViewModels;
 using WendlandtVentas.Web.Models.PromotionViewModels;
 using WendlandtVentas.Web.Models.TableModels;
+using Order = WendlandtVentas.Core.Entities.Order;
 
 namespace WendlandtVentas.Web.Controllers
 {
@@ -244,28 +246,18 @@ namespace WendlandtVentas.Web.Controllers
         {
             ViewData["Action"] = nameof(Add);
             ViewData["Title"] = "Agregar pedido";
-
-            var clients = (await _repository.ListAllExistingAsync<Client>())
-                .OrderBy(c => c.Name)
-                .Select(x => new
-                {
-                    Value = x.Id,
-                    Text = $"{x.Name}" + (x.Classification.HasValue ? $" - {x.Classification.Humanize()}" : string.Empty),
-                    Channel = x.Channel,  // Incluimos Channel (que ya tiene ClientType)
-                    DiscountPercentage = x.DiscountPercentage
-                });
-
+            var clients = (await _repository.ListAllExistingAsync<Client>()).OrderBy(c => c.Name);
             var payTypes = Enum.GetValues(typeof(PayType)).Cast<PayType>().AsEnumerable();
             var currencyTypes = Enum.GetValues(typeof(CurrencyType)).Cast<CurrencyType>().AsEnumerable();
             var addresses = new List<Address>() { };
-
             // return remision number options
             var remissionsForReturn = await _orderService.GetInvoiceRemissionNumbersAsync();
+            
 
             var model = new OrderViewModel
             {
                 IsInvoice = OrderType.Invoice,
-                Clients = new SelectList(clients, "Value", "Text"), // Usamos solo Value y Text
+                Clients = new SelectList(clients.Select(x => new { Value = x.Id, Text = $"{x.Name}" + (x.Classification.HasValue ? $" - {x.Classification.Humanize()}" : string.Empty) }), "Value", "Text"),
                 Addresses = new SelectList(addresses.Select(x => new { Value = x.Id, Text = x.AddressLocation }), "Value", "Text"),
                 PayType = PayType.Cash,
                 PayTypes = new SelectList(payTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
@@ -276,7 +268,6 @@ namespace WendlandtVentas.Web.Controllers
 
             return View("AddEdit", model);
         }
-
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpPost]
@@ -291,9 +282,6 @@ namespace WendlandtVentas.Web.Controllers
                         .SelectMany(x => x.Errors)
                         .Select(x => x.ErrorMessage))));
             }
-
-
-
             //Manda a llamar el metodo para verificar si el cliente tiene RFC registrado
             var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
             if (rfcValidationResult != null)
@@ -345,6 +333,11 @@ namespace WendlandtVentas.Web.Controllers
                 {
                     // Consultar la base de datos si no está en caché
                     productsInStock = (List<ProductPresentation>)await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
+
+                    // Filtrar por moneda
+                    productsInStock = currencyType == CurrencyType.MXN
+                 ? productsInStock.Where(c => c.Price >= 0).ToList()
+                 : productsInStock.Where(c => c.PriceUsd >= 0).ToList();
 
                     // Almacenar en caché con una duración de 10 minutos
                     _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
@@ -398,8 +391,6 @@ namespace WendlandtVentas.Web.Controllers
             bool hasRFC = !string.IsNullOrEmpty(client.RFC);
             return Json(new { hasRFC, message = hasRFC ? "" : "Este cliente no tiene RFC registrado." });
         }
-
-
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
@@ -706,7 +697,8 @@ namespace WendlandtVentas.Web.Controllers
                 PayTypes = new SelectList(Enum.GetValues(typeof(PayType)).Cast<PayType>().Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CurrencyTypes = new SelectList(new[] { order.CurrencyType }.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CanEditProducts = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
-                Comment = order.Comment
+                Comment = order.Comment,
+                ProntoPago = order.ProntoPago
             };
 
             return View("AddEdit", model);
@@ -717,17 +709,21 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(OrderViewModel model)
         {
+
+
+            
             if (!ModelState.IsValid)
                 return Json(AjaxFunctions.GenerateJsonError(string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
+
+           
 
             var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
             if (rfcValidationResult != null)
             {
                 return rfcValidationResult;
             }
-
 
             var response = await _orderService.UpdateOrderAsync(model, User.Identity.Name);
 
@@ -837,6 +833,13 @@ namespace WendlandtVentas.Web.Controllers
                 var currentStatusOrder = order.OrderStatus;
                 order.ChangeStatus(model.Status, model.Comments ?? "", model.InvoiceCode ?? "");
 
+                // Si es estado "InProcess" y se ingresó un nuevo monto real
+                if (model.Status == OrderStatus.InProcess && model.InitialAmount > 0)
+                {
+                    order.PrecioEspecial = true; // aquí asumo que el campo en la entidad se llama así
+                    await _repository.UpdateAsync(order); // se guarda el cambio
+                }
+
                 if (model.Status == OrderStatus.Delivered)
                 {
                     var client = await _repository.GetByIdAsync<Client>(order.ClientId);
@@ -925,6 +928,36 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
+
+        [HttpPost("actualizar-total")]
+        public async Task<IActionResult> ActualizarTotal(ActualizarTotalViewModel model)
+        {
+
+            Console.WriteLine("Metodo ejecutandose: " + model.Id +" " +  model.PrecioEspecial + " " + model.RealAmount);
+            // Verificar si el modelo es válido
+            if (!ModelState.IsValid)
+                return BadRequest("Datos inválidos");
+
+            // Llamar al servicio para actualizar el total
+            var result = await _orderService.ActualizarTotalAsync(model.Id, model.RealAmount);
+
+            // Verificar si la actualización fue exitosa
+            if (!result.IsSuccess)
+            {
+                // Si falla, retornar el mensaje de error
+                return StatusCode(500, result.Message);
+            }
+
+            // Si fue exitosa, retornar el mensaje de éxito
+            return Ok(result.Message);
+        }
+
+
+
+
+
+
+
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
@@ -964,6 +997,7 @@ namespace WendlandtVentas.Web.Controllers
                     AddressLocation = order.Address,
                     DeliverySpecification = order.DeliverySpecification
                 },
+                ProntoPago = order.ProntoPago,
                 Client = new ClientItemModel
                 {
                     Id = order.ClientId,
@@ -1005,13 +1039,11 @@ namespace WendlandtVentas.Web.Controllers
                     Id = b.Id,
                     Usuario = b.Usuario,
                     FechaModificacion = b.Fecha_modificacion.ToLocalTime(), // Formatear la fecha
-                    Accion = b.Accion,
-                }).ToList(),
-                ProntoPago = order.ProntoPago, // Agregamos el valor de ProntoPago
-                
+                     Accion = b.Accion,
+                }).ToList()
             };
-            Console.WriteLine("Es pronto pago? " + order.ProntoPago);
 
+           
             return PartialView("_DetailsModal", model);
         }
 

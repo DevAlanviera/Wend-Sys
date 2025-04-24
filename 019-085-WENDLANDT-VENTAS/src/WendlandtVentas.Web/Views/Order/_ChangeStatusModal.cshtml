@@ -81,11 +81,12 @@
             </div>
 
             <!--Checkbox para verificar si se requiere precio especial-->
-            <div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.OnRoute || Model.Status == OrderStatus.InProcess ? "" : "hidden")>
+            <div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.InProcess ? "" : "hidden")>
                 <label>
                     <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Precio Especial?
                 </label>
             </div>
+
             <!-- Agregamos el checkbox para agregar el descuento del 5% en el caso de que sea pago parcial-->
             <div class="form-group" id="prontoPago" hidden>
                 <div class="form-check">
@@ -117,7 +118,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
         </div>
     </form>
 </div>
@@ -125,16 +126,6 @@
 <script>
     $(function () {
         // Inicialización del modal
-        if ($("#Status").find('option:selected').text() == "Pago parcial") {
-            $('#initialAmount').removeAttr('hidden');
-            $('#prontoPago').removeAttr('hidden');
-            $('#nuevoMonto').removeAttr('hidden');
-        }
-
-        if ($("#Status").find('option:selected').text() == "En ruta" || $("#Status").find('option:selected').text() == "En proceso") {
-            $('#realAmountGroup').removeAttr('hidden');
-            $('#precioEspecialGroup').removeAttr('hidden'); // Mostrar también al inicio si corresponde
-        }
 
         // Inicializar el datepicker
         $(".date-picker").datepicker({
@@ -154,12 +145,8 @@
 
         if ($(this).find('option:selected').text() == "Pago parcial") {
             $('#initialAmount').removeAttr('hidden');
-            $('#prontoPago').removeAttr('hidden');
-            $('#nuevoMonto').removeAttr('hidden');
         } else {
             $('#initialAmount').attr('hidden', '');
-            $('#prontoPago').attr('hidden', '');
-            $('#nuevoMonto').attr('hidden', '');
         }
 
         if ($(this).find('option:selected').text() == "Entregado") {
@@ -168,9 +155,11 @@
             $('#deliveryDay').attr('hidden', '');
         }
 
-        if ($(this).find('option:selected').text() == "En ruta" || $(this).find('option:selected').text() == "En proceso") {
+        if ($(this).find('option:selected').text() == "En proceso") {
             $('#realAmountGroup').removeAttr('hidden');
             $('#precioEspecialGroup').removeAttr('hidden'); // <- Muestra el checkbox
+            $('#prontoPago').attr('hidden', '');
+            $('#nuevoMonto').attr('hidden', '');
         } else {
             $('#realAmountGroup').attr('hidden', '');
             $('#precioEspecialGroup').attr('hidden', ''); // <- Oculta el checkbox
@@ -241,5 +230,36 @@
     }
 
     checkAndMarkPrecioEspecial();
+
+    document.getElementById("btnGuardar").addEventListener("click", async function () {
+        const precioEspecial = document.getElementById("PrecioEspecial").checked;
+        const realAmount = parseFloat(document.getElementById("RealAmount").value);
+        const orderId = parseInt(document.getElementById("OrderId").value);
+        alert("order id: " + orderId);
+        if (precioEspecial && !isNaN(realAmount)) {
+            const response = await fetch('/api/order/actualizar-total', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: orderId,
+                    precioEspecial: true,
+                    realAmount: realAmount
+                })
+            });
+
+            const result = await response.text();
+
+            if (response.ok) {
+                alert("Total actualizado correctamente");
+                // Aquí puedes cerrar el modal o actualizar la UI
+            } else {
+                alert("Error: " + result);
+            }
+        }
+    });
+
+
     
 </script>

@@ -31,7 +31,8 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
 
         // Nuevas propiedades para calcular pronto pago
         public bool IsProntoPago { get; set; } // Checkbox para "Pronto Pago"
-        public double NuevoTotal { get; set; } // Nuevo total con descuento
+
+        public double NuevoTotal { get; set; } // Nuevo total con precio especial
         public double TotalOriginal { get; set; } // Total original de la orden
 
         [Display(Name = "Monto de la orden")]

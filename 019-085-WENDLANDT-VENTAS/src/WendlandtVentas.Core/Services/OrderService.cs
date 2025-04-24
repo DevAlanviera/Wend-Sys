@@ -225,7 +225,8 @@ namespace WendlandtVentas.Core.Services
                         model.AddressName = address.Name;
                     }
                 }
-
+                order.ProntoPago = model.ProntoPago;
+                
                 order.Edit(model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
                     dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(), 
                     model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification, 
@@ -256,6 +257,43 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, e.Message);
             }
         }
+
+        //Agregamos este metodo para modificar el monto real de la orden en caso de que sea precio especial
+        public async Task<Response> ActualizarTotalAsync(int orderId, decimal nuevoTotal)
+        {
+            try
+            {
+                // Obtener la orden por su Id
+                var order = await _repository.GetByIdAsync<Order>(orderId);
+                if (order == null)
+                {
+                    // Si no existe la orden, retornamos un Response de error
+                    return new Response(false, "La orden no existe.");
+                }
+
+                // Actualizar el total de la orden
+                order.ActualizarTotal(nuevoTotal);
+
+                // Guardar los cambios en la base de datos
+                await _repository.UpdateAsync(order);
+
+                // Retornar un Response indicando que la actualización fue exitosa
+                return new Response(true, "Total actualizado correctamente.");
+            }
+            catch (Exception ex)
+            {
+                // Si ocurre un error, registrar el error y devolver un Response de error
+                _logger.LogError(ex, "Error al actualizar el total.");
+                return new Response(false, "Error al actualizar el total.");
+            }
+        }
+
+
+
+
+
+
+
 
         //public IQueryable<Order> FilterValues(FilterViewModel filter)
         //{

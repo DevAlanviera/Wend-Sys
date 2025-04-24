@@ -10,7 +10,12 @@ namespace WendlandtVentas.Core.Interfaces
     {
         Task<Response> AddOrderAsync(OrderViewModel orderViewModel, string currrentUserEmail);
         Task<Response> UpdateOrderAsync(OrderViewModel orderViewModel, string currrentUserEmail);
+
+        Task<Response> ActualizarTotalAsync(int orderId, decimal nuevoTotal);
+        
+
         //IQueryable<Order> FilterValues(FilterViewModel filter);
+
         Task<List<Order>> FilterValues(FilterViewModel filter);
         Task<List<SelectListItem>> GetInvoiceRemissionNumbersAsync();
     }
