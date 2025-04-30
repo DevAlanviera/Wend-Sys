@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using WendlandtVentas.Core.Entities.Enums;
+using WendlandtVentas.Web.Models.ProductViewModels;
 
 namespace WendlandtVentas.Core.Entities
 {
@@ -32,6 +33,8 @@ namespace WendlandtVentas.Core.Entities
         //Solo se utiliza cuando el tipo de cliente es deistribuidor
         [Range(0, 100, ErrorMessage = "El porcentaje de descuento debe estar entre 0 y 100")]
         public decimal? DiscountPercentage { get; set; }
+
+    
 
         public Client()
         {

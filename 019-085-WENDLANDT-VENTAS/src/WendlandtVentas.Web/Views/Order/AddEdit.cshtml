@@ -58,6 +58,11 @@
                                         </label>
                                     </div>
                                 }
+                                <!-- Nuevo checkbox debajo de los radios -->
+                                <div class="form-check mt-2">
+                                    <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
+                                    <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
+                                </div>
                             </div>
                         </div>
                     }
@@ -245,12 +250,32 @@
                                     <h5 class="subtotal-order">$0.00 MXN</h5>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col">
-                                    <h5>Descuentos</h5>
+                            <div class="descuentos-container">
+                                <!-- Fila principal de Descuentos -->
+                                <div class="row">
+                                    <div class="col">
+                                        <h5 class="mb-1">Descuentos</h5> <!-- mb-1 para espacio inferior -->
+                                    </div>
+                                    <div class="col text-right p-0">
+                                        <h5 class="discount-order">$0.00 MXN</h5>
+                                    </div>
                                 </div>
-                                <div class="col text-right p-0">
-                                    <h5 class="discount-order">$0.00 MXN</h5>
+
+                                <!-- Subsección de descuento pronto pago -->
+                                <div class="row prontopago-discount" style="display: none;">
+                                    <div class="col pl-4">
+                                        <!-- pl-4 para indentación -->
+                                        <div class="d-flex align-items-center" style="font-size: 0.85em">
+                                            <span class="mr-2">↳</span> <!-- Flecha indicadora -->
+                                            <span>Pronto Pago:</span>
+
+                                        </div>
+                                    </div>
+                                    <div class="col text-right p-0">
+                                        <span class="text-muted" style="font-size: 0.85em">
+                                            (<span class="prontopago-percentage font-weight-bold ml-1">5%</span>)
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="row">
@@ -282,11 +307,39 @@
                             <div class="row justify-content-center">
                                 <h5 style="text-align:center" class="subtotal-order">$0.00</h5>
                             </div>
-                            <div class="row justify-content-center">
-                                <h5>Descuentos</h5>
+                            <div class="descuentos-container">
+                                <!-- Fila principal de Descuentos -->
+                                <div class="row">
+                                    <div class="col">
+                                        <h5 class="mb-1">Descuentos</h5> <!-- mb-1 para espacio inferior -->
+                                    </div>
+                                    <div class="col text-right p-0">
+                                        <h5 class="discount-order">$0.00 MXN</h5>
+                                    </div>
+                                </div>
+
+                                <!-- Subsección de descuento pronto pago -->
+                                <div class="row prontopago-discount" style="display: none;">
+                                    <div class="col pl-4">
+                                        <!-- pl-4 para indentación -->
+                                        <div class="d-flex align-items-center" style="font-size: 0.85em">
+                                            <span class="mr-2">↳</span> <!-- Flecha indicadora -->
+                                            <span>Pronto Pago:</span>
+
+                                        </div>
+                                    </div>
+                                    <div class="col text-right p-0">
+                                        <span class="text-muted" style="font-size: 0.85em">
+                                            (<span class="prontopago-percentage font-weight-bold ml-1">5%</span>)
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="row justify-content-center">
                                 <h5 class="discount-order">$0.00</h5>
+                            </div>
+                            <div class="col distributor-discount" style="display: none;">
+                                <h5>Descuento Distribuidor: <span class="discount-percentage"></span>%</h5>
                             </div>
                             <div class="row justify-content-center">
                                 <h4>Total</h4>
@@ -317,12 +370,12 @@
     </div>
 </form>
 
-@section Modals{
+@section Modals {
     <div class="modal" id="addProductModal" tabindex="false" role="dialog" aria-labelledby="addProductModal-label"></div>
     <div class="modal modal-focus-first" id="addPromotionsModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddPromotions")"></div>
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
 }
-@section Scripts{
+@section Scripts {
     <script>
         $(document).ready(function () {
             $("#addProduct").on("click", function () {
@@ -415,12 +468,12 @@
                     break;
                 case 'warning':
                     $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                                             <strong>Acción inválida: </strong>
-                                                               ${json.body}
-                                                               <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                                  <span aria-hidden="true">&times;</span>
-                                                               </button>
-                                                           </div>`);
+                                                                     <strong>Acción inválida: </strong>
+                                                                       ${json.body}
+                                                                       <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                          <span aria-hidden="true">&times;</span>
+                                                                       </button>
+                                                                   </div>`);
                     $form.find(".alert").alert()
                     break;
             }
@@ -540,12 +593,12 @@
                     case 'warning':
                         $form.find('button[type="submit"]').prop("disabled", true);
                         $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                                         <strong>Acción inválida: </strong>
-                                                           ${json.body}
-                                                           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                              <span aria-hidden="true">&times;</span>
-                                                           </button>
-                                                       </div>`);
+                                                                 <strong>Acción inválida: </strong>
+                                                                   ${json.body}
+                                                                   <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                      <span aria-hidden="true">&times;</span>
+                                                                   </button>
+                                                               </div>`);
                         $form.find(".alert").alert()
                         break;
                 }
@@ -816,31 +869,84 @@
         });
 
         //Calcular totales de la orden
+
+        var distributorDiscountPercentage = 0;
+
         function CalculateTotals() {
             var formatter = new Intl.NumberFormat('es-MX', {
                 style: 'currency',
                 currency: 'MXN'
             });
+
+            // 1. Calcular subtotal (solo productos no presentes)
             var subtotal = 0;
-            var discount = 0;
-            var total = 0;
-
             $('.row-product').each(function () {
-
-                var isPresent = $(this).find('input[name ="ProductIsPresent"]').val();
-
-                if (isPresent === "false") {
-                    subtotal = subtotal + parseFloat($(this).data('subtotal'));
+                if ($(this).find('input[name="ProductIsPresent"]').val() === "false") {
+                    subtotal += parseFloat($(this).data('subtotal')) || 0;
                 }
             });
+
+            // 2. Calcular descuentos por promociones
+            var promotionDiscount = 0;
             $('.discount-presentation').each(function () {
-                discount = discount + parseFloat($(this).val());
+                promotionDiscount += parseFloat($(this).val()) || 0;
             });
-            total = subtotal - discount;
+
+
+            // 4. Calcular descuento por pronto pago (5% adicional)
+            var earlyPaymentDiscount = 0;
+            if ($('#early-payment-check').is(':checked')) {
+                earlyPaymentDiscount = subtotal * 0.05;
+            }
+
+            // 5. Calcular descuento total
+            var totalDiscount = promotionDiscount + earlyPaymentDiscount;
+
+            // 6. Calcular total final
+            var total = subtotal - totalDiscount;
+
+            // 7. Actualizar la interfaz
             $('.subtotal-order').text(formatter.format(subtotal.toFixed(2)) + ' ' + $('#CurrencyType').val());
-            $('.discount-order').text(formatter.format(discount.toFixed(2)) + ' ' + $('#CurrencyType').val());
+            $('.discount-order').text(formatter.format(totalDiscount.toFixed(2)) + ' ' + $('#CurrencyType').val());
             $('.total-order').text(formatter.format(total.toFixed(2)) + ' ' + $('#CurrencyType').val());
         }
+
+        $(document).ready(function () {
+            function toggleProntoPagoRow() {
+                if ($('#early-payment-check').is(':checked')) {
+                    $('.prontopago-discount').show();
+                } else {
+                    $('.prontopago-discount').hide();
+                }
+            }
+
+            // Llamar al cambiar el estado del checkbox
+            $('#early-payment-check').on('change', function () {
+                toggleProntoPagoRow();
+                CalculateTotals(); // Si también recalculas aquí
+            });
+
+            // También al cargar la página por si viene marcado desde el servidor
+            toggleProntoPagoRow();
+        });
+  
+
+        $(document).ready(function () {
+            $('#ClientId').change(function () {
+                var clientId = $(this).val();
+
+                // 1. Validación RFC para facturas
+                if ($('input:radio[name=IsInvoice]:checked').val() === "@OrderType.Invoice") {
+                    $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
+                        if (!response.hasRFC) {
+                            $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
+                        } else {
+                            $('.modal-errores').hide();
+                        }
+                    });
+                }
+            });
+        });
     </script>
     <!-- script para verificar si el cliente tiene RFC -->
     <script>

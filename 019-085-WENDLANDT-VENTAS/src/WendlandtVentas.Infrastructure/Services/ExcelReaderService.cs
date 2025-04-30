@@ -267,7 +267,7 @@ namespace WendlandtVentas.Infrastructure.Services
                 int i = model.TypeEnum == OrderType.Remission ? 15 : 14;
                 foreach (var product in model.Products)
                 {
-                    if (i < 26)
+                    if (i < 30)
                     {
                         worksheet.Range[$"B{i}"].Text = product.Quantity.ToString();
                         worksheet.Range[$"C{i}"].Text = product.PresentationLiters;

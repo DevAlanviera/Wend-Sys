@@ -23,6 +23,10 @@
                             <th>Tipo</th>
                             <th>Fecha de creación</th>
                             <th>Por</th>
+                            @if(Model.ProntoPago)
+                            {
+                                <th>Pronto Pago</th>
+                            }
                             <th>Remisión</th>
                             @if (Model.TypeEnum == OrderType.Invoice)
                             {
@@ -36,6 +40,10 @@
                             <td><text class="text-info"><b>@Model.Type</b></text></td>
                             <td>@Model.CreateDate.ToString("dd/MM/yyyy")</td>
                             <td>@Model.User</td>
+                            @if (Model.ProntoPago)
+                            {
+                                <td>Sí</td>
+                            }
                             <td>@Model.RemissionCode</td>
                             @if (Model.TypeEnum == OrderType.Invoice)
                             {
@@ -163,23 +171,59 @@
                         <th>Nombre</th>
                         <th><text class="float-right">Cantidad</text></th>
                         <th><text class="float-right">Precio</text></th>
+                        @if(Model.ProntoPago)
+                        {
+                            <th><text class="float-right">Descuentos(5%)</text></th>
+                        }
+                       
                         <th><text class="float-right">Subtotal</text></th>
+                       
                     </tr>
-                    @foreach (var item in Model.Products)
+                   @foreach (var item in Model.Products)
                     {
                         <tr>
                             <td>@item.PresentationLiters</td>
                             <td><text class="float-right">@item.Quantity</text></td>
-                            <td><text class="float-right">@item.Price.FormatCurrency()</text></td>
-                            <td><text class="float-right">@item.Total.FormatCurrency()</text></td>
+                            <!--<td><text class="float-right">item.Price.FormatCurrency()</text></td>-->
+                            @if (Model.ProntoPago)
+                            {
+                                {
+                                    // Cálculo del total bruto (sin descuento)
+                                    decimal totalBruto = item.Total / 0.95m;
+                                    decimal descuento = totalBruto * 0.05m;
+                                
+                                <td><text class="float-right">@totalBruto.FormatCurrency()</text></td>
+                                <td><text class="float-right text-danger">-@descuento.FormatCurrency()</text></td>
+                                    <td><text class="float-right">@item.Total.FormatCurrency()</text></td>
+                                }
+                            }
+                            else
+                            {
+                                <td><text class="float-right">@item.Price.FormatCurrency()</text></td>
+                                <td><text class="float-right">@((item.Quantity * item.Price).FormatCurrency())</text></td>
+                            }
+                            
                         </tr>
                     }
                     <tr>
-                        <td><b>TOTAL</b></td>
-                        <td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>
-                        <td></td>
+                    <td><b>TOTAL</b></td>
+                    <td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>
+                    @if (Model.ProntoPago)
+                        {
+                            {
+                                decimal totalBrutoGeneral = Model.Products.Sum(p => p.Total) / 0.95m;
+                                decimal descuentoGeneral = totalBrutoGeneral * 0.05m;
+
+                                <td></td>
+                                <td></td>
+                            }
+                        }
+                        else
+                        {
+                            <td></td>
+                        }
                         <td><text class="float-right"><b>@Model.SubTotal</b></text></td>
-                    </tr>
+                </tr>
                 </table>
             </div>
             @if (Model.Promotions.Any())
@@ -208,12 +252,14 @@
                                 <td><text class="float-right">@promotionGroup.Sum(c => c.DiscountMoney).FormatCurrency()</text></td>
                             </tr>
                         }
+                        
                         <tr>
                             <td colspan="2"><b>TOTAL</b></td>
                             @*<td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>*@
                             <td></td>
                             <td><text class="float-right"><b>@Model.Promotions.Sum(c => c.DiscountMoney).FormatCurrency()</b></text></td>
                         </tr>
+                       
                     </table>
                    
                 </div>

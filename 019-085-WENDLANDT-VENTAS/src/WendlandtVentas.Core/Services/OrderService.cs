@@ -58,6 +58,7 @@ namespace WendlandtVentas.Core.Services
 
         public async Task<Response> AddOrderAsync(OrderViewModel model, string currrentUserEmail)
         {
+           
             var user = await _userManager.FindByEmailAsync(currrentUserEmail);
             var rolesUser = await _userManager.GetRolesAsync(user);
             var role = rolesUser != null ? rolesUser.First() : string.Empty;
@@ -77,6 +78,16 @@ namespace WendlandtVentas.Core.Services
                 var isPresent = model.ProductIsPresent[i];
                 var price = model.ProductPrices[i];
                 orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price));
+            }
+
+            // Aplicar descuento por pronto pago si aplica
+            if (model.ProntoPago)
+            {
+                foreach (var orderProduct in orderProducts)
+                {
+                    // Aplica 5% de descuento
+                    orderProduct.Price = orderProduct.Price * 0.95m;
+                }
             }
 
 
@@ -104,7 +115,10 @@ namespace WendlandtVentas.Core.Services
                 dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(), 
                 user.Id, model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
                 orderProducts, orderPromotions, model.Address, model.AddressName, 
-                dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(), model.PayType, model.CurrencyType);
+                dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(), model.PayType, model.CurrencyType)
+            {
+                ProntoPago = model.ProntoPago // Aquí asignamos el valor de ProntoPago desde el modelo
+            };
 
             try
             {
@@ -211,7 +225,8 @@ namespace WendlandtVentas.Core.Services
                         model.AddressName = address.Name;
                     }
                 }
-
+                order.ProntoPago = model.ProntoPago;
+                
                 order.Edit(model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
                     dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(), 
                     model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification, 
@@ -242,6 +257,43 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, e.Message);
             }
         }
+
+        //Agregamos este metodo para modificar el monto real de la orden en caso de que sea precio especial
+        public async Task<Response> ActualizarTotalAsync(int orderId, decimal nuevoTotal)
+        {
+            try
+            {
+                // Obtener la orden por su Id
+                var order = await _repository.GetByIdAsync<Order>(orderId);
+                if (order == null)
+                {
+                    // Si no existe la orden, retornamos un Response de error
+                    return new Response(false, "La orden no existe.");
+                }
+
+                // Actualizar el total de la orden
+                order.ActualizarTotal(nuevoTotal);
+
+                // Guardar los cambios en la base de datos
+                await _repository.UpdateAsync(order);
+
+                // Retornar un Response indicando que la actualización fue exitosa
+                return new Response(true, "Total actualizado correctamente.");
+            }
+            catch (Exception ex)
+            {
+                // Si ocurre un error, registrar el error y devolver un Response de error
+                _logger.LogError(ex, "Error al actualizar el total.");
+                return new Response(false, "Error al actualizar el total.");
+            }
+        }
+
+
+
+
+
+
+
 
         //public IQueryable<Order> FilterValues(FilterViewModel filter)
         //{

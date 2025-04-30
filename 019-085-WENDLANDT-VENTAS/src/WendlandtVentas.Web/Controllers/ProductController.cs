@@ -258,8 +258,8 @@ namespace WendlandtVentas.Web.Controllers
 
                 product.Edit(model.Name, model.Distinction, model.Season);
                 await _repository.UpdateAsync(product);
-                _cacheService.ClearProductCache();
-                _cacheService.RemoveProductsCache();
+                _cacheService.ClearProductCache(); //Limpiamos Cache
+                _cacheService.RemoveProductsCache(); //Limpiamos Cache
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Producto actualizado"));
             }
             catch (Exception e)

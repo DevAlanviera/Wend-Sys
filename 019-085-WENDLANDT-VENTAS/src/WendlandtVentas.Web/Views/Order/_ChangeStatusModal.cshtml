@@ -62,17 +62,50 @@
                     <input asp-for="InvoiceCode" class="form-control" />
                     <span asp-validation-for="InvoiceCode" class="text-danger"></span>
                 </div>
+
+
+                <!--Campo para los status en proceso y en ruta-->
+                <div class="form-group" id="realAmountGroup" @(Model.Status == OrderStatus.OnRoute || Model.Status == OrderStatus.InProcess ? "" : "hidden")>
+                    <label asp-for="RealAmount"></label> <b class="text-danger">*</b>
+                    <input asp-for="RealAmount" class="form-control" type="number" min="0" step="0.01" />
+                    <span asp-validation-for="RealAmount" class="text-danger"></span>
+                </div>
+
+               
+
                 <div class="col mb-3" id="deliveryDay" @(Model.Status == OrderStatus.Delivered ? string.Empty : "hidden")>
                     <label asp-for="DeliveryDay"></label> <b class="text-danger">*</b>
                     <input asp-for="DeliveryDay" class="form-control date-picker" value="@Model.DeliveryDay" />
                     <span asp-validation-for="DeliveryDay" class="text-danger"></span>
                 </div>
             </div>
+
+            <!--Checkbox para verificar si se requiere precio especial-->
+            <div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.InProcess ? "" : "hidden")>
+                <label>
+                    <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Precio Especial?
+                </label>
+            </div>
+
+            <!-- Agregamos el checkbox para agregar el descuento del 5% en el caso de que sea pago parcial-->
+            <div class="form-group" id="prontoPago" hidden>
+                <div class="form-check">
+                    <input asp-for="IsProntoPago" class="form-check-input" id="prontoPagoCheckbox" />
+                    <label class="form-check-label" for="prontoPagoCheckbox">Pronto Pago (5% de descuento)</label>
+                </div>
+            </div>
+
             <div class="form-group" id="initialAmount" hidden>
                 <label asp-for="InitialAmount"></label>
-                <input asp-for="InitialAmount" class="form-control" type="number" min="0" step="0.01" />
+                <input asp-for="InitialAmount" class="form-control" type="number" min="0" step="0.01" id="InitialAmount" />
                 <span asp-validation-for="InitialAmount" class="text-danger"></span>
             </div>
+
+            <div class="form-group" id="nuevoMonto" hidden>
+                <label>Nuevo Monto (con descuento)</label>
+                <input asp-for="NuevoTotal" class="form-control" readonly id="NuevoTotal" />
+            </div>
+
             <div class="form-group">
                 <label asp-for="Comments"></label>
                 <textarea asp-for="Comments" maxlength="300" class="form-control" rows="3"></textarea>
@@ -85,16 +118,16 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
         </div>
     </form>
 </div>
 
 <script>
     $(function () {
-        if ($("#Status").find('option:selected').text() == "Pago parcial")
-            $('#initialAmount').removeAttr('hidden');
+        // Inicialización del modal
 
+        // Inicializar el datepicker
         $(".date-picker").datepicker({
             autoclose: true,
             format: 'dd/mm/yyyy',
@@ -102,20 +135,131 @@
         });
     });
 
+    // Manejar el cambio de estado
     $("#Status").on('change', function () {
-        if ($(this).find('option:selected').text() == "En ruta" && $('#Type').val() == 'Invoice')
+        if ($(this).find('option:selected').text() == "En ruta" && $('#Type').val() == 'Invoice') {
             $('#invoicecode').removeAttr('hidden');
-        else
+        } else {
             $('#invoicecode').attr('hidden', '');
+        }
 
-        if ($(this).find('option:selected').text() == "Pago parcial")
+        if ($(this).find('option:selected').text() == "Pago parcial") {
             $('#initialAmount').removeAttr('hidden');
-        else
+        } else {
             $('#initialAmount').attr('hidden', '');
+        }
 
-        if ($(this).find('option:selected').text() == "Entregado")
+        if ($(this).find('option:selected').text() == "Entregado") {
             $('#deliveryDay').removeAttr('hidden');
-        else
+        } else {
             $('#deliveryDay').attr('hidden', '');
+        }
+
+        if ($(this).find('option:selected').text() == "En proceso") {
+            $('#realAmountGroup').removeAttr('hidden');
+            $('#precioEspecialGroup').removeAttr('hidden'); // <- Muestra el checkbox
+            $('#prontoPago').attr('hidden', '');
+            $('#nuevoMonto').attr('hidden', '');
+        } else {
+            $('#realAmountGroup').attr('hidden', '');
+            $('#precioEspecialGroup').attr('hidden', ''); // <- Oculta el checkbox
+        }
+
     });
+
+    // Listener para el campo InitialAmount
+    $('#InitialAmount').on('input', function () {
+        aplicarDescuento();
+    });
+
+    // Listener para el checkbox de "Pronto Pago"
+    $('#prontoPagoCheckbox').on('change', function () {
+        aplicarDescuento();
+    });
+
+    // Función para aplicar el descuento
+    function aplicarDescuento() {
+        var montoIngresado = parseFloat($('#InitialAmount').val()) || 0; // Obtener el monto ingresado
+        if ($('#prontoPagoCheckbox').is(':checked')) {
+            var descuento = montoIngresado * 0.05; // 5% de descuento
+            var montoConDescuento = montoIngresado - descuento;
+            $('#NuevoTotal').val(montoConDescuento.toFixed(2));
+        } else {
+            $('#NuevoTotal').val(montoIngresado.toFixed(2));
+        }
+    }
+    $('form').on('submit', function (e) {
+        var estadoSeleccionado = $('#Status').find('option:selected').text();
+        var realAmount = parseFloat($('#RealAmount').val());
+
+        if ((estadoSeleccionado === "En ruta" || estadoSeleccionado === "En proceso") && (!realAmount || realAmount <= 0)) {
+            e.preventDefault();
+            $('#RealAmount').addClass('is-invalid');
+            if ($('#RealAmount').next('.invalid-feedback').length === 0) {
+                $('#RealAmount').after('<div class="invalid-feedback">Debes ingresar el monto real del pedido.</div>');
+            }
+            return false;
+        } else {
+            $('#RealAmount').removeClass('is-invalid');
+            $('#RealAmount').next('.invalid-feedback').remove();
+        }
+    });
+
+    function toggleMontoRealField() {
+        if ($('#PrecioEspecial').is(':checked') || $('#RealAmount').val().trim() !== "") {
+            $('#realAmountGroup').show(); // Mostrar el input de monto real
+        } else {
+            $('#realAmountGroup').hide(); // Ocultarlo si no aplica
+        }
+    }
+
+    // Escuchar cambios en el checkbox "PrecioEspecial"
+    $('#PrecioEspecial').change(function () {
+        toggleMontoRealField();
+    });
+
+    // Ejecutar al cargar por si ya venía marcado o con valor
+    toggleMontoRealField();
+
+    // Si el campo ya tiene monto, marcar el checkbox automáticamente
+    function checkAndMarkPrecioEspecial() {
+        var monto = $('#RealAmount').val();
+        if (monto && monto.trim() !== "") {
+            $('#PrecioEspecial').prop('checked', true);
+        }
+    }
+
+    checkAndMarkPrecioEspecial();
+
+    document.getElementById("btnGuardar").addEventListener("click", async function () {
+        const precioEspecial = document.getElementById("PrecioEspecial").checked;
+        const realAmount = parseFloat(document.getElementById("RealAmount").value);
+        const orderId = parseInt(document.getElementById("OrderId").value);
+        alert("order id: " + orderId);
+        if (precioEspecial && !isNaN(realAmount)) {
+            const response = await fetch('/api/order/actualizar-total', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: orderId,
+                    precioEspecial: true,
+                    realAmount: realAmount
+                })
+            });
+
+            const result = await response.text();
+
+            if (response.ok) {
+                alert("Total actualizado correctamente");
+                // Aquí puedes cerrar el modal o actualizar la UI
+            } else {
+                alert("Error: " + result);
+            }
+        }
+    });
+
+
+    
 </script>

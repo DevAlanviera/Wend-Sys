@@ -58,6 +58,6 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
 
         public int? Liters_Presentation { get; set; }
 
-
+        public bool ProntoPago { get; set; }
     }  
 }

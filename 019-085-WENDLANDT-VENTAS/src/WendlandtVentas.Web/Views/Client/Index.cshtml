@@ -19,8 +19,6 @@
     </ul>
 </section>
 
-
-<!-- Contenido de las pestañas -->
 <!-- Controles de las pestañas -->
 <ul class="nav nav-tabs" id="clientTabs" role="tablist">
     <li class="nav-item" role="presentation">
@@ -28,6 +26,12 @@
     </li>
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="distributors-tab" data-toggle="tab" href="#distributors" role="tab" aria-controls="distributors" aria-selected="false">Distribuidores</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="autoservices-tab" data-toggle="tab" href="#autoservices" role="tab" aria-controls="autoservices" aria-selected="false">Auto servicios</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="tastingroom-tab" data-toggle="tab" href="#tastingroom" role="tab" aria-controls="tastingroom" aria-selected="false">Tasting Rooms</a>
     </li>
 </ul>
 
@@ -72,6 +76,7 @@
                 <e-grid-columns>
                     <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
                     <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
                     <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
                     <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
                     <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
@@ -109,6 +114,7 @@
     }
 </style>
 @section Modals {
+@section Modals {
     <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Add")"></div>
     <div class="modal" id="editModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Edit")"></div>
     <div class="modal" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Delete")"></div>
@@ -132,6 +138,7 @@
 
 }
 
+@section Scripts {
 @section Scripts {
     <script id="actionButtons" type="text/x-template">
         <div>

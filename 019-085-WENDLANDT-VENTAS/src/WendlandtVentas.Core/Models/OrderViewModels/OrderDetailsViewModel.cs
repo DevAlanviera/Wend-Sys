@@ -72,5 +72,9 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         //Agregamos la referencia de bitacoraItemModel
         public List<BitacoraItemModel> BitacoraEntries { get; set; }
 
+        //Agregamos la propiedad para pronto pago
+        public bool ProntoPago { get; set; }
+
+
     }
 }

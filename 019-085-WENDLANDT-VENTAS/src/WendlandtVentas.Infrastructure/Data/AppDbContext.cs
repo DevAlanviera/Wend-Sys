@@ -2,12 +2,15 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Monobits.SharedKernel;
 using Monobits.SharedKernel.Interfaces;
+using Syncfusion.DocIO.DLS;
 using System;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Threading;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Interfaces;
+using WendlandtVentas.Web.Models.ProductViewModels;
 
 
 //WendlandtVentas.Infraestructure.Data
@@ -51,6 +54,9 @@ namespace WendlandtVentas.Infrastructure.Data
         //Referencia de la clase bitacora
         public DbSet<Bitacora> Bitacora { get; set; }
 
+        // DbSet para la tabla PreciosEspeciales
+        public DbSet<PrecioEspecial> PreciosEspeciales { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
 
@@ -70,7 +76,32 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Entity<Promotion>(ConfigureExecution);
             builder.Entity<State>(ConfigureExecution);
             builder.Entity<Bitacora>(ConfigureExecution);
+            builder.Entity<PrecioEspecial>(ConfigureExecution);
         }
+
+        private void ConfigureExecution(EntityTypeBuilder<PrecioEspecial> builder)
+        {
+            // Definir la clave primaria compuesta
+            builder.HasKey(pe => new { pe.ClienteId, pe.ProductoId });
+
+            // Relación con Cliente (SIN WithMany)
+            builder.HasOne(pe => pe.Cliente)
+                .WithMany() // Eliminamos la referencia a la colección eliminada
+                .HasForeignKey(pe => pe.ClienteId)
+                .OnDelete(DeleteBehavior.Cascade); // Opcional: Define el comportamiento al eliminar
+
+            // Relación con Producto
+            builder.HasOne(pe => pe.Producto)
+                .WithMany(p => p.PreciosEspeciales)
+                .HasForeignKey(pe => pe.ProductoId)
+                .OnDelete(DeleteBehavior.Cascade); // Opcional: Define el comportamiento al eliminar
+
+            // Configuración del campo Precio
+            builder.Property(pe => pe.Precio)
+                .HasColumnType("decimal(18, 2)") // Tipo de dato en la base de datos
+                .IsRequired(); // Campo obligatorio
+        }
+
 
         private void ConfigureExecution(EntityTypeBuilder<Client> builder)
         {
@@ -145,6 +176,14 @@ namespace WendlandtVentas.Infrastructure.Data
                 .HasColumnType("decimal(18,2)");
             builder.Property(c => c.Total)
                 .HasColumnType("decimal(18,2)");
+
+            builder.Property(o => o.ProntoPago)
+       .HasDefaultValue(false) // Valor por defecto
+       .HasColumnName("ProntoPago");
+
+            builder.Property(o => o.PrecioEspecial)
+        .HasDefaultValue(false)
+        .HasColumnName("PrecioEspecial");
         }
 
 

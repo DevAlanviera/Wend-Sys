@@ -6,6 +6,9 @@ namespace WendlandtVentas.Core.Entities.Enums
     {
         [Display(Name = "Venta directa")] DirectSale,
         [Display(Name = "Mayorista")] Wholesaler,
-        [Display(Name = "Distribuidor")] Distributor
+        [Display(Name = "Distribuidor")] Distributor,
+        [Display(Name = "Autoservicio")] Autoservicio,
+        [Display(Name = "E-Commerce")] ECommerce,
+        [Display(Name = "Tasting Room")] TastingRoom,
     }
 }

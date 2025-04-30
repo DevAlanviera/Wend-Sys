@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Drawing.Charts;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -44,6 +45,7 @@ using WendlandtVentas.Web.Models.ClientViewModels;
 using WendlandtVentas.Web.Models.OrderViewModels;
 using WendlandtVentas.Web.Models.PromotionViewModels;
 using WendlandtVentas.Web.Models.TableModels;
+using Order = WendlandtVentas.Core.Entities.Order;
 
 namespace WendlandtVentas.Web.Controllers
 {
@@ -320,8 +322,8 @@ namespace WendlandtVentas.Web.Controllers
 
                     // Filtrar por moneda
                     productsInStock = currencyType == CurrencyType.MXN
-                        ? productsInStock.Where(c => !c.Price.Equals(decimal.Zero)).ToList()
-                        : productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
+                 ? productsInStock.Where(c => c.Price >= 0).ToList()
+                 : productsInStock.Where(c => c.PriceUsd >= 0).ToList();
 
                     // Almacenar en caché con una duración de 10 minutos
                     _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
@@ -341,6 +343,39 @@ namespace WendlandtVentas.Web.Controllers
                 _logger.LogError(e, $"Error en método AddProduct: {e.Message}");
                 return PartialView("_AddProductModal");
             }
+        }
+
+        private async Task<IActionResult> ValidateClientRFCAsync(int clientId, OrderType orderType)
+        {
+            // Solo validar si el tipo de pedido es Factura (Invoice)
+            if (orderType == OrderType.Invoice)
+            {
+                // Obtener el cliente desde la base de datos
+                var client = await _repository.GetByIdAsync<Client>(clientId);
+
+                // Verificar si el cliente tiene un RFC válido
+                if (client == null || string.IsNullOrEmpty(client.RFC))
+                {
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
+                        "No se puede guardar como factura porque el cliente no tiene RFC registrado."));
+                }
+            }
+
+            // Si la validación es exitosa, devolver null
+            return null;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CheckClientRFC(int clientId)
+        {
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+            {
+                return Json(new { hasRFC = false, message = "Cliente no encontrado." });
+            }
+
+            bool hasRFC = !string.IsNullOrEmpty(client.RFC);
+            return Json(new { hasRFC, message = hasRFC ? "" : "Este cliente no tiene RFC registrado." });
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
@@ -648,7 +683,8 @@ namespace WendlandtVentas.Web.Controllers
                 PayTypes = new SelectList(Enum.GetValues(typeof(PayType)).Cast<PayType>().Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CurrencyTypes = new SelectList(new[] { order.CurrencyType }.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CanEditProducts = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
-                Comment = order.Comment
+                Comment = order.Comment,
+                ProntoPago = order.ProntoPago
             };
 
             return View("AddEdit", model);
@@ -659,10 +695,21 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(OrderViewModel model)
         {
+
+
+            
             if (!ModelState.IsValid)
                 return Json(AjaxFunctions.GenerateJsonError(string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
+
+           
+
+            var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
+            if (rfcValidationResult != null)
+            {
+                return rfcValidationResult;
+            }
 
             var response = await _orderService.UpdateOrderAsync(model, User.Identity.Name);
 
@@ -772,6 +819,13 @@ namespace WendlandtVentas.Web.Controllers
                 var currentStatusOrder = order.OrderStatus;
                 order.ChangeStatus(model.Status, model.Comments ?? "", model.InvoiceCode ?? "");
 
+                // Si es estado "InProcess" y se ingresó un nuevo monto real
+                if (model.Status == OrderStatus.InProcess && model.InitialAmount > 0)
+                {
+                    order.PrecioEspecial = true; // aquí asumo que el campo en la entidad se llama así
+                    await _repository.UpdateAsync(order); // se guarda el cambio
+                }
+
                 if (model.Status == OrderStatus.Delivered)
                 {
                     var client = await _repository.GetByIdAsync<Client>(order.ClientId);
@@ -860,6 +914,36 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
+
+        [HttpPost("actualizar-total")]
+        public async Task<IActionResult> ActualizarTotal(ActualizarTotalViewModel model)
+        {
+
+            Console.WriteLine("Metodo ejecutandose: " + model.Id +" " +  model.PrecioEspecial + " " + model.RealAmount);
+            // Verificar si el modelo es válido
+            if (!ModelState.IsValid)
+                return BadRequest("Datos inválidos");
+
+            // Llamar al servicio para actualizar el total
+            var result = await _orderService.ActualizarTotalAsync(model.Id, model.RealAmount);
+
+            // Verificar si la actualización fue exitosa
+            if (!result.IsSuccess)
+            {
+                // Si falla, retornar el mensaje de error
+                return StatusCode(500, result.Message);
+            }
+
+            // Si fue exitosa, retornar el mensaje de éxito
+            return Ok(result.Message);
+        }
+
+
+
+
+
+
+
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
@@ -899,6 +983,7 @@ namespace WendlandtVentas.Web.Controllers
                     AddressLocation = order.Address,
                     DeliverySpecification = order.DeliverySpecification
                 },
+                ProntoPago = order.ProntoPago,
                 Client = new ClientItemModel
                 {
                     Id = order.ClientId,
@@ -943,8 +1028,8 @@ namespace WendlandtVentas.Web.Controllers
                      Accion = b.Accion,
                 }).ToList()
             };
-        
 
+           
             return PartialView("_DetailsModal", model);
         }
 
@@ -1056,7 +1141,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_DeleteModal", $"{id}");
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, , BillingAssistant")]
+        [Authorize(Roles = "Administrator")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)

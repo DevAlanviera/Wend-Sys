@@ -28,7 +28,7 @@
                 @Html.DropDownListFor(m => m.Channel, Html.GetEnumSelectList<WendlandtVentas.Core.Entities.Enums.Channel>(), "Seleccionar canal", new { @class = "form-control", id = "Channel" })
                 <span asp-validation-for="Channel" class="text-danger"></span>
             </div>
-            <!-- Campo descuentoDistribuidor (oculto inicialmente) 
+            <!-- Campo descuentoDistribuidor (oculto inicialmente)
             <div class="form-group" id="descuentoDistribuidorGroup" hidden>
                 <label for="DiscountPercentage">Descuento Distribuidor (%)</label> <b class="text-danger">*</b>
                 <input asp-for="DiscountPercentage" id="DiscountPercentage" class="form-control" type="number" step="0.01" min="0" max="100" required />
@@ -133,4 +133,3 @@
         });*/
     });
 </script>
-
