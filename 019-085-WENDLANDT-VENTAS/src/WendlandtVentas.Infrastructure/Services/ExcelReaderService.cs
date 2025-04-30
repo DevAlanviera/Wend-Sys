@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
@@ -98,7 +99,7 @@ namespace WendlandtVentas.Infrastructure.Services
             excelFile = Path.Combine(path, $"wwwroot/resources/{excelFile}");
             guidExcel = Path.Combine(path, $"wwwroot/resources/orders/{guidExcel}");
             guidPdf = Path.Combine(path, $"wwwroot/resources/orders/{guidPdf}");
-
+            
 
             using (ExcelEngine excelEngine = new ExcelEngine())
             {
@@ -106,6 +107,7 @@ namespace WendlandtVentas.Infrastructure.Services
                 IApplication application = excelEngine.Excel;
                 IWorkbook workbook = application.Workbooks.Open(excelStream);
                 IWorksheet worksheet = workbook.Worksheets[0];
+
 
                 if (model.TypeEnum == OrderType.Invoice)
                 {
@@ -145,6 +147,29 @@ namespace WendlandtVentas.Infrastructure.Services
                         : model.Comment;
                     worksheet.Range["D31"].Text += $"{model.Weight} Kg.";
 
+                    var commentsList = model.Client.Comments.ToList();
+                    string commentText;
+
+                    if (commentsList.Any())
+                    {
+                        commentText = string.Join(" ", commentsList.Select(c => c.Comments));
+
+                        // Insertar saltos de línea automáticos cada 25 caracteres
+                        commentText = InsertLineBreaks(commentText, 25);
+                    }
+                    else
+                    {
+                        commentText = "No hay comentarios disponibles";
+                    }
+
+                    // Asignar el comentario a las celdas
+                    worksheet.Range["D25:F26"].Text = commentText;
+                    worksheet.Range["N25:P26"].Text = commentText;
+
+                    // Habilitar el ajuste de texto
+                    worksheet.Range["D25:F26"].CellStyle.WrapText = true;
+                    worksheet.Range["N25:P26"].CellStyle.WrapText = true;
+
                     worksheet.Range["R7"].Text = model.CreateDate.Day.ToString();
                     worksheet.Range["S7"].Text = model.CreateDate.Month.ToString();
                     worksheet.Range["T7"].Text = model.CreateDate.Year.ToString();
@@ -180,6 +205,31 @@ namespace WendlandtVentas.Infrastructure.Services
                     worksheet.Range["E9"].Text += model.Address.AddressLocation;
                     worksheet.Range["E12"].Text += model.Client.City;
                     worksheet.Range["H12"].Text += model.Client.RFC;
+
+                    var commentsList = model.Client.Comments.ToList();
+                    string commentText;
+
+                    if (commentsList.Any())
+                    {
+                        commentText = string.Join(" ", commentsList.Select(c => c.Comments));
+
+                        // Insertar saltos de línea automáticos cada 25 caracteres
+                        commentText = InsertLineBreaks(commentText, 25);
+                    }
+                    else
+                    {
+                        commentText = "No hay comentarios disponibles";
+                    }
+
+
+                    // Asignar el comentario a las celdas
+                    worksheet.Range["N26:P27"].Text = commentText;
+                    worksheet.Range["D26:F27"].Text = commentText;
+
+                    // Habilitar el ajuste de texto para que se respeten los saltos de línea
+                    worksheet.Range["N26:P27"].CellStyle.WrapText = true;
+                    worksheet.Range["D26:F27"].CellStyle.WrapText = true;
+
 
                     worksheet.Range["D28"].Text += string.IsNullOrEmpty(model.CollectionComment)
                         ? string.Empty
@@ -265,6 +315,35 @@ namespace WendlandtVentas.Infrastructure.Services
                 return null;
             }
             return guidPdf;
+        }
+
+        private string InsertLineBreaks(string text, int maxLineLength)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
+            var words = text.Split(' ');
+            var result = new StringBuilder();
+            int currentLineLength = 0;
+
+            foreach (var word in words)
+            {
+                if (currentLineLength + word.Length + 1 > maxLineLength)
+                {
+                    result.Append(Environment.NewLine); // Insertar salto de línea compatible con Excel
+                    currentLineLength = 0;
+                }
+                else if (result.Length > 0)
+                {
+                    result.Append(' ');
+                    currentLineLength++;
+                }
+
+                result.Append(word);
+                currentLineLength += word.Length;
+            }
+
+            return result.ToString();
         }
     }
 }

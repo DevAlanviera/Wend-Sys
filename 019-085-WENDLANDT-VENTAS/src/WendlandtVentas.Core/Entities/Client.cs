@@ -26,8 +26,11 @@ namespace WendlandtVentas.Core.Entities
         public ICollection<Address> Addresses { get; private set; }
         public ICollection<Contact> Contacts { get; private set; }
 
+        //Agregamos la coleccion de Comentarios al cliente
+        public ICollection<Comment> Comment { get; private set; }
+
         //Solo se utiliza cuando el tipo de cliente es deistribuidor
-       [Range(0, 100, ErrorMessage = "El porcentaje de descuento debe estar entre 0 y 100")]
+        [Range(0, 100, ErrorMessage = "El porcentaje de descuento debe estar entre 0 y 100")]
         public decimal? DiscountPercentage { get; set; }
 
         public Client()

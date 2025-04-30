@@ -18,6 +18,7 @@ namespace WendlandtVentas.Core.Specifications.ClientSpecifications
             AddInclude(c => c.State);
             AddInclude(c => c.Contacts);
             AddInclude(c => c.Addresses);
+            AddInclude(c => c.Comment);
         }
 
         // Nuevo constructor para filtrar clientes con un criterio personalizado
@@ -26,6 +27,7 @@ namespace WendlandtVentas.Core.Specifications.ClientSpecifications
             AddInclude(c => c.State);
             AddInclude(c => c.Contacts);
             AddInclude(c => c.Addresses);
+            AddInclude(c => c.Comment);
         }
     }
 }

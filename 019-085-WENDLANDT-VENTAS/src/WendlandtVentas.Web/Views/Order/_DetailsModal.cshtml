@@ -131,6 +131,8 @@
                             <th>Tipo de pago</th>
                             <th>Canal</th>
                             <th>Estado</th>
+                            <th>Comentarios del cliente:</th>
+                           
                         </tr>
                     </thead>
                     <tbody>
@@ -140,6 +142,16 @@
                             <td>@Model.Client.PayType</td>
                             <td>@Model.Client.Channel</td>
                             <td>@Model.Client.State</td>
+                            <td colspan="5">
+                                @if (Model.Client.Comments != null && Model.Client.Comments.Any())
+                                {
+                                    @string.Join(", ", Model.Client.Comments.Select(c => c.Comments))
+                                }
+                                else
+                                {
+                                    <text>-</text>
+                                }
+                            </td>
                         </tr>
                     </tbody>
                 </table>

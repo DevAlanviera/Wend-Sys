@@ -55,6 +55,7 @@
                     <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
                     <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
                     <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
                     <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
                 </e-grid-columns>
             </ejs-grid>
@@ -83,6 +84,7 @@
                     <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
                     <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
                     <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
                     <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
                 </e-grid-columns>
             </ejs-grid>
@@ -121,6 +123,13 @@
     <div class="modal" id="viewAddresses" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddressesView")"></div>
     <div class="modal" id="editAddress" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("EditAddressView")"></div>
     <div class="modal" id="deleteAddress" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("DeleteAddressView")"></div>
+
+    <div class="modal" id="addComments" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddCommentsView")"></div>
+    <div class="modal" id="viewComments" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("CommentsView")"></div>
+    <div class="modal" id="editComments" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("EditCommentsView")"></div>
+    <div class="modal" id="deleteComments" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("DeleteCommentsView")"></div>
+
+
 }
 
 @section Scripts {
@@ -128,6 +137,7 @@
         <div>
             <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
             <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+            
         </div>
     </script>
     <script id="contactsButtons" type="text/x-template">
@@ -154,6 +164,25 @@
             <a href="#deleteAddress" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
         </div>
     </script>
+
+    <!--Agregamos para comentarios-->
+
+    <script id="commentsButtons" type="text/x-template">
+        <div>
+            <a href="#addComments" data-id="${id}" title="Agregar Comentario" class="tip btn btn-sm btn-light btn-modal-action ${AddCommentButtonClass}">
+                ${comments} <i class="fa fa-fw fa-plus"></i>
+            </a>
+            <a href="#viewComments" data-id="${id}" title="Ver Comentarios" class="tip btn btn-sm btn-light btn-modal-action">
+                <i class="fa fa-comments"></i>
+            </a>
+        </div>
+    </script>
+    <script id="commentsActionButtons" type="text/x-template">
+        <div>
+            <a href="#editComments" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
+            <a href="#deleteComments" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+        </div>
+    </script>
     <script type="text/x-template" id="classificationTemplate">
         ${if(classification == "Oro")}
             <i class="fas fa-circle" style="color:gold"></i>
@@ -164,6 +193,16 @@
         ${if(classification == "Bronce")}
             <i class="fas fa-circle" style="color:saddlebrown"></i>
         ${/if}
+         ${if(classification == "Gold")}
+            <i class="fas fa-circle" style="color:gold"></i>
+        ${/if}
+        ${if(classification == "Silver")}
+            <i class="fas fa-circle" style="color:silver"></i>
+        ${/if}
+        ${if(classification == "Bronze")}
+            <i class="fas fa-circle" style="color:saddlebrown"></i>
+        ${/if}
+
         <span class="ml-1">
             ${classification}
         </span>

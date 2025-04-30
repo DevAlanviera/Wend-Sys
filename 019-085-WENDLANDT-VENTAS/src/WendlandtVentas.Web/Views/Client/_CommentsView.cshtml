@@ -1,0 +1,32 @@
+﻿@using Syncfusion.EJ2
+@model int
+
+<div class="modal-dialog modal-xl" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="container-fluid">
+                <div class="datatable-container">
+                    <ejs-grid id="GridComments" allowExcelExport="true" class="datatable" locale="es-MX" allowPaging="true" allowSorting="false" allowTextWrap="true">
+                        <e-data-manager url="@Url.Action("GetDataComments", new { Id = Model })" adaptor="UrlAdaptor"></e-data-manager>
+                        <e-grid-pagesettings pageSize="50"></e-grid-pagesettings>
+                        <e-grid-columns>
+                            <e-grid-column field="comment" headerText="Comentarios" width="200"></e-grid-column>
+                           <e-grid-column headerText="" width="70" template="#commentsActionButtons" textAlign="Right"></e-grid-column>
+                        </e-grid-columns>
+                    </ejs-grid>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+@Html.EJS().ScriptManager()

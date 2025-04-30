@@ -45,6 +45,9 @@ namespace WendlandtVentas.Infrastructure.Data
         public DbSet<Contact> Contacts { get; set; }
         public DbSet<Address> Addresses { get; set; }
 
+        //Agregamos comentarios al contexto de la bd
+        public DbSet<Comment> Comments { get; set; }
+
         //Referencia de la clase bitacora
         public DbSet<Bitacora> Bitacora { get; set; }
 

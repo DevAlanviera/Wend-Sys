@@ -924,6 +924,8 @@ namespace WendlandtVentas.Web.Controllers
 
             var bitacoraEntries = await _bitacoraRepository.GetBitacorasByOrderIdAsync(id);
 
+           
+
             var model = new OrderDetailsViewModel
             {
                 Id = order.Id,
@@ -961,6 +963,12 @@ namespace WendlandtVentas.Web.Controllers
                     Name = order.Client.Name,
                     Classification = order.Client.Classification == null ? "-" : order.Client.Classification.Humanize(),
                     State = order.Client.State == null ? "-" : order.Client.State.Name,
+                    Comments = order.Client.Comment != null && order.Client.Comment.Any()
+                    ? order.Client.Comment
+                        .Where(c => !c.IsDeleted) // Filtra los comentarios no eliminados
+                        .Select(c => new CommentsItemModel { Id = c.Id, Comments = c.Comments })
+                        .ToList()
+                    : new List<CommentsItemModel>()
                 },
                 Products = order.OrderProducts.Where(c => !c.IsDeleted).Select(c => new ProductItemModel
                 {
@@ -1056,7 +1064,13 @@ namespace WendlandtVentas.Web.Controllers
                     Classification = order.Client.Classification == null ? "-" : order.Client.Classification.Humanize(),
                     State = order.Client.State == null ? "-" : order.Client.State.Name,
                     City = string.IsNullOrEmpty(order.Client.City) ? "-" : order.Client.City,
-                    RFC = string.IsNullOrEmpty(order.Client.RFC) ? "-" : order.Client.RFC
+                    RFC = string.IsNullOrEmpty(order.Client.RFC) ? "-" : order.Client.RFC,
+                    Comments = order.Client.Comment != null && order.Client.Comment.Any()
+                    ? order.Client.Comment
+                        .Where(c => !c.IsDeleted)
+                        .Select(c => new CommentsItemModel { Id = c.Id, Comments = c.Comments })
+                        .ToList()
+                    : new List<CommentsItemModel>()
                 },
                 Products = order.OrderProducts.Where(c => !c.IsDeleted).Select(c => new ProductItemModel
                 {
@@ -1088,6 +1102,16 @@ namespace WendlandtVentas.Web.Controllers
             };
             try
             {
+                foreach (var comment in order.Client.Comment != null && order.Client.Comment.Any()
+                    ? order.Client.Comment
+                        .Where(c => !c.IsDeleted)
+                        .Select(c => new CommentsItemModel { Id = c.Id, Comments = c.Comments })
+                        .ToList()
+                    : new List<CommentsItemModel>())
+                {
+                    Console.WriteLine($"Comentario: {comment.Comments}");
+                }
+               
                 var archivo_generado = await _excelReadService.FillData(currentPath, model);
 
                 FileStream fileStream = new FileStream(archivo_generado, FileMode.Open, FileAccess.ReadWrite);

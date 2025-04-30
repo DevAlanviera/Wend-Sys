@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace WendlandtVentas.Core.Models.ClientViewModels
 {
@@ -22,5 +23,8 @@ namespace WendlandtVentas.Core.Models.ClientViewModels
         public string State { get; set; }
         public string City { get; set; }
         public string RFC { get; set; }
+
+        //Agregamos esta propiedad para poder acceder a los comentarios
+        public List<CommentsItemModel> Comments { get; set; } = new List<CommentsItemModel>(); // <-- Aquí agregas los comentarios como texto
     }
 }

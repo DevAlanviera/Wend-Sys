@@ -69,7 +69,9 @@ namespace WendlandtVentas.Web.Controllers
                 c.CreditDays,
                 c.SellerId,
                 Addresses = c.Addresses.Count,
-                Contacts = c.Contacts.Count
+                Contacts = c.Contacts.Count,
+                Comments = c.Comment.Count(x => !x.IsDeleted), // Aquí estamos contando los comentarios no eliminados
+                AddCommentButtonClass = c.Comment.Count(x => !x.IsDeleted) >= 1 ? "btn-disabled" : "" // Deshabilitar si no hay comentarios
             });
 
             var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
@@ -112,18 +114,19 @@ namespace WendlandtVentas.Web.Controllers
                     {
                         c.Id,
                         c.Name,
-                        Classification = c.Classification.HasValue ? c.Classification.Value.ToString().Humanize() : "-",
-                        Channel = c.Channel.HasValue ? c.Channel.Value.ToString().Humanize() : "-",
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
                         State = c.State != null ? c.State.Name : "-",
                         c.RFC,
                         c.City,
                         CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
                         PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
-
                         c.CreditDays,
                         c.SellerId,
                         Addresses = c.Addresses.Count,
                         Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted), // Aquí estamos contando los comentarios no eliminados
+                        AddCommentButtonClass = c.Comment.Count(x => !x.IsDeleted) >= 1 ? "btn-disabled" : "", // Deshabilitar si no hay comentarios,
                         DiscountPercentage = c.DiscountPercentage ?? 0
                     })
                     .ToListAsync();
@@ -173,7 +176,7 @@ namespace WendlandtVentas.Web.Controllers
                     return new AddressTableModel
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Comment = c.Name,
                         Address = c.AddressLocation
                     };
                 });
@@ -361,6 +364,155 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo editar la dirección"));
             }
         }
+
+        //A continuacion vienen los metodos para agregar comentarios a clientes
+
+        [HttpPost]
+        public async Task<IActionResult> GetDataComments([FromBody] DataManagerRequest dm, int id)
+        {
+            var dataSource = (await _repository.ListAsync(new CommentsByClientIdSpecification(id)))
+                .Where(c => !c.IsDeleted)
+                .Select(c => new CommentsTableModel
+                {
+                    Id = c.Id,
+                    Comment = c.Comments,
+                    IsDeleted = c.IsDeleted
+                });
+
+
+            var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
+            var filteredData = dataResult.DataResult;
+
+            var count = (await _repository.ListAsync(new CommentsByClientIdSpecification(id)))
+                .Where(c => !c.IsDeleted)
+                .Count();
+
+            return dm.RequiresCounts
+                ? new JsonResult(new { result = filteredData, count = count, hasComments = count >= 1 })
+                : new JsonResult(new { result = filteredData, hasComments = count >= 1 });
+        }
+
+
+
+
+
+
+        [HttpGet]
+        public async Task<IActionResult> CommentsView(int id)
+        {
+            var client = await _repository.GetByIdAsync<Client>(id);
+            ViewData["ModalTitle"] = $"Comentarios de {client.Name}";
+            return PartialView("_CommentsView", id);
+        }
+
+        [HttpGet]
+        public IActionResult AddCommentsView(int id)
+        {
+            ViewData["ModalTitle"] = "Agregar comentario";
+            ViewData["Action"] = nameof(AddComments);
+            var model = new CommentsViewModel
+            {
+                ClientId = id
+            };
+            return PartialView("_AddEditCommentsModal", model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddComments(CommentsViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+            try
+            {
+                var comment = new Comment(model.Comment, model.ClientId);
+                await _repository.AddAsync(comment);
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Comentario guardado"));
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Error en ClientController --> AddComment: " + e.Message);
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el comentario"));
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditCommentsView(int id)
+        {
+            var comment = await _repository.GetByIdAsync<Comment>(id);
+            ViewData["ModalTitle"] = "Editar comentario";
+            ViewData["Action"] = nameof(EditComments);
+
+            var model = new CommentsViewModel
+            {
+                Id = comment.Id,
+                ClientId = comment.ClientId,
+                Comment = comment.Comments
+            };
+
+            return PartialView("_AddEditCommentsModal", model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditComments(CommentsViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+            try
+            {
+                var comment = await _repository.GetByIdAsync<Comment>(model.Id);
+                comment.Edit(model.Comment, model.ClientId);
+                await _repository.UpdateAsync(comment);
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Comentario actualizado"));
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Error en ClientController --> EditComment: " + e.Message);
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo editar el comentario"));
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DeleteCommentsView(int id)
+        {
+            var comment = await _repository.GetByIdAsync<Comment>(id);
+
+            if (comment == null)
+                return Json(AjaxFunctions.GenerateJsonError("El comentario no existe"));
+
+            ViewData["Action"] = nameof(DeleteComments); // nombre del método POST
+            ViewData["ModalTitle"] = "Eliminar comentario";
+            ViewData["ModalDescription"] = $"el comentario: \"{comment.Comments}\""; // Asumiendo que tienes una propiedad Text
+
+            return PartialView("_DeleteModal", comment.Id.ToString());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteComments(int id)
+        {
+            try
+            {
+                var comment = await _repository.GetByIdAsync<Comment>(id);
+
+                if (comment == null)
+                    return Json(AjaxFunctions.GenerateJsonError("El comentario no existe"));
+
+                comment.Delete(); // Asumiendo que manejas un borrado lógico
+                await _repository.UpdateAsync(comment);
+
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Comentario eliminado"));
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Error en CommentController --> DeleteComment: {e.Message}");
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo eliminar el comentario"));
+            }
+        }
+
+        //AQUI TERMINAN LOS METODOS PARA AGREGAR COMENTARIOS A CLIENTES
+
 
         [HttpGet]
         public async Task<IActionResult> Add()
