@@ -272,47 +272,33 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Add(OrderViewModel model)
         {
-            // Validar el modelo
             if (!ModelState.IsValid)
-            {
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
-                    string.Join("; ", ModelState.Values
-                        .SelectMany(x => x.Errors)
-                        .Select(x => x.ErrorMessage))));
-            }
-            //Manda a llamar el metodo para verificar si el cliente tiene RFC registrado
-            var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
-            if (rfcValidationResult != null)
-            {
-                return rfcValidationResult;
-            }
-
-            // Verificar si hay pedidos pendientes para el cliente
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, string.Join("; ", ModelState.Values
+                    .SelectMany(x => x.Errors)
+                    .Select(x => x.ErrorMessage))));
             var filters = new Dictionary<string, string>
             {
-                { nameof(model.ClientId), $"{model.ClientId}" },
-                { "StatusList", $"{OrderStatus.OnRoute},{OrderStatus.InProcess}" }
+                {
+                    nameof(model.ClientId),
+                    $"{model.ClientId}"
+                },
+                {
+                    "StatusList",
+                    $"{OrderStatus.OnRoute},{OrderStatus.InProcess}"
+                }
             };
             var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
 
             if (ordersPending.Any() && model.Type != OrderType.Return)
-            {
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning,
-                    "Existe un pedido previo sin entregar."));
-            }
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
 
-            // Guardar el pedido
             var response = await _orderService.AddOrderAsync(model, User.Identity.Name);
 
             if (response.IsSuccess)
-            {
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, response.Message));
-            }
 
-            // Loggear el error y devolver mensaje de error
             _logger.LogError($"Error: {response.Message}");
-            return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
-                "No se pudo guardar el pedido"));
+            return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el pedido"));
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
@@ -334,8 +320,8 @@ namespace WendlandtVentas.Web.Controllers
 
                     // Filtrar por moneda
                     productsInStock = currencyType == CurrencyType.MXN
-                     ? productsInStock.Where(c => c.Price >= 0).ToList()
-                     : productsInStock.Where(c => c.PriceUsd >= 0).ToList();
+                        ? productsInStock.Where(c => !c.Price.Equals(decimal.Zero)).ToList()
+                        : productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
 
                     // Almacenar en caché con una duración de 10 minutos
                     _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
@@ -355,39 +341,6 @@ namespace WendlandtVentas.Web.Controllers
                 _logger.LogError(e, $"Error en método AddProduct: {e.Message}");
                 return PartialView("_AddProductModal");
             }
-        }
-
-        private async Task<IActionResult> ValidateClientRFCAsync(int clientId, OrderType orderType)
-        {
-            // Solo validar si el tipo de pedido es Factura (Invoice)
-            if (orderType == OrderType.Invoice)
-            {
-                // Obtener el cliente desde la base de datos
-                var client = await _repository.GetByIdAsync<Client>(clientId);
-
-                // Verificar si el cliente tiene un RFC válido
-                if (client == null || string.IsNullOrEmpty(client.RFC))
-                {
-                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
-                        "No se puede guardar como factura porque el cliente no tiene RFC registrado."));
-                }
-            }
-
-            // Si la validación es exitosa, devolver null
-            return null;
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> CheckClientRFC(int clientId)
-        {
-            var client = await _repository.GetByIdAsync<Client>(clientId);
-            if (client == null)
-            {
-                return Json(new { hasRFC = false, message = "Cliente no encontrado." });
-            }
-
-            bool hasRFC = !string.IsNullOrEmpty(client.RFC);
-            return Json(new { hasRFC, message = hasRFC ? "" : "Este cliente no tiene RFC registrado." });
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
@@ -711,13 +664,6 @@ namespace WendlandtVentas.Web.Controllers
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
 
-            var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
-            if (rfcValidationResult != null)
-            {
-                return rfcValidationResult;
-            }
-
-
             var response = await _orderService.UpdateOrderAsync(model, User.Identity.Name);
 
             if (response.IsSuccess)
@@ -817,7 +763,7 @@ namespace WendlandtVentas.Web.Controllers
                 //Aqui esta obteniendo el id de la persona que tiene el nombre por medio del id registrado en la orden
                 var user = await _userManager.FindByIdAsync(order.UserId);
 
-
+               
 
                 var orderTotal = order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total;
                 if (orderTotal < model.InitialAmount)
@@ -900,9 +846,9 @@ namespace WendlandtVentas.Web.Controllers
                     await _bitacoraRepository.AddAsync(bitacora);
                     _cacheService.InvalidateOrderCache();
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. Inventario actualizado"));
-
+                
                 }
-
+                    
                 //return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. {messageDiscountInventory}"));
 
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, $"Cambio de estado guardado. Notificación no enviada. Inventario actualizado"));
@@ -923,8 +869,6 @@ namespace WendlandtVentas.Web.Controllers
             var weight = await CalcOrderWeight(id);
 
             var bitacoraEntries = await _bitacoraRepository.GetBitacorasByOrderIdAsync(id);
-
-           
 
             var model = new OrderDetailsViewModel
             {
@@ -963,12 +907,6 @@ namespace WendlandtVentas.Web.Controllers
                     Name = order.Client.Name,
                     Classification = order.Client.Classification == null ? "-" : order.Client.Classification.Humanize(),
                     State = order.Client.State == null ? "-" : order.Client.State.Name,
-                    Comments = order.Client.Comment != null && order.Client.Comment.Any()
-                    ? order.Client.Comment
-                        .Where(c => !c.IsDeleted) // Filtra los comentarios no eliminados
-                        .Select(c => new CommentsItemModel { Id = c.Id, Comments = c.Comments })
-                        .ToList()
-                    : new List<CommentsItemModel>()
                 },
                 Products = order.OrderProducts.Where(c => !c.IsDeleted).Select(c => new ProductItemModel
                 {
@@ -1064,13 +1002,7 @@ namespace WendlandtVentas.Web.Controllers
                     Classification = order.Client.Classification == null ? "-" : order.Client.Classification.Humanize(),
                     State = order.Client.State == null ? "-" : order.Client.State.Name,
                     City = string.IsNullOrEmpty(order.Client.City) ? "-" : order.Client.City,
-                    RFC = string.IsNullOrEmpty(order.Client.RFC) ? "-" : order.Client.RFC,
-                    Comments = order.Client.Comment != null && order.Client.Comment.Any()
-                    ? order.Client.Comment
-                        .Where(c => !c.IsDeleted)
-                        .Select(c => new CommentsItemModel { Id = c.Id, Comments = c.Comments })
-                        .ToList()
-                    : new List<CommentsItemModel>()
+                    RFC = string.IsNullOrEmpty(order.Client.RFC) ? "-" : order.Client.RFC
                 },
                 Products = order.OrderProducts.Where(c => !c.IsDeleted).Select(c => new ProductItemModel
                 {
@@ -1102,16 +1034,6 @@ namespace WendlandtVentas.Web.Controllers
             };
             try
             {
-                foreach (var comment in order.Client.Comment != null && order.Client.Comment.Any()
-                    ? order.Client.Comment
-                        .Where(c => !c.IsDeleted)
-                        .Select(c => new CommentsItemModel { Id = c.Id, Comments = c.Comments })
-                        .ToList()
-                    : new List<CommentsItemModel>())
-                {
-                    Console.WriteLine($"Comentario: {comment.Comments}");
-                }
-               
                 var archivo_generado = await _excelReadService.FillData(currentPath, model);
 
                 FileStream fileStream = new FileStream(archivo_generado, FileMode.Open, FileAccess.ReadWrite);
@@ -1134,7 +1056,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_DeleteModal", $"{id}");
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, , BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
