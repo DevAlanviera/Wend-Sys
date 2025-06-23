@@ -177,6 +177,10 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Property(c => c.Total)
                 .HasColumnType("decimal(18,2)");
 
+            builder.Property(c => c.RealAmount) // Aquí vinculas RealAmount con la columna real
+       .HasColumnType("decimal(18,2)")
+       .HasColumnName("EspecialPrice");
+
             builder.Property(o => o.ProntoPago)
        .HasDefaultValue(false) // Valor por defecto
        .HasColumnName("ProntoPago");

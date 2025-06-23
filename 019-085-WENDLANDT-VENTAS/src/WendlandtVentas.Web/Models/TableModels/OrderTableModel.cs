@@ -27,5 +27,8 @@ namespace WendlandtVentas.Web.Models.TableModels
         public string Address { get; set; }
         public bool CanDelete => StatusEnum == OrderStatus.New;
         public bool CanEdit { get; set; }
+
+        //Se agrega esta propiedad para obtener el monto real
+        public decimal? RealAmount { get; set; }
     }
 }

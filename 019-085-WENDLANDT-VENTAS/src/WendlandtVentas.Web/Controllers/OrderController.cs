@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DocumentFormat.OpenXml.Drawing.Charts;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -39,10 +40,12 @@ using WendlandtVentas.Core.Specifications.PromotionSpecifications;
 using WendlandtVentas.Infrastructure.Commons;
 using WendlandtVentas.Infrastructure.Data;
 using WendlandtVentas.Infrastructure.Repositories;
+using WendlandtVentas.Infrastructure.Services;
 using WendlandtVentas.Web.Extensions;
 using WendlandtVentas.Web.Libs;
 using WendlandtVentas.Web.Models.ClientViewModels;
 using WendlandtVentas.Web.Models.OrderViewModels;
+using WendlandtVentas.Web.Models.ProductViewModels;
 using WendlandtVentas.Web.Models.PromotionViewModels;
 using WendlandtVentas.Web.Models.TableModels;
 using Order = WendlandtVentas.Core.Entities.Order;
@@ -66,6 +69,7 @@ namespace WendlandtVentas.Web.Controllers
         private readonly ITreasuryApi _treasuryApi;
         private readonly IBitacoraService _bitacoraService;
         private readonly IBitacoraRepository _bitacoraRepository;
+        private readonly IEmailSender _emailSender;
 
         public OrderController(IAsyncRepository repository,
             ILogger<ProductController> logger,
@@ -80,7 +84,8 @@ namespace WendlandtVentas.Web.Controllers
             IBitacoraRepository bitacoraRepository,
             AppDbContext dbContext,
             IMemoryCache memoryCache,
-            CacheService cacheService)
+            CacheService cacheService,
+            IEmailSender emailSender)
         {
             _repository = repository;
             _logger = logger;
@@ -96,6 +101,7 @@ namespace WendlandtVentas.Web.Controllers
             _dbContext = dbContext;
             _memoryCache = memoryCache;
             _cacheService = cacheService;
+            _emailSender = emailSender;
         }
 
         public class CachedDataResult
@@ -173,7 +179,9 @@ namespace WendlandtVentas.Web.Controllers
                         PaymentDate = c.PaymentDate == DateTime.MinValue ? string.Empty : c.PaymentDate.ToLocalTime().FormatDateShortMx(),
                         PaymentPromiseDate = c.PaymentPromiseDate == DateTime.MinValue ? string.Empty : c.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
                         CreateDate = c.CreatedAt.ToLocalTime().FormatDateShortMx(),
-                        Total = c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency(),
+                        Total = c.RealAmount.HasValue && c.RealAmount.Value != 0
+                        ? c.RealAmount.Value.FormatCurrency()
+                        : (c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency()),
                         Client = c.Client.Name,
                         StatusEnum = c.OrderStatus,
                         Comment = c.Comment,
@@ -397,7 +405,11 @@ namespace WendlandtVentas.Web.Controllers
 
             var productPresentation = await _repository.GetAsync(new ProductPresentationExtendedSpecification(model.ProductPresentationId));
 
-           
+
+            // Selecciona el precio base en base a la moneda
+            var basePrice = model.CurrencyType == CurrencyType.MXN
+                ? productPresentation.Price
+                : productPresentation.PriceUsd;
 
             var item = new ProductPresentationItem
             {
@@ -415,6 +427,9 @@ namespace WendlandtVentas.Web.Controllers
                 IsSeason = productPresentation.Product.Distinction == Distinction.Season,
                 IsPresent = model.IsPresent,
                 CanDelete = true,
+
+                //Agregamos esta propiedad para poder obtener el precio base y poder hacer operaciones con este
+                BasePriceFromProductPresentation = basePrice
             };
 
 
@@ -666,6 +681,7 @@ namespace WendlandtVentas.Web.Controllers
                         ProductPresentationId = c.ProductPresentationId,
                         ProductName = c.ProductPresentation.NameExtended(),
                         Price = c.Price != 0 ? c.Price : (isMxnCurrency ? c.ProductPresentation.Price : c.ProductPresentation.PriceUsd),
+                        BasePriceFromProductPresentation = isMxnCurrency ? c.ProductPresentation.Price : c.ProductPresentation.PriceUsd,
                         Quantity = c.Quantity,
                         SubtotalDouble = c.Price * c.Quantity,
                         PresentationId = c.ProductPresentation.PresentationId,
@@ -767,6 +783,8 @@ namespace WendlandtVentas.Web.Controllers
                 Comments = order.Comment,
                 Type = order.Type,
                 InvoiceCode = order.InvoiceCode,
+                PrecioEspecial = order.PrecioEspecial,
+                RealAmount = order.RealAmount,
                 Client = new ClientTableModel
                 {
                     Name = client.Name,
@@ -794,6 +812,7 @@ namespace WendlandtVentas.Web.Controllers
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
 
+            // Validaciones específicas por estado
             if (model.Type == OrderType.Invoice && string.IsNullOrEmpty(model.InvoiceCode) && model.Status == OrderStatus.OnRoute)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo cambiar el estado. El número de factura es requerido."));
 
@@ -803,68 +822,82 @@ namespace WendlandtVentas.Web.Controllers
             if (model.Status == OrderStatus.Delivered && string.IsNullOrEmpty(model.DeliveryDay))
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Seleccione una fecha de entrega."));
 
+            // Nueva validación para RealAmount
+            if (model.Status == OrderStatus.OnRoute && model.PrecioEspecial && model.RealAmount <= 0)
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Debe ingresar un monto real válido cuando activa precio especial"));
+
             try
             {
                 var email = User.Identity.Name;
                 var order = await _repository.GetAsync(new OrderExtendedSpecification(model.OrderId));
-                //Aqui esta obteniendo el id de la persona que tiene el nombre por medio del id registrado en la orden
                 var user = await _userManager.FindByIdAsync(order.UserId);
 
-               
-
+                // Validación de monto inicial
                 var orderTotal = order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total;
                 if (orderTotal < model.InitialAmount)
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Monto inicial no puede ser mayor que el total del pedido."));
 
+
                 var currentStatusOrder = order.OrderStatus;
+                // Actualizar estado y campos adicionales
                 order.ChangeStatus(model.Status, model.Comments ?? "", model.InvoiceCode ?? "");
 
-                // Si es estado "InProcess" y se ingresó un nuevo monto real
-                if (model.Status == OrderStatus.InProcess && model.InitialAmount > 0)
+                // Manejo de RealAmount para estado "En ruta"
+                if (model.Status == OrderStatus.OnRoute && model.PrecioEspecial)
                 {
-                    order.PrecioEspecial = true; // aquí asumo que el campo en la entidad se llama así
-                    await _repository.UpdateAsync(order); // se guarda el cambio
+                    order.PrecioEspecial = true;
+                    order.RealAmount = (decimal)model.RealAmount;
+                }
+                else
+                {
+                    order.PrecioEspecial = false;
+                    order.RealAmount = null;
                 }
 
+                // Manejo de fecha de entrega
                 if (model.Status == OrderStatus.Delivered)
                 {
                     var client = await _repository.GetByIdAsync<Client>(order.ClientId);
-                    var deliveryDay = string.IsNullOrEmpty(model.DeliveryDay) ? DateTime.MinValue : DateTime.ParseExact(model.DeliveryDay, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+                    var deliveryDay = DateTime.ParseExact(model.DeliveryDay, "dd/MM/yyyy", CultureInfo.InvariantCulture);
                     order.Delivered(deliveryDay.ToUniversalTime(), deliveryDay.AddDays(client.CreditDays + 1).ToUniversalTime());
                 }
 
                 await _repository.UpdateAsync(order);
 
+                // Manejo de inventario
                 var messageDiscountInventory = string.Empty;
                 if (!order.InventoryDiscount && model.Status != OrderStatus.Cancelled)
                 {
                     var response = await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
                     order.ToggleInventoryDiscount();
                     await _repository.UpdateAsync(order);
-
                     messageDiscountInventory = response.Message;
                 }
-
-                if (order.InventoryDiscount && model.Status == OrderStatus.Cancelled)
+                else if (order.InventoryDiscount && model.Status == OrderStatus.Cancelled)
                 {
                     var response = await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
                     order.ToggleInventoryDiscount();
                     await _repository.UpdateAsync(order);
                 }
 
+                // Manejo de pagos
                 if (model.Status == OrderStatus.Paid || model.Status == OrderStatus.PartialPayment)
                 {
+                    double amountToSend = order.RealAmount.HasValue && order.RealAmount.Value > 0
+                        ? Math.Min(model.InitialAmount, (double)order.RealAmount.Value)
+                        : orderTotal;
+
                     var income = new OrdersIncomeDto
                     {
                         OrderId = order.Id,
                         OrderType = order.Type,
                         CurrencyType = order.CurrencyType,
                         RemissionCode = order.RemissionCode,
-                        Amount = order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total,
+                        Amount = amountToSend,
                         InitialAmount = model.InitialAmount,
                         User = User.Identity.Name
                     };
-
+                    //COMENTADO DE MOMENTO PARA QUE NO INTENTE ENVIAR DATOSA TESORERIA
                     var apiResult = await _treasuryApi.AddIncomeAsync(income);
                     if (apiResult.IsSuccess)
                     {
@@ -890,8 +923,10 @@ namespace WendlandtVentas.Web.Controllers
 
                         return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Cambio de estado no guardado. No se pudo enviar el pago a Tesorería"));
                     }
+                    _cacheService.InvalidateOrderCache();
                 }
 
+                // Notificaciones y bitácora
                 var success = await _notificationService.NotifyChangeOrderStateAsync(order.Id, order.OrderStatus, email);
                 if (success)
                 {
@@ -900,10 +935,7 @@ namespace WendlandtVentas.Web.Controllers
                     await _bitacoraRepository.AddAsync(bitacora);
                     _cacheService.InvalidateOrderCache();
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. Inventario actualizado"));
-                
                 }
-                    
-                //return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. {messageDiscountInventory}"));
 
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, $"Cambio de estado guardado. Notificación no enviada. Inventario actualizado"));
             }
@@ -915,34 +947,59 @@ namespace WendlandtVentas.Web.Controllers
         }
 
 
-        [HttpPost("actualizar-total")]
-        public async Task<IActionResult> ActualizarTotal(ActualizarTotalViewModel model)
+        [HttpPost]
+        public async Task<IActionResult> ActualizarTotal([FromBody] ActualizarTotalViewModel model)
         {
-
-            Console.WriteLine("Metodo ejecutandose: " + model.Id +" " +  model.PrecioEspecial + " " + model.RealAmount);
-            // Verificar si el modelo es válido
             if (!ModelState.IsValid)
                 return BadRequest("Datos inválidos");
 
-            // Llamar al servicio para actualizar el total
-            var result = await _orderService.ActualizarTotalAsync(model.Id, model.RealAmount);
+            // Actualizar en la base de datos principal
+            var result = await _orderService.ActualizarTotalAsync(
+                model.Id,
+                model.RealAmount,
+                model.PrecioEspecial,
+                User.Identity.Name
+            );
 
-            // Verificar si la actualización fue exitosa
             if (!result.IsSuccess)
-            {
-                // Si falla, retornar el mensaje de error
                 return StatusCode(500, result.Message);
-            }
 
-            // Si fue exitosa, retornar el mensaje de éxito
-            return Ok(result.Message);
+            return Ok("Monto actualizado correctamente.");
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Recalculate(int id, bool prontoPago)
+        {
+            var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
+            if (order == null) return NotFound();
 
+            var recalculatedItems = order.OrderProducts.Select(op =>
+            {
+                var precioBase = prontoPago ? op.Price * 0.95m : op.Price;
 
+                var presentationPromotions = op.ProductPresentation.Presentation.PresentationPromotions
+                    .Where(pp => pp.Promotion.IsActive);
 
+                // Convertimos el descuento (double) a decimal
+                var totalDiscount = presentationPromotions
+                    .Sum(pp => (decimal)pp.Promotion.Discount * precioBase); // aplica sobre precioBase
 
+                var precioFinal = precioBase - totalDiscount;
 
+                return new
+                {
+                    ProductId = op.ProductPresentation.Product.Id,
+                    ProductName = op.ProductPresentation.Product.Name,
+                    PrecioBase = Math.Round(precioBase, 2),
+                    TotalDiscount = Math.Round(totalDiscount, 2),
+                    PrecioFinal = Math.Round(precioFinal, 2)
+                };
+            }).ToList();
+
+            var total = recalculatedItems.Sum(x => x.PrecioFinal);
+
+            return Json(new { precios = recalculatedItems, total = Math.Round(total, 2) });
+        }
 
         [HttpGet]
         public async Task<IActionResult> Details(int id)
@@ -976,6 +1033,8 @@ namespace WendlandtVentas.Web.Controllers
                 Comment = order.Comment,
                 CollectionComment = order.CollectionComment,
                 Weight = weight,
+                RealAmount = order.RealAmount,
+                PrecioEspecial = order.PrecioEspecial,
                 Address = new AddressItemModel
                 {
                     Name = order.AddressName,
@@ -1050,6 +1109,25 @@ namespace WendlandtVentas.Web.Controllers
             var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
             var user = await _userManager.FindByIdAsync(order.UserId);
             var weight = await CalcOrderWeight(id);
+
+            // Cálculo del total de descuento por pronto pago
+            decimal totalProntoPagoDescuento = 0;
+
+            foreach (var product in order.OrderProducts.Where(p => !p.IsDeleted))
+            {
+                var precioBase = order.CurrencyType == CurrencyType.MXN
+                    ? product.ProductPresentation.Price
+                    : product.ProductPresentation.PriceUsd;
+
+                var precioUsado = product.Price != 0 ? product.Price : precioBase;
+
+                if (precioUsado < precioBase)
+                {
+                    var descuentoUnitario = precioBase - precioUsado;
+                    totalProntoPagoDescuento += descuentoUnitario * product.Quantity;
+                }
+            }
+
             var model = new OrderDetailsViewModel
             {
                 Id = order.Id,
@@ -1066,12 +1144,15 @@ namespace WendlandtVentas.Web.Controllers
                 IVA = order.IVA.FormatCurrency(),
                 Status = order.OrderStatus.Humanize(),
                 SubTotal = order.SubTotal.FormatCurrency(),
-                Total = order.Total.FormatCurrency(),
+                Total = (order.RealAmount.HasValue && order.RealAmount.Value != 0.0m || order.PrecioEspecial)
+                ? order.RealAmount.GetValueOrDefault().FormatCurrency()
+                : order.Total.FormatCurrency(),
                 Discount = order.Discount.FormatCurrency(),
                 User = user != null ? user.Name : "-",
                 Comment = order.Comment,
                 CollectionComment = order.CollectionComment,
                 Weight = weight,
+                ProntoPago = order.ProntoPago,
                 Address = new AddressItemModel
                 {
                     Name = order.AddressName,
@@ -1115,7 +1196,9 @@ namespace WendlandtVentas.Web.Controllers
                         ? d.ProductPresentation.Price
                         : d.ProductPresentation.PriceUsd
                     }).ToList()
-                })
+                }),
+                TotalDescuentoProntoPago = totalProntoPagoDescuento,
+                
             };
             try
             {
@@ -1129,6 +1212,20 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, err.Message));
             }
         }
+
+        /*[HttpPost]
+        public async Task<IActionResult> EnviarEstadoCuenta(int orderId)
+        {
+            Console.WriteLine("ENVIANDO EMAIL DESDE SERVICIO...");
+
+            var enviado = await _orderService.EnviarEstadoCuentaAsync(orderId);
+
+            if (enviado)
+                return Ok("Estado de cuenta enviado con éxito.");
+            else
+                return StatusCode(500, "Error al enviar el correo.");
+        }*/
+
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing, BillingAssistant")]
         [HttpGet("{controller}/Delete/{id}")]

@@ -43,6 +43,9 @@ namespace WendlandtVentas.Core.Entities
         //Agregamos propiedad para manejar precio especial
         public bool PrecioEspecial { get; set; } = false;
 
+        //EL nuevo monto en caso de que sea precio especial
+        public decimal? RealAmount { get; set; }
+
         public decimal BaseAmount
         {
             //Fórmula anterior (SubTotal / 1.265M) * 0.8M;

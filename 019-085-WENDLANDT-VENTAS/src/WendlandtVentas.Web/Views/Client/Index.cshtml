@@ -14,7 +14,7 @@
         <li>
             <a href="#addModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Agregar</a>
             <a href="#importModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Importar</a>
-            <a href="~/resources/template.xlsx" target="_blank" class="btn btn-success  "><i class="fa fa-file-excel"></i> Descargar template</a>
+            <a href="~/resources/template.xlsx" target="_blank" class="btn btn-success moderno  "><i class="fa fa-file-excel"></i> Descargar template</a>
         </li>
     </ul>
 </section>
@@ -95,6 +95,65 @@
             </ejs-grid>
         </div>
     </div>
+
+    <!-- Pestaña de Auto Servicios -->
+    <div class="tab-pane fade" id="autoservices" role="tabpanel" aria-labelledby="autoservices-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="AutoServicessGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageSize="50" pageSizes="@(new[] {"50", "100", "200"})"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetAutoServicesData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Channel", "Classification", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
+    <!-- Pestaña de Tasting Rooms -->
+    <!-- Pestaña de Tasting Rooms -->
+    <div class="tab-pane fade" id="tastingroom" role="tabpanel" aria-labelledby="tastingroom-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="TastingRoomsGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageSize="50" pageSizes="@(new[] {"50", "100", "200"})"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetTastingRoomData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Channel", "Classification", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
 </div>
 <style type="text/css" class="cssStyles">
     .detailtable td {
@@ -113,7 +172,6 @@
         box-shadow: inset 0 0 1px #e0e0e0, inset 0 0 14px rgba(0, 0, 0, 0.2);
     }
 </style>
-@section Modals {
 @section Modals {
     <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Add")"></div>
     <div class="modal" id="editModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Edit")"></div>
@@ -138,7 +196,6 @@
 
 }
 
-@section Scripts {
 @section Scripts {
     <script id="actionButtons" type="text/x-template">
         <div>

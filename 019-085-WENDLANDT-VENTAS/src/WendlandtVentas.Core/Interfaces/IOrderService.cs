@@ -11,8 +11,12 @@ namespace WendlandtVentas.Core.Interfaces
         Task<Response> AddOrderAsync(OrderViewModel orderViewModel, string currrentUserEmail);
         Task<Response> UpdateOrderAsync(OrderViewModel orderViewModel, string currrentUserEmail);
 
-        Task<Response> ActualizarTotalAsync(int orderId, decimal nuevoTotal);
-        
+        //Este metodo es para actualizar el monto real de la orden
+        Task<Response> ActualizarTotalAsync(int orderId, decimal nuevoTotal, bool precioEspecial, string currrentUserEmail);
+
+        //Agregamos este metodo para poder enviar el correo
+        Task<bool> EnviarEstadoCuentaAsync(int orderId);
+
 
         //IQueryable<Order> FilterValues(FilterViewModel filter);
 

@@ -27,6 +27,7 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         public double Monto { get; set; } // Monto total de la orden
         public double Pagado { get; set; } // Monto pagado
         public double PorPagar { get; set; } // Monto por pagar (Monto - Pagado)
+
     }
 
 }

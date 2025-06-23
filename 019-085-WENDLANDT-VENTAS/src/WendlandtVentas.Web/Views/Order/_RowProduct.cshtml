@@ -1,29 +1,47 @@
-﻿﻿@using WendlandtVentas.Core.Models
+﻿@using WendlandtVentas.Core.Models
 @model ProductPresentationItem
+@{
+    // Este variable indica si el producto es ELEGIBLE para pronto pago
+    var prontoPagoEligible = ViewData["ProntoPago"] as bool? ?? false;
+}
 
 @if (Model.ExistPresentation)
 {
-    <div id="@Model.ProductPresentationId" class="m-2 row-product" data-quantity="@Model.Quantity" data-presentation="@Model.PresentationId" data-subtotal="@Model.SubtotalDouble" data-product="@Model.ProductId" data-price="@Model.Price">
+    <div id="@Model.ProductPresentationId"
+         class="m-2 row-product"
+         data-quantity="@Model.Quantity"
+         data-presentation="@Model.PresentationId"
+         data-subtotal="@Model.SubtotalDouble" 
+         data-product="@Model.ProductId"
+         data-price="@Model.Price"
+         data-base-price="@Model.BasePriceFromProductPresentation"
+         data-pronto-pago="@prontoPagoEligible.ToString().ToLower()">
+        @* Indica si este producto es ELEGIBLE *@
         <input name="ProductPresentationIds" value="@Model.ProductPresentationId" type="hidden" />
         <input name="ProductPresentationQuantities" value="@Model.Quantity" type="hidden" />
         <input name="ProductIsPresent" @(Model.IsPresent ? "value=true" : "value=false") type="hidden" />
         <input name="ProductPrices" value="@Model.Price" type="hidden" />
         <div class="row">
-            @if (Model.IsPresent)
-            {
-                <div class="col-4 pl-4"><span class="badge badge-primary mr-2">Obsequio</span>@Model.ProductName</div>
-            }
-            else
-            {
-                <div class="col-4 pl-4">@Model.ProductName</div>
-            }
-            <div class="col-2"><text class="float-right">$@Model.Price</text></div>
+            @* ... nombre del producto ... *@
+            <div class="col-4 pl-4">
+                @if (Model.IsPresent)
+                {
+                    <span class="badge badge-primary mr-2">Obsequio</span>
+                }
+                @Model.ProductName
+            </div>
+            <div class="col-2"><text class="float-right product-price-display">@Model.PriceString</text></div>
+           
+
+
+
             <div class="col-2"><text class="float-right">@Model.Quantity</text></div>
-            <div class="col-2"><text class="float-right">@((Model.Price * Model.Quantity).ToString("C", System.Globalization.CultureInfo.GetCultureInfo("es-MX")))</text></div>
+            @* Aquí podrías tener un span o text tag que el JS actualizará con el subtotal calculado si aplica *@
+            <div class="col-2"><text class="float-right product-subtotal-display">@Model.Subtotal</text></div> @* Muestra el subtotal original por defecto *@
             <div class="col-2">
                 @if (Model.CanDelete)
                 {
-                    <button type="button" title="Eliminar" data- class="tip btn btn-sm btn-light btn-delete-row float-right">
+                    <button type="button" title="Eliminar" class="tip btn btn-sm btn-light btn-delete-row float-right">
                         <i class="fa fa-fw fa-trash"></i>
                     </button>
                 }
@@ -33,32 +51,39 @@
 }
 else
 {
-    <div id="content-@Model.PresentationId" class="presentation" data-presentation="@Model.PresentationId">
+    <div id="content-@Model.PresentationId" class="presentation" data-presentation="@Model.PresentationId"
+         data-base-price="@Model.BasePriceFromProductPresentation" data-pronto-pago="@prontoPagoEligible.ToString().ToLower()">
         <label class="mt-2 ml-2 mb-0 presentation-@Model.PresentationId">
             <b>@Model.PresentationName</b>
         </label>
         <a href="#addPromotionsModal" id="btn-promotion-@Model.PresentationId" class="btn btn-sm btn-pill btn-warning btn-promotion" type="button">HAY PROMOCIONES</a>
-        <div id="@Model.ProductPresentationId" class="m-2 row-product" data-quantity="@Model.Quantity" data-subtotal="@Model.SubtotalDouble" data-presentation="@Model.PresentationId" data-product="@Model.ProductId" data-price="@Model.Price">
+
+        <div id="@Model.ProductPresentationId" data-price="@Model.Price"
+             data-base-price="@Model.BasePriceFromProductPresentation" class="m-2 row-product" data-quantity="@Model.Quantity" data-subtotal="@Model.SubtotalDouble" data-presentation="@Model.PresentationId" data-product="@Model.ProductId" data-price="@Model.Price">
             <input name="ProductPresentationIds" value="@Model.ProductPresentationId" type="hidden" />
             <input name="ProductPresentationQuantities" value="@Model.Quantity" type="hidden" />
             <input name="ProductIsPresent" @(Model.IsPresent ? "value=true" : "value=false") type="hidden" />
             <input name="ProductPrices" value="@Model.Price" type="hidden" />
             <div class="row">
-                @if (Model.IsPresent)
-                {
-                    <div class="col-4 pl-4"><span class="badge badge-primary mr-2">Obsequio</span>@Model.ProductName</div>
-                }
-                else
-                {
-                    <div class="col-4 pl-4">@Model.ProductName</div>
-                }
-                <div class="col-2"><text class="float-right">$@Model.Price</text></div>
+                @* ... nombre del producto ... *@
+                <div class="col-4 pl-4">
+                    @if (Model.IsPresent)
+                    {
+                        <span class="badge badge-primary mr-2">Obsequio</span>
+                    }
+                    @Model.ProductName
+                </div>
+                <div class="col-2"><text class="float-right product-price-display">@Model.PriceString</text></div>
+                
+               
+
                 <div class="col-2"><text class="float-right">@Model.Quantity</text></div>
-                <div class="col-2"><text class="float-right">@((Model.Price * Model.Quantity).ToString("C", System.Globalization.CultureInfo.GetCultureInfo("es-MX")))</text></div>
+                @* Aquí podrías tener un span o text tag que el JS actualizará con el subtotal calculado si aplica *@
+                <div class="col-2"><text class="float-right product-subtotal-display">@Model.Subtotal</text></div> @* Muestra el subtotal original por defecto *@
                 <div class="col-2">
                     @if (Model.CanDelete)
                     {
-                        <button type="button" title="Eliminar" data- class="tip btn btn-sm btn-light btn-delete-row float-right">
+                        <button type="button" title="Eliminar" class="tip btn btn-sm btn-light btn-delete-row float-right">
                             <i class="fa fa-fw fa-trash"></i>
                         </button>
                     }
@@ -66,38 +91,6 @@ else
             </div>
         </div>
     </div>
+
+
 }
-
-@*<label class="mt-2 ml-2 mb-0 presentation-@Model.PresentationId" id="presentation-@Model.PresentationId">
-            <b>@Model.PresentationName</b>
-        </label>
-        <div id="row-product-@Model.ProductPresentationId" class="m-2 row-product" data-presentation="@Model.PresentationId" data-subtotal="@Model.SubtotalDouble">
-         <label><b>BARREL INOX 30 lts</b></label>
-    <button class="btn btn-sm btn-pill btn-warning" type="button">HAY PROMOCIONES</button>
-    <div class="row">
-        <div class="col-4 pl-4">@Model.ProductName</div>
-        <div class="col-2"><text class="float-right">@Model.Price</text></div>
-        <div class="col-2"><text class="float-right">@Model.Quantity</text></div>
-        <div class="col-2"><text class="float-right">@Model.Subtotal</text></div>
-        <div class="col-2">
-            <button type="button" title="Eliminar" data- class="tip btn btn-sm btn-light btn-delete-row float-right">
-                <i class="fa fa-fw fa-trash"></i>
-            </button>
-        </div>
-    </div>
-    </div>*@
-
-@*<tr id="@Model.ProductPresentationId" class="row-product" data-subtotal="@Model.SubtotalDouble">
-        <input name="ProductPresentationIds" value="@Model.ProductPresentationId" type="hidden" />
-        <input name="ProductPresentationQuantities" value="@Model.Quantity" type="hidden" />
-
-        <td>@Model.ProductName</td>
-        <td><text class="float-right">@Model.Price</text></td>
-        <td><text class="float-right">@Model.Quantity</text></td>
-        <td><text class="float-right">@Model.Subtotal</text></td>
-        <td>
-            <button type="button" title="Eliminar" class="tip btn btn-sm btn-light btn-delete-row float-right">
-                <i class="fa fa-fw fa-trash"></i>
-            </button>
-        </td>
-    </tr>*@

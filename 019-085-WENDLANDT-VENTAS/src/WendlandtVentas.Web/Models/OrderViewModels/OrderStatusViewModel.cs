@@ -37,10 +37,14 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
 
         [Display(Name = "Monto de la orden")]
         [DataType(DataType.Currency)]
+
+        //Propiedad para introducir el monto real con descuento
         public decimal? RealAmount { get; set; }
 
         [Display(Name = "¿Precion especial?")]
         public bool PrecioEspecial { get; set; } // Propiedad para el checkbox
+
+        
 
     }
 }

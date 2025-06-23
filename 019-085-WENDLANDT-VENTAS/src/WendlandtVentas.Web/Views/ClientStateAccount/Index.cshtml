@@ -5,12 +5,30 @@
     ViewData["Title"] = "Estado de Cuenta";
 }
 
-<link rel="stylesheet" href="~/css/ClientLayout.css" />
+<head>
+    <link href="~/css/custom.css" rel="stylesheet" />
+</head>
+
+
+
+<header class="top-bar">
+    <div class="container top-bar-container">
+        <a class="logo">
+            <img src="~/images/logo.png" alt="Logo Wendlandt Ventas" />
+        </a>
+        <div class="navbar-title">
+            ESTADO DE CUENTA <br />
+            <h2 class="nombre-cliente">@Model.ClientName</h2>
+        </div>
+        <div class="placeholder"></div> <!-- Para balancear el flex -->
+    </div>
+</header>
+
 
 <!-- Campo de Búsqueda y Botón de Filtro -->
 <div class="row mb-4 mt-3">
     <div class="col-md-6 m-auto">
-        <input type="text" class="form-control" placeholder="Buscar cliente por nombre o ID" id="searchField" />
+        <input type="text" class="form-control" placeholder="Buscar cliente por remisión o fáctura" id="searchField" />
     </div>
     <div class="col-md-6">
         <button class="btn btn-primary" id="filterButton">Filtrar</button>
@@ -18,12 +36,13 @@
 </div>
 
 <!-- Cuatro Cards para mostrar resumen de cuenta -->
-<div class="row mb-4">
+<div class="cards-especiales row mb-4">
     <div class="col-md-3">
         <div class="card shadow-sm text-center">
             <div class="card-body">
-                <h5 class="card-title">Total Pagado</h5>
-                <p class="card-text">@Model.PaidAmount.ToString("C2")</p> <!-- Mostrar total pagado -->
+                
+                <p class="card-text text-paid">@Model.PaidAmount.ToString("C2")</p> <!-- Verde oscuro -->
+                <span class="card-title">Total Pagado</span>
             </div>
         </div>
     </div>
@@ -31,8 +50,8 @@
     <div class="col-md-3">
         <div class="card shadow-sm text-center">
             <div class="card-body">
-                <h5 class="card-title">Devoluciones</h5>
                 <p class="card-text">$0</p> <!-- Mostrar cantidad de devoluciones -->
+                <span class="card-title">Devoluciones</span>
             </div>
         </div>
     </div>
@@ -40,8 +59,8 @@
     <div class="col-md-3">
         <div class="card shadow-sm text-center">
             <div class="card-body">
-                <h5 class="card-title">Cuentas Pendientes</h5>
-                <p class="card-text text-center">@Model.TotalPendientes</p> <!-- Cuantas cuentas pendientes por pagar -->
+                <p class="card-text text-center text-due ">@Model.TotalPendientes</p> <!-- Cuantas cuentas pendientes por pagar -->
+                <span class="card-title">Cuentas Pendientes</span>
             </div>
         </div>
     </div>
@@ -49,17 +68,14 @@
     <div class="col-md-3">
         <div class="card shadow-sm text-center">
             <div class="card-body">
-                <h5 class="card-title">Total por Pagar</h5>
-                <p class="card-text">@Model.TotalPorPagar.ToString("C2")</p> <!-- Mostrar total por pagar -->
+                <p class="card-text text-due">@Model.TotalPorPagar.ToString("C2")</p> <!-- Mostrar total por pagar -->
+                <span class="card-title">Total por Pagar</span>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Tabla de Balances -->
-<h2>Estado de Cuenta - @Model.ClientName</h2>
-
-<div class="table-container">
+<div class="tabla-especial tabla-scroll">
     <table class="table table-striped shadow-sm">
         <thead>
             <tr>
@@ -70,10 +86,12 @@
                 <th>Monto</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="balanceTableBody">
             @foreach (var item in Model.Balances)
             {
-                <tr>
+                var collapseId = $"collapse-{item.RemissionCode}";
+
+                <tr class="@(item.isPaid == true ? "fila-pagada" : "fila-pendiente")">
                     <td>@item.RemissionCode</td>
                     <td>@item.InvoiceCode</td>
                     <td>@item.DeliveryDate.ToString("dd/MM/yyyy")</td>
@@ -85,11 +103,27 @@
     </table>
 </div>
 
+
 <!-- JavaScript para el botón de filtro -->
 <script>
     document.getElementById("filterButton").addEventListener("click", function () {
-        var searchField = document.getElementById("searchField").value;
-        // Aquí puedes redirigir o hacer una llamada AJAX con el valor de searchField para filtrar los resultados
-        alert("Filtrar por: " + searchField);
+        var searchText = document.getElementById("searchField").value.toLowerCase().trim();
+        var rows = document.querySelectorAll("#balanceTableBody tr");
+
+        rows.forEach(function (row) {
+            var rowText = row.innerText.toLowerCase();
+            if (rowText.includes(searchText)) {
+                row.style.display = ""; // Mostrar
+            } else {
+                row.style.display = "none"; // Ocultar
+            }
+        });
+    });
+
+    // También puedes filtrar al presionar "Enter"
+    document.getElementById("searchField").addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            document.getElementById("filterButton").click();
+        }
     });
 </script>
