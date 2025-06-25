@@ -1,4 +1,4 @@
-﻿body {
+body {
 }
 /* Estilos modernos para los botones de acción */
 .btn-modal-action, .btn-primary {
@@ -12,7 +12,7 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-/* Botones modernos y efecto hover para TODOS los botones */
+    /* Botones modernos y efecto hover para TODOS los botones */
     .btn-modal-action:hover,
     .btn-modal-action:focus, .btn-primary:hover {
         background-color: #6f42c1; /* morado */
@@ -24,7 +24,7 @@
         transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
     }
 
-.btn-secondary{
+.btn-secondary {
     border-radius: 8px;
     background-color: #f1f3f5; /* gris claro */
     border: 1.5px solid #ced4da; /* gris más definido */
@@ -59,6 +59,7 @@
     transition: all 0.3s ease;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
+
     .btn-edit-action:hover {
         background-color: #6f42c1; /* morado */
         border-color: #6f42c1;
@@ -102,7 +103,6 @@
     }
 
 .btn-success.moderno {
-    
     border: 2px solid #28a745;
     color: white;
     padding: 8px 18px;
@@ -140,30 +140,30 @@
     overflow: visible !important;
 }
 
-/* Encabezados */
+    /* Encabezados */
 
-/* Filas */
-.datatable .e-row {
-    border-radius: 20px;
-    font-size: 0.9rem;
-    color: #333;
-    transition: background-color 0.25s ease;
-    cursor: default;
-    transform-origin: center center; /* Por defecto */
-    margin: 0 4px;
-}
-
-    .datatable .e-row:hover {
-        background-color: #f0f5ff;
-        transform: scale(1.015);
-        transform-origin: center center;
+    /* Filas */
+    .datatable .e-row {
+        border-radius: 20px;
+        font-size: 0.9rem;
+        color: #333;
+        transition: background-color 0.25s ease;
+        cursor: default;
+        transform-origin: center center; /* Por defecto */
+        margin: 0 4px;
     }
 
-/* Separadores entre filas */
-.datatable .e-rowcell {
-    border-bottom: 1px solid #ddd;
-    padding: 12px 10px;
-}
+        .datatable .e-row:hover {
+            background-color: #f0f5ff;
+            transform: scale(1.015);
+            transform-origin: center center;
+        }
+
+    /* Separadores entre filas */
+    .datatable .e-rowcell {
+        border-bottom: 1px solid #ddd;
+        padding: 12px 10px;
+    }
 
 /* Estados con prioridad: En ruta y En proceso (amarillo) */
 .badge-nuevo {
@@ -186,8 +186,8 @@
 }
 
 .badge-piggy {
-    background-color: #f4c2c2; /* Rosita pastel (cochinito) */
-    color: white;
+    background-color: #f4c2c2 !important; /* Rosita pastel (cochinito) */
+    color: white !important;
     font-weight: 600;
 }
 
@@ -222,24 +222,24 @@
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
-    line-height: normal;
-    padding-left: 0;
-    margin: 0;
-    flex: 1;
-    display: flex;
-    align-items: center;
-}
+    .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+        line-height: normal;
+        padding-left: 0;
+        margin: 0;
+        flex: 1;
+        display: flex;
+        align-items: center;
+    }
 
-/* Icono de flecha */
-.select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
-    height: 100%;
-    right: 10px;
-    top: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    /* Icono de flecha */
+    .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 10px;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
 
 /*TABS PANES*/
@@ -286,5 +286,3 @@
     margin: 0;
     padding: 0;
 }
-
-

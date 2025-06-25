@@ -1,13 +1,13 @@
-﻿    .top-bar {
-        background-color: #ffffff;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        padding: 10px 0;
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        border: none;
-        border-radius: 15px;
-    }
+.top-bar {
+    background-color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    padding: 10px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border: none;
+    border-radius: 15px;
+}
 
 .top-bar-container {
     display: flex;
@@ -16,10 +16,10 @@
     width: 100%;
 }
 
-    .logo img {
-        height: 50px;
-        width: auto;
-    }
+.logo img {
+    height: 50px;
+    width: auto;
+}
 
 .navbar-title {
     flex: 1;
@@ -38,6 +38,7 @@
     .navbar-title {
         font-size: 1rem;
     }
+
     .nombre-cliente {
         font-size: 0.650rem;
     }
@@ -47,6 +48,7 @@
     .navbar-title {
         font-size: 0.750rem;
     }
+
     .nombre-cliente {
         font-size: 0.500rem;
     }
@@ -65,98 +67,98 @@
     width: 40px; /* igual que el ancho aproximado del logo para balancear el espacio */
 }
 
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: #fff;
-        color: #000;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #fff;
+    color: #000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+/* Cards resumen */
+.cards-especiales .card {
+    box-shadow: 0 2px 6px rgba(108, 117, 125, 0.15);
+    border-radius: 20px;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    border: none;
+    background-color: #FFFFFF; /* Fondo blanco */
+    padding: 5px;
+}
+
+    .cards-especiales .card:hover {
+        box-shadow: 0 6px 12px rgba(108, 117, 125, 0.25);
+        transform: translateY(-10px);
     }
-    /* Cards resumen */
-    .cards-especiales .card {
-        box-shadow: 0 2px 6px rgba(108, 117, 125, 0.15);
-        border-radius: 20px;
-        transition: box-shadow 0.3s ease, transform 0.3s ease;
+
+.cards-especiales .card-title {
+    color: #6c757d; /* Gris neutro para subtítulo */
+    font-weight: 600;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.cards-especiales .card-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0;
+}
+/* Colores personalizados para cada tipo de card */
+.text-paid {
+    color: #157347; /* Verde oscuro */
+}
+
+.text-due {
+    color: #b02a37; /* Rojo oscuro */
+    text-align: center;
+}
+/* Botones */
+button.btn {
+    background-color: #fff !important;
+    color: #000 !important;
+    border: 1.5px solid #FFFFFF;
+    box-shadow: 0 2px 6px rgba(173, 181, 189, 0.3);
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease-in-out, background-color 0.3s ease;
+}
+
+    button.btn:hover {
+        box-shadow: 0 6px 12px rgba(173, 181, 189, 0.5);
+        background-color: #f8f9fa !important;
+        outline: none;
+        transform: scale(1.1);
         border: none;
-        background-color: #FFFFFF; /* Fondo blanco */
-        padding: 5px;
     }
 
-        .cards-especiales .card:hover {
-            box-shadow: 0 6px 12px rgba(108, 117, 125, 0.25);
-            transform: translateY(-10px);
-        }
+    button.btn:focus {
+        outline: none;
+        border: none;
+        box-shadow: 0 0 0 3px rgba(57, 255, 20, 0.5);
+    }
+/* Input búsqueda */
+input#searchField {
+    border: 1.5px solid #adb5bd;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
 
-    .cards-especiales .card-title {
-        color: #6c757d; /* Gris neutro para subtítulo */
-        font-weight: 600;
-        font-size: 14px;
-        margin-top: 4px;
+    input#searchField:focus {
+        border-color: #39ff14;
+        outline: none;
+        box-shadow: 0 0 5px #39ff14;
     }
 
-    .cards-especiales .card-text {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 0;
-    }
-    /* Colores personalizados para cada tipo de card */
-    .text-paid {
-        color: #157347; /* Verde oscuro */
-    }
+.text-paid {
+    color: #05b199; /* verde oscuro */
+    font-weight: 600;
+}
 
-    .text-due {
-        color: #b02a37; /* Rojo oscuro */
-        text-align: center;
-            }
-    /* Botones */
-    button.btn {
-        background-color: #fff !important;
-        color: #000 !important;
-        border: 1.5px solid #FFFFFF;
-        box-shadow: 0 2px 6px rgba(173, 181, 189, 0.3);
-        padding: 8px 20px;
-        border-radius: 6px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all .2s ease-in-out, background-color 0.3s ease;
-    }
-
-        button.btn:hover {
-            box-shadow: 0 6px 12px rgba(173, 181, 189, 0.5);
-            background-color: #f8f9fa !important;
-            outline: none;
-            transform: scale(1.1);
-            border: none;
-        }
-
-        button.btn:focus {
-            outline: none;
-            border: none;
-            box-shadow: 0 0 0 3px rgba(57, 255, 20, 0.5);
-        }
-    /* Input búsqueda */
-    input#searchField {
-        border: 1.5px solid #adb5bd;
-        border-radius: 6px;
-        padding: 8px 12px;
-        font-size: 1rem;
-        transition: border-color 0.3s ease;
-    }
-
-        input#searchField:focus {
-            border-color: #39ff14;
-            outline: none;
-            box-shadow: 0 0 5px #39ff14;
-        }
-
-    .text-paid {
-        color: #05b199; /* verde oscuro */
-        font-weight: 600;
-    }
-
-    .text-due {
-        color: #cd2d4a; /* rojo oscuro */
-        font-weight: 600;
-    }
+.text-due {
+    color: #cd2d4a; /* rojo oscuro */
+    font-weight: 600;
+}
 
 .fila-pagada {
     background-color: #d4edda !important; /* verde claro */
