@@ -160,8 +160,11 @@ namespace WendlandtVentas.Web.Controllers
 
                 // Mapear datos al modelo de la tabla
                 cachedData = filteredOrders
-                    .Where(c => c.Type != OrderType.Return) // Filtrar órdenes de tipo "Return"
-                    .Select(c => new OrderTableModel
+                .Where(c => c.Type != OrderType.Return)
+                .Select(c => new
+                {
+                    Order = c,
+                    Model = new OrderTableModel
                     {
                         Id = c.Id,
                         Type = c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize(),
@@ -177,9 +180,13 @@ namespace WendlandtVentas.Web.Controllers
                         Comment = c.Comment,
                         Address = c.Address ?? string.Empty,
                         CanEdit = c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString())
-                    })
-                    .OrderByDescending(c => c.Id) // Ordenar por Id en orden descendente
-                    .ToList();
+                    }
+                })
+                .OrderBy(x => x.Order.OrderStatus != OrderStatus.InProcess) // Solo "En proceso" al inicio
+                .ThenByDescending(x => x.Order.CreatedAt)                   // Luego orden por fecha
+                .Select(x => x.Model)
+                .ToList();
+
 
                 // Guardar en caché con duración de 10 minutos
                 var cacheEntryOptions = new MemoryCacheEntryOptions()

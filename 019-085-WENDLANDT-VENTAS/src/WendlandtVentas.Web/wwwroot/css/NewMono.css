@@ -1,0 +1,288 @@
+﻿﻿body {
+}
+/* Estilos modernos para los botones de acción */
+.btn-modal-action, .btn-primary {
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    border: 1.5px solid transparent;
+    color: #495057;
+    padding: 4.8px 8px; /* antes 6px 10px, reducido un 20% */
+    font-size: 0.72rem; /* antes 0.9rem, reducido un 20% */
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+    /* Botones modernos y efecto hover para TODOS los botones */
+    .btn-modal-action:hover,
+    .btn-modal-action:focus, .btn-primary:hover {
+        background-color: #6f42c1; /* morado */
+        border-color: #6f42c1;
+        color: white;
+        box-shadow: 0 4px 10px rgba(111, 66, 193, 0.5);
+        text-decoration: none;
+        transform: scale(1.05);
+        transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+    }
+
+.btn-secondary {
+    border-radius: 8px;
+    background-color: #f1f3f5; /* gris claro */
+    border: 1.5px solid #ced4da; /* gris más definido */
+    color: #6c757d; /* gris neutro */
+    padding: 4.8px 8px;
+    font-size: 0.72rem;
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+    .btn-secondary:hover {
+        background-color: #e9ecef;
+        color: #495057;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+/* Si usas botones dentro de ejs-grid, asegurar que se vea bien */
+.e-grid .btn,
+.e-grid .btn-modal-action {
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    overflow: hidden;
+}
+
+.btn-edit-action {
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    border: 1.5px solid transparent;
+    color: #495057;
+    padding: 4.8px 8px;
+    font-size: 0.72rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+    .btn-edit-action:hover {
+        background-color: #6f42c1; /* morado */
+        border-color: #6f42c1;
+        color: white;
+        box-shadow: 0 4px 10px rgba(111, 66, 193, 0.5);
+        text-decoration: none;
+        transform: scale(1.05);
+        transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+    }
+
+
+
+/* Estilo moderno para botón Agregar */
+.btn-primary.moderno {
+    background-color: white;
+    border: 2px solid #6f42c1; /* morado */
+    color: #6f42c1;
+    padding: 8px 18px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+}
+
+    .btn-primary.moderno:hover,
+    .btn-primary.moderno:focus {
+        background-color: #6f42c1;
+        color: white;
+        transform: scale(1.05);
+        outline: none;
+        text-decoration: none;
+        box-shadow: 0 6px 12px rgba(111, 66, 193, 0.5);
+    }
+
+    .btn-primary.moderno i {
+        font-size: 1.1rem;
+    }
+
+.btn-success.moderno {
+    border: 2px solid #28a745;
+    color: white;
+    padding: 8px 18px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(40, 167, 69, 0.4);
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+    .btn-success.moderno:hover,
+    .btn-success.moderno:focus {
+        background-color: white;
+        color: #28a745;
+        border-color: #28a745;
+        box-shadow: 0 6px 14px rgba(40, 167, 69, 0.6);
+        transform: scale(1.05);
+        outline: none;
+        text-decoration: none;
+    }
+
+
+
+/* Estilos modernos para la tabla */
+.datatable-container, .e-grid, .datatable {
+    border-radius: 20px;
+    overflow: hidden; /* para que el border-radius funcione */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border: 1px solid #e1e4e8;
+    background-color: #fff;
+    overflow: visible !important;
+}
+
+    /* Encabezados */
+
+    /* Filas */
+    .datatable .e-row {
+        border-radius: 20px;
+        font-size: 0.9rem;
+        color: #333;
+        transition: background-color 0.25s ease;
+        cursor: default;
+        transform-origin: center center; /* Por defecto */
+        margin: 0 4px;
+    }
+
+        .datatable .e-row:hover {
+            background-color: #f0f5ff;
+            transform: scale(1.015);
+            transform-origin: center center;
+        }
+
+    /* Separadores entre filas */
+    .datatable .e-rowcell {
+        border-bottom: 1px solid #ddd;
+        padding: 12px 10px;
+    }
+
+/* Estados con prioridad: En ruta y En proceso (amarillo) */
+.badge-nuevo {
+    background-color: #28a745; /* Verde éxito */
+    color: white;
+    font-weight: 600;
+}
+
+.badge-entregado {
+    background-color: #007bff; /* Azul */
+    color: white;
+    font-weight: 600;
+}
+
+.badge-proceso,
+.badge-enruta {
+    background-color: #ffc107; /* Amarillo tipo warning */
+    color: white;
+    font-weight: 600;
+}
+
+.badge-piggy {
+    background-color: #f4c2c2 !important; /* Rosita pastel (cochinito) */
+    color: white !important;
+    font-weight: 600;
+}
+
+.badge-cancelado {
+    background-color: #dc3545; /* Rojo fuerte */
+    color: white;
+    font-weight: 600;
+}
+
+.badge-default {
+    background-color: #e2e3e5; /* Gris claro */
+    color: white;
+    font-weight: 600;
+}
+
+
+
+
+/*DROPDOWN*/
+/* Estilo base para Select2 con Bootstrap 4 */
+.select2-container--bootstrap4 .select2-selection--single {
+    height: 38px;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    border: 1.5px solid #ced4da;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #495057;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    background-color: #fff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+    .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+        line-height: normal;
+        padding-left: 0;
+        margin: 0;
+        flex: 1;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Icono de flecha */
+    .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 10px;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+
+/*TABS PANES*/
+/* Contenedor de tabs */
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+    gap: 0.5rem;
+}
+
+    /* Cada tab */
+    .nav-tabs .nav-link {
+        background-color: #f8f9fa;
+        border: 1px solid transparent;
+        border-radius: 8px 8px 0 0;
+        color: #495057;
+        padding: 8px 16px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+        /* Hover sobre un tab */
+        .nav-tabs .nav-link:hover {
+            background-color: #e9ecef;
+            color: #212529;
+            border-color: #dee2e6 #dee2e6 #fff;
+        }
+
+        /* Tab activo */
+        .nav-tabs .nav-link.active {
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-bottom-color: transparent;
+            color: #00b894;
+            font-weight: 600;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+.tab-content {
+    padding: 0;
+    background-color: #fff;
+}
+
+.datatable-container {
+    margin: 0;
+    padding: 0;
+}

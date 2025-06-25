@@ -8,7 +8,6 @@
     var cols = new List<object> { new { field = "id", direction = "Descending" } };
     var targetUrl = $"{Url.Action("GetData")}{Context.Request.QueryString}";
 }
-
 <h4>
     @ViewData["Title"]
     <br />
@@ -20,7 +19,7 @@
     <section class="mt-3">
         <ul class="list-inline">
             <li>
-                <a asp-action="Add" class="btn btn-primary"><i class="fa fa-plus"></i> Agregar</a>
+                <a asp-action="Add" class="btn btn-primary moderno" ><i class="fa fa-plus"></i> Agregar</a>
             </li>
         </ul>
     </section>
@@ -28,7 +27,7 @@
 <div class="card">
     <div class="card-header" id="headingOne">
         <h5 class="mb-0">
-            <a data-toggle="collapse" href="#collapseOne" role="button" aria-expanded="false" aria-controls="collapseExample">
+            <a data-toggle="collapse" href="#collapseOne" role="button" aria-expanded="false" aria-controls="collapseExample" class="btn-primary">
                 Filtros
             </a>
         </h5>
@@ -120,7 +119,7 @@
 </div>
 
 <div class="datatable-container">
-    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowTextWrap="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search","Print"})">
+    <ejs-grid id="Grid" cssClass="~/css/NewMono.css" class="datatable" locale="es-MX" allowTextWrap="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search", "Print" })">
         <!-- Configuración del DataManager -->
         <e-data-manager url="@targetUrl" adaptor="UrlAdaptor"></e-data-manager>
 
@@ -138,7 +137,7 @@
             <e-grid-column field="total" headerText="Total" width="150" textAlign="Right" template="#totalTemplate"></e-grid-column>
             <e-grid-column field="createDate" headerText="Fecha de creación" width="150"></e-grid-column>
             <e-grid-column field="type" headerText="Tipo" width="150"></e-grid-column>
-            <e-grid-column field="status" headerText="Estatus" width="150"></e-grid-column>
+            <e-grid-column field="status" enableHtmlSanitizer="false" headerText="Estatus" width="150" template="#statusTemplate"></e-grid-column>
             <e-grid-column headerText="" width="200" template="#actionButtons" textAlign="Left"></e-grid-column>
         </e-grid-columns>
     </ejs-grid>
@@ -154,33 +153,41 @@
 @section Scripts{
     <script id="actionButtons" type="text/x-template">
         <div>
-            <a href="#detailsModal" data-id="${id}" title="Ver información completa" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-info-circle"></i></a>
-            @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorAssistant") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
-            {
-                <a href="#addCollectionCommentModal" data-id="${id}" title="Agregar comentario" class="tip btn btn-sm btn-light btn-modal-action ml-2"><i class="fa fa-fw fa-comment"></i></a>
-            }
+            <a href="#detailsModal" data-id="${id}" title="Ver información completa" class="tip btn btn-sm btn-modal-action"><i class="fa fa-fw fa-info-circle"></i></a>
+        @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorAssistant") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
+        {
+                    <a href="#addCollectionCommentModal" data-id="${id}" title="Agregar comentario" class="tip btn btn-sm btn-modal-action ml-2"><i class="fa fa-fw fa-comment"></i></a>
+        }
             ${if(status != "Pagado")}
-            <a href="#changeStatusModal" data-id="${id}" title="Cambiar estado" class="tip ml-2 btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-sync-alt"></i></a>
+            <a href="#changeStatusModal" data-id="${id}" title="Cambiar estado" class="tip btn btn-sm btn-modal-action ml-2"><i class="fa fa-fw fa-sync-alt"></i></a>
             ${/if}
-            @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Sales") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant") || User.IsInRole("Storekeeper"))
+        @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Sales") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant") || User.IsInRole("Storekeeper"))
+        {
+            <text>
+                        ${if(canEdit)}
+                            <a href="/Order/Edit/${id}" title="Editar" class="tip btn btn-sm btn-edit-action ml-2"><i class="fa fa-fw fa-edit"></i></a>
+                        ${/if}
+            </text>
+            @if (User.IsInRole("Administrator"))
             {
                 <text>
-                    ${if(canEdit)}
-                    <a href="/Order/Edit/${id}" title="Editar" class="tip btn btn-sm btn-light ml-2"><i class="fa fa-fw fa-edit"></i></a>
-                    ${/if}
+                                ${if(canDelete)}
+                                <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-modal-action ml-2"><i class="fa fa-fw fa-trash"></i></a>
+                                ${/if}
                 </text>
-                @if (User.IsInRole("Admin"))
-                {
-                    <text>
-                        ${if(canDelete)}
-                        <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action ml-2"><i class="fa fa-fw fa-trash"></i></a>
-                        ${/if}
-                    </text>
-                }
             }
+        }
         </div>
     </script>
+
     <script>
+        $('.select2').select2({
+    theme: 'bootstrap4',
+    placeholder: "Seleccionar cliente",
+    allowClear: true,
+    width: '100%'
+});
+
         $(function () {
             var stateId = $('#StateId').val();
             var clientId = $('#ClientId').val();
@@ -267,6 +274,54 @@
     <script type="text/x-jsrender" id="totalTemplate">
         <span class="text-success">${total}</span>
     </script>
+    <script type="text/x-template" id="statusTemplate">
+        <span class="badge ${getBadgeClass(status)}">
+            ${getStatusIcon(status)} ${getStatusText(status)}
+        </span>
+    </script>
+    <script>
+        function getBadgeClass(status) {
+            switch (status) {
+                case "Nuevo": return "badge-nuevo";               // Verde
+                case "Entregado": return "badge-entregado";       // Azul
+                case "En proceso": return "badge-proceso";        // Amarillo
+                case "En ruta": return "badge-enruta";            // Amarillo
+                case "Pago parcial": return "badge-piggy";        // Rosita
+                case "Pagado": return "badge-piggy";              // Rosita
+                case "Cancelado": return "badge-cancelado";       // Rojo
+                default: return "badge-default";
+            }
+        }
+
+
+        function getStatusIcon(status) {
+            switch (status) {
+                case "Nuevo": return '<i class="fa fa-star"></i>';                     // ⭐
+                case "Entregado": return '<i class="fa fa-check-circle"></i>';         // ✅
+                case "En proceso": return '<i class="bi bi-exclamation-triangle-fill"></i>';                // ⚙️
+                case "En ruta": return '<i class="fa fa-truck"></i>';                  // 🚚
+                case "Pago parcial":
+                case "Pagado": return '<i class="bi bi-cash-stack"></i>';              // 🐷
+                case "Cancelado": return '<i class="fa fa-times-circle"></i>';         // ❌
+                default: return '';
+            }
+        }
+
+        function getStatusText(status) {
+            switch (status) {
+                case "Nuevo": return "Nuevo";
+                case "Entregado": return "Entregado";
+                case "En proceso": return "En proceso";
+                case "En ruta": return "En ruta";
+                case "Pago parcial": return "Pago parcial";
+                case "Pagado": return "Pagado";
+                case "Cancelado": return "Cancelado";
+                default: return status;
+            }
+        }
+    </script>
+
+
     <script>
         var $modal = $('#changeStatusModal');
 
@@ -285,4 +340,5 @@
             });
         });
     </script>
+    
 }
