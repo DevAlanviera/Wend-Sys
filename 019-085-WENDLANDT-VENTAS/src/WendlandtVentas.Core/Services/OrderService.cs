@@ -159,14 +159,14 @@ namespace WendlandtVentas.Core.Services
                 _cacheService.InvalidateOrderCache();
 
                 // Enviar correo de estado de cuenta después de guardar el pedido
-                if (!model.ProntoPago)
+                /*if (!model.ProntoPago)
                 {
                     var enviado = await EnviarEstadoCuentaAsync(order.Id, clienteEmail);
                     if (!enviado)
                     {
                         _logger.LogWarning("No se pudo enviar el estado de cuenta del pedido {OrderId}", order.Id);
                     }
-                }
+                }*/
 
                 return new Response(true, "Pedido guardado");
 

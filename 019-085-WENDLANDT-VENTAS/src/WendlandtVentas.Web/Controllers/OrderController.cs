@@ -293,6 +293,12 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
+
+            // 🔒 Validación de RFC si es Factura
+            var rfcValidation = await ValidateClientRFCAsync(model.ClientId, model.Type);
+            if (rfcValidation != null)
+                return rfcValidation;
+
             var filters = new Dictionary<string, string>
             {
                 {
