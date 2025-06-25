@@ -58,7 +58,7 @@ namespace WendlandtVentas.Core.Services
         }
 
 
-        public async Task<Response> AddOrderAsync(OrderViewModel model, string currrentUserEmail)
+        public async Task<Response> AddOrderAsync(OrderViewModel model, string currrentUserEmail, string clienteEmail)
         {
             var user = await _userManager.FindByEmailAsync(currrentUserEmail);
             var rolesUser = await _userManager.GetRolesAsync(user);
@@ -161,7 +161,7 @@ namespace WendlandtVentas.Core.Services
                 // Enviar correo de estado de cuenta después de guardar el pedido
                 if (!model.ProntoPago)
                 {
-                    var enviado = await EnviarEstadoCuentaAsync(order.Id);
+                    var enviado = await EnviarEstadoCuentaAsync(order.Id, clienteEmail);
                     if (!enviado)
                     {
                         _logger.LogWarning("No se pudo enviar el estado de cuenta del pedido {OrderId}", order.Id);
@@ -313,6 +313,7 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, "Error al actualizar el total.");
             }
         }
+
 
         //Se necesita desarrollar para cuando esta desactivado el valor del realamount se haga 0.0
 
@@ -622,12 +623,13 @@ namespace WendlandtVentas.Core.Services
             return _repository.GetQueryableExisting<Order>().Select(c => new SelectListItem(c.RemissionCode, c.RemissionCode)).ToListAsync();
         }
 
-        public async Task<bool> EnviarEstadoCuentaAsync(int orderId)
+        public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmaill)
         {
             var order = await _repository.GetByIdAsync<Order>(orderId);
+
             if (order == null)
                 return false;
-
+            //Cambiar variable para enviar el correo al del cliente a clienteEmaill
             var clienteEmail = "alan.cordova@wendlandt.com.mx";
             var nombreCliente = order.Client.Name;
 
@@ -649,5 +651,6 @@ namespace WendlandtVentas.Core.Services
                 perfil: "Emailpagos"
             );
         }
+
     }
 }

@@ -282,42 +282,45 @@
     <script>
         function getBadgeClass(status) {
             switch (status) {
-                case "En ruta": return "badge-enruta";
-                case "En proceso": return "badge-proceso";
-                case "Nuevo": return "badge-primary";
-                case "Cancelado": return "badge-danger";
-                case "Pagado": return "badge-pagado";
-                case "Pago parcial" : return "badge-partial"
-                case "Entregado": return "badge-entregado";
-                default: return "badge-light";
+                case "Nuevo": return "badge-nuevo";               // Verde
+                case "Entregado": return "badge-entregado";       // Azul
+                case "En proceso": return "badge-proceso";        // Amarillo
+                case "En ruta": return "badge-enruta";            // Amarillo
+                case "Pago parcial": return "badge-piggy";        // Rosita
+                case "Pagado": return "badge-piggy";              // Rosita
+                case "Cancelado": return "badge-cancelado";       // Rojo
+                default: return "badge-default";
             }
         }
 
+
         function getStatusIcon(status) {
             switch (status) {
-                case "En ruta": return '<i class="fa fa-truck"></i>';
-                case "En proceso": return '<i class="fa fa-cogs"></i>';  // Icono para "En proceso"
-                case "Nuevo": return '<i class="fa fa-star"></i>';            // Estrella (nuevo)
-                case "Cancelado": return '<i class="fa fa-times-circle"></i>';    // Círculo con X (cancelado)
-                case "Pagado": return '<i class="bi bi-cash-stack"></i>';    // Signo dólar (pagado)
-                case "Pago parcial": return  '<i class="bi bi-cash-stack"></i>';
-                case "Entregado": return '<i class="fa fa-check-circle"></i>';   // Círculo con check (entregado)
+                case "Nuevo": return '<i class="fa fa-star"></i>';                     // ⭐
+                case "Entregado": return '<i class="fa fa-check-circle"></i>';         // ✅
+                case "En proceso": return '<i class="fa fa-cogs"></i>';                // ⚙️
+                case "En ruta": return '<i class="fa fa-truck"></i>';                  // 🚚
+                case "Pago parcial":
+                case "Pagado": return '<i class="bi bi-cash-stack"></i>';              // 🐷
+                case "Cancelado": return '<i class="fa fa-times-circle"></i>';         // ❌
                 default: return '';
             }
         }
 
         function getStatusText(status) {
             switch (status) {
-                case "En ruta": return "En ruta";
-                case "En proceso": return "En proceso";
                 case "Nuevo": return "Nuevo";
-                case "Cancelado": return "Cancelado";
+                case "Entregado": return "Entregado";
+                case "En proceso": return "En proceso";
+                case "En ruta": return "En ruta";
                 case "Pago parcial": return "Pago parcial";
                 case "Pagado": return "Pagado";
+                case "Cancelado": return "Cancelado";
                 default: return status;
             }
         }
     </script>
+
 
     <script>
         var $modal = $('#changeStatusModal');

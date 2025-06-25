@@ -165,30 +165,44 @@
     padding: 12px 10px;
 }
 
-.badge-enruta {
-    background-color: #fd7e14; /* naranja similar a bootstrap warning */
+/* Estados con prioridad: En ruta y En proceso (amarillo) */
+.badge-nuevo {
+    background-color: #28a745; /* Verde éxito */
     color: white;
-}
-
-.badge-proceso {
-    background-color: #17a2b8; /* Azul turquesa */
-    color: white;
-}
-
-.badge-pagado {
-    background-color: #28a745; /* verde dinero */
-    color: white;
+    font-weight: 600;
 }
 
 .badge-entregado {
-    background-color: #20c997;
+    background-color: #007bff; /* Azul */
     color: white;
+    font-weight: 600;
 }
 
-.badge-partial {
-    background-color: #ffc107;
+.badge-proceso,
+.badge-enruta {
+    background-color: #ffc107; /* Amarillo tipo warning */
     color: white;
+    font-weight: 600;
 }
+
+.badge-piggy {
+    background-color: #f4c2c2; /* Rosita pastel (cochinito) */
+    color: white;
+    font-weight: 600;
+}
+
+.badge-cancelado {
+    background-color: #dc3545; /* Rojo fuerte */
+    color: white;
+    font-weight: 600;
+}
+
+.badge-default {
+    background-color: #e2e3e5; /* Gris claro */
+    color: white;
+    font-weight: 600;
+}
+
 
 
 

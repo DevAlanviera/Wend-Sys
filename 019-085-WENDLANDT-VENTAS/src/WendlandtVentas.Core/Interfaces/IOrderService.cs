@@ -8,14 +8,14 @@ namespace WendlandtVentas.Core.Interfaces
 {
     public interface IOrderService
     {
-        Task<Response> AddOrderAsync(OrderViewModel orderViewModel, string currrentUserEmail);
+        Task<Response> AddOrderAsync(OrderViewModel orderViewModel, string currrentUserEmail, string clienteEmail);
         Task<Response> UpdateOrderAsync(OrderViewModel orderViewModel, string currrentUserEmail);
 
         //Este metodo es para actualizar el monto real de la orden
         Task<Response> ActualizarTotalAsync(int orderId, decimal nuevoTotal, bool precioEspecial, string currrentUserEmail);
 
         //Agregamos este metodo para poder enviar el correo
-        Task<bool> EnviarEstadoCuentaAsync(int orderId);
+        Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmail);
 
 
         //IQueryable<Order> FilterValues(FilterViewModel filter);

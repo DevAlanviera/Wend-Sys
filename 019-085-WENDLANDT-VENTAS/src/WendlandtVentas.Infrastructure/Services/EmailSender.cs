@@ -25,7 +25,7 @@ public class EmailSender : IEmailSender
 
     public async Task<bool> SendEmailAsync(string email, string subject, string message, string file = null, string perfil = "Email")
     {
-        Console.WriteLine("ENVIANDO CORREITO");
+        
         var settings = _emailSettingsSnapshot.Get(perfil);
 
         using var client = new SmtpClient(settings.Server, settings.Port)

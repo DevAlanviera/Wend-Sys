@@ -188,7 +188,9 @@ namespace WendlandtVentas.Web.Controllers
                         Address = c.Address ?? string.Empty,
                         CanEdit = c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString())
                     })
-                    .OrderByDescending(c => c.Id) // Ordenar por Id en orden descendente
+                    .OrderBy(c => c.StatusEnum != OrderStatus.InProcess && c.StatusEnum != OrderStatus.OnRoute) // Los que NO están en proceso o en ruta van después
+                    .ThenByDescending(c => c.CreateDate) // Ordenar por fecha descendente dentro de cada grupo
+
                     .ToList();
 
                 // Guardar en caché con duración de 10 minutos
@@ -302,13 +304,23 @@ namespace WendlandtVentas.Web.Controllers
             if (ordersPending.Any() && model.Type != OrderType.Return)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
 
-            var response = await _orderService.AddOrderAsync(model, User.Identity.Name);
+            var client = await GetByIdWithContactsAsync(model.ClientId);
+            var primerEmail = client?.Contacts?.FirstOrDefault()?.Email;
+
+            var response = await _orderService.AddOrderAsync(model, User.Identity.Name, primerEmail);
 
             if (response.IsSuccess)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, response.Message));
 
             _logger.LogError($"Error: {response.Message}");
             return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el pedido"));
+        }
+
+        public async Task<Client> GetByIdWithContactsAsync(int clientId)
+        {
+            return await _dbContext.Clients
+                .Include(c => c.Contacts)
+                .FirstOrDefaultAsync(c => c.Id == clientId);
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
