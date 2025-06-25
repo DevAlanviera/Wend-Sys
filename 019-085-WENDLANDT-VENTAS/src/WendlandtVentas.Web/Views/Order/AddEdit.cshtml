@@ -114,21 +114,21 @@
                         <div class="col-2 col-lg-2 col-xl-2">
                             <div class="form-group">
                                 <label asp-for="PaymentPromiseDate"></label>
-                                <input asp-for="PaymentPromiseDate" class="form-control date-picker" />
+                                <input asp-for="PaymentPromiseDate" class="form-control date-picker" autocomplete="off" />
                                 <span asp-validation-for="PaymentPromiseDate" class="text-danger"></span>
                             </div>
                         </div>
                         <div class="col-2 col-lg-2 col-xl-2">
                             <div class="form-group">
                                 <label asp-for="PaymentDate"></label>
-                                <input asp-for="PaymentDate" class="form-control date-picker" />
+                                <input asp-for="PaymentDate" class="form-control date-picker" autocomplete="off" />
                                 <span asp-validation-for="PaymentDate" class="text-danger"></span>
                             </div>
                         </div>
                         <div class="col-2 col-lg-2 col-xl-2">
                             <div class="form-group">
                                 <label asp-for="DeliveryDay"></label>
-                                <input asp-for="DeliveryDay" class="form-control date-picker" />
+                                <input asp-for="DeliveryDay" class="form-control date-picker" autocomplete="off" />
                                 <span asp-validation-for="DeliveryDay" class="text-danger"></span>
                             </div>
                         </div>
@@ -317,12 +317,12 @@
     </div>
 </form>
 
-@section Modals{
+@section Modals {
     <div class="modal" id="addProductModal" tabindex="false" role="dialog" aria-labelledby="addProductModal-label"></div>
     <div class="modal modal-focus-first" id="addPromotionsModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddPromotions")"></div>
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
 }
-@section Scripts{
+@section Scripts {
     <script>
         $(document).ready(function () {
             $("#addProduct").on("click", function () {
@@ -415,12 +415,12 @@
                     break;
                 case 'warning':
                     $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                                             <strong>Acción inválida: </strong>
-                                                               ${json.body}
-                                                               <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                                  <span aria-hidden="true">&times;</span>
-                                                               </button>
-                                                           </div>`);
+                                                                     <strong>Acción inválida: </strong>
+                                                                       ${json.body}
+                                                                       <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                          <span aria-hidden="true">&times;</span>
+                                                                       </button>
+                                                                   </div>`);
                     $form.find(".alert").alert()
                     break;
             }
@@ -540,12 +540,12 @@
                     case 'warning':
                         $form.find('button[type="submit"]').prop("disabled", true);
                         $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                                         <strong>Acción inválida: </strong>
-                                                           ${json.body}
-                                                           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                              <span aria-hidden="true">&times;</span>
-                                                           </button>
-                                                       </div>`);
+                                                                 <strong>Acción inválida: </strong>
+                                                                   ${json.body}
+                                                                   <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                      <span aria-hidden="true">&times;</span>
+                                                                   </button>
+                                                               </div>`);
                         $form.find(".alert").alert()
                         break;
                 }

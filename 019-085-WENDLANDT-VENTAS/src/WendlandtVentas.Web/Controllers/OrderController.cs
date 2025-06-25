@@ -257,7 +257,7 @@ namespace WendlandtVentas.Web.Controllers
             var addresses = new List<Address>() { };
             // return remision number options
             var remissionsForReturn = await _orderService.GetInvoiceRemissionNumbersAsync();
-            
+
 
             var model = new OrderViewModel
             {
@@ -327,8 +327,8 @@ namespace WendlandtVentas.Web.Controllers
 
                     // Filtrar por moneda
                     productsInStock = currencyType == CurrencyType.MXN
-                        ? productsInStock.Where(c => !c.Price.Equals(decimal.Zero)).ToList()
-                        : productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
+                 ? productsInStock.Where(c => c.Price >= 0).ToList()
+                 : productsInStock.Where(c => c.PriceUsd >= 0).ToList();
 
                     // Almacenar en caché con una duración de 10 minutos
                     _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
@@ -955,6 +955,39 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_DetailsModal", model);
         }
 
+        private async Task<IActionResult> ValidateClientRFCAsync(int clientId, OrderType orderType)
+        {
+            // Solo validar si el tipo de pedido es Factura (Invoice)
+            if (orderType == OrderType.Invoice)
+            {
+                // Obtener el cliente desde la base de datos
+                var client = await _repository.GetByIdAsync<Client>(clientId);
+
+                // Verificar si el cliente tiene un RFC válido
+                if (client == null || string.IsNullOrEmpty(client.RFC))
+                {
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
+                        "No se puede guardar como factura porque el cliente no tiene RFC registrado."));
+                }
+            }
+
+            // Si la validación es exitosa, devolver null
+            return null;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CheckClientRFC(int clientId)
+        {
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+            {
+                return Json(new { hasRFC = false, message = "Cliente no encontrado." });
+            }
+
+            bool hasRFC = !string.IsNullOrEmpty(client.RFC);
+            return Json(new { hasRFC, message = hasRFC ? "" : "Este cliente no tiene RFC registrado." });
+        }
+
         public async Task<IActionResult> PrintOrder(int id)
         {
             var currentPath = Environment.CurrentDirectory;
@@ -1172,6 +1205,7 @@ namespace WendlandtVentas.Web.Controllers
                         }
                     });
                 });
+
 
                 var client = await _repository.GetByIdAsync<Client>(checkPromotion.ClientId);
                 var promotions = (await _repository.ListExistingAsync(new PromotionByClientSpecification(client))).SelectMany(d => d.PresentationPromotions);

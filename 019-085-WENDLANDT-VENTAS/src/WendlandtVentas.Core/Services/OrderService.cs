@@ -101,9 +101,9 @@ namespace WendlandtVentas.Core.Services
             }
 
             var order = new Order(model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
-                dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(), 
+                dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
                 user.Id, model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
-                orderProducts, orderPromotions, model.Address, model.AddressName, 
+                orderProducts, orderPromotions, model.Address, model.AddressName,
                 dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(), model.PayType, model.CurrencyType);
 
             try
@@ -121,7 +121,7 @@ namespace WendlandtVentas.Core.Services
                     order.GenerateRemisionCode();
                 }
 
-                
+
 
                 await _repository.UpdateAsync(order);
 
@@ -132,7 +132,7 @@ namespace WendlandtVentas.Core.Services
 
                 await _notificationService.AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
 
-                var bitacora = new Bitacora(order.Id, user.Name,"Crear pedido");
+                var bitacora = new Bitacora(order.Id, user.Name, "Crear pedido");
 
                 await _bitacoraService.AddAsync(bitacora);
                 //Eliminamos el cache de la tabla
