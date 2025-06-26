@@ -76,6 +76,14 @@ namespace WendlandtVentas.Core.Services
             var orderPromotions = new List<OrderPromotion>();
             var orderPromotionsItems = new List<PromotionItemModel>();
 
+            // Validación final de RFC (redundante por seguridad)
+            if (model.IsInvoice == OrderType.Invoice)
+            {
+               
+                if (client == null || string.IsNullOrEmpty(client.RFC))
+                    return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
+            }
+
             foreach (var productPresentation in productPresentations)
             {
                 var i = model.ProductPresentationIds.FindIndex(x => x == productPresentation.Id);
@@ -194,6 +202,13 @@ namespace WendlandtVentas.Core.Services
                 var currentOrderProduct = new OrderProduct();
                 var orderPromotions = new List<OrderPromotion>();
                 var orderPromotionsItems = new List<PromotionItemModel>();
+
+                if (model.IsInvoice == OrderType.Invoice)
+                {
+
+                    if (client == null || string.IsNullOrEmpty(client.RFC))
+                        return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
+                }
 
                 if (order.InventoryDiscount)
                 {

@@ -58,10 +58,11 @@
                                         </label>
                                     </div>
                                 }
-                                <div class="form-check mt-2">
+                                <!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
+                               <!-- <div class="form-check mt-2">
                                     <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
                                     <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
-                                </div>
+                                 </div>-->
                             </div>
                         </div>
                     }
@@ -327,6 +328,91 @@
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
 }
 @section Scripts {
+
+    <script>
+        $(document).ready(function () {
+            // Validar RFC al cambiar cliente o tipo de pedido
+            function validateRFCForInvoice() {
+                const isInvoice = $('input:radio[name=IsInvoice]:checked').val() === "@OrderType.Invoice";
+                const clientId = $('#ClientId').val();
+
+                if (isInvoice && clientId) {
+                    $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
+                        if (!response.hasRFC || !response.isValid) {
+                            $('.modal-errores').html(`
+                                <div class="alert alert-danger">
+                                    ${response.message || "No se puede facturar: RFC inválido o faltante."}
+                                    
+                                </div>
+                            `).show();
+                            $('button[type="submit"]').prop('disabled', true);
+                        } else {
+                            $('.modal-errores').empty().hide();
+                            $('button[type="submit"]').prop('disabled', false);
+                        }
+                    });
+                } else if (isInvoice && !clientId) {
+                    $('.modal-errores').html(`
+                        <div class="alert alert-danger">
+                            Seleccione un cliente para facturar.
+                        </div>
+                    `).show();
+                    $('button[type="submit"]').prop('disabled', true);
+                } else {
+                    $('.modal-errores').empty().hide();
+                    $('button[type="submit"]').prop('disabled', false);
+                }
+            }
+
+            // Eventos que disparan la validación
+            $('input:radio[name=IsInvoice]').on('change', validateRFCForInvoice);
+            $('#ClientId').on('change', validateRFCForInvoice);
+
+            // Validación adicional al enviar el formulario
+            $('form').on('submit', function (e) {
+                if ($('input:radio[name=IsInvoice]:checked').val() === "@OrderType.Invoice") {
+                    const clientId = $('#ClientId').val();
+                    if (!clientId) {
+                        e.preventDefault();
+                        $('.modal-errores').html(`
+                            <div class="alert alert-danger">
+                                Seleccione un cliente para facturar.
+                            </div>
+                        `).show();
+                        return false;
+                    }
+
+                    // Validación síncrona para asegurar RFC antes de enviar
+                    let hasValidRFC = false;
+                    $.ajax({
+                        url: "@Url.Action("CheckClientRFC", "Order")",
+                        data: { clientId: clientId },
+                        async: false,
+                        success: function (response) {
+                            if (!response.hasRFC || !response.isValid) {
+                                $('.modal-errores').html(`
+                                    <div class="alert alert-danger">
+                                        ${response.message || "No se puede facturar: RFC inválido o faltante."}
+                                        <a href="/Client/Edit/${clientId}" target="_blank" class="alert-link">
+                                            (Editar cliente)
+                                        </a>
+                                    </div>
+                                `).show();
+                                hasValidRFC = false;
+                            } else {
+                                hasValidRFC = true;
+                            }
+                        }
+                    });
+
+                    if (!hasValidRFC) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+        });
+    </script>
     <script>
         $(document).ready(function () {
             $("#addProduct").on("click", function () {

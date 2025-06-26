@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Office2010.Excel;
@@ -294,10 +295,13 @@ namespace WendlandtVentas.Web.Controllers
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
 
-            // 🔒 Validación de RFC si es Factura
-            var rfcValidation = await ValidateClientRFCAsync(model.ClientId, model.Type);
-            if (rfcValidation != null)
-                return rfcValidation;
+            // Validación de RFC antes de guardar
+            if (model.IsInvoice == OrderType.Invoice)
+            {
+                var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
+                if (rfcValidation != null)
+                    return rfcValidation;
+            } 
 
             var filters = new Dictionary<string, string>
             {
@@ -376,23 +380,17 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
-        private async Task<IActionResult> ValidateClientRFCAsync(int clientId, OrderType orderType)
+        private async Task<IActionResult> ValidateClientRFCAsync(int clientId)
         {
-            // Solo validar si el tipo de pedido es Factura (Invoice)
-            if (orderType == OrderType.Invoice)
-            {
-                // Obtener el cliente desde la base de datos
-                var client = await _repository.GetByIdAsync<Client>(clientId);
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Cliente no encontrado."));
 
-                // Verificar si el cliente tiene un RFC válido
-                if (client == null || string.IsNullOrEmpty(client.RFC))
-                {
-                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
-                        "No se puede guardar como factura porque el cliente no tiene RFC registrado."));
-                }
-            }
+            if (string.IsNullOrEmpty(client.RFC))
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se puede facturar: el cliente no tiene RFC registrado."));
 
-            // Si la validación es exitosa, devolver null
+         
+
             return null;
         }
 
@@ -742,12 +740,14 @@ namespace WendlandtVentas.Web.Controllers
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
 
-           
 
-            var rfcValidationResult = await ValidateClientRFCAsync(model.ClientId, model.IsInvoice);
-            if (rfcValidationResult != null)
+
+            // Validación de RFC antes de actualizar
+            if (model.IsInvoice == OrderType.Invoice)
             {
-                return rfcValidationResult;
+                var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
+                if (rfcValidation != null)
+                    return rfcValidation;
             }
 
             var response = await _orderService.UpdateOrderAsync(model, User.Identity.Name);
