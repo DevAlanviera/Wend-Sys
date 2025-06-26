@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
@@ -283,6 +284,15 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
+
+            // Validación de RFC antes de guardar
+            if (model.IsInvoice == OrderType.Invoice)
+            {
+                var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
+                if (rfcValidation != null)
+                    return rfcValidation;
+            }
+
             var filters = new Dictionary<string, string>
             {
                 {
@@ -327,7 +337,7 @@ namespace WendlandtVentas.Web.Controllers
 
                     // Filtrar por moneda
                     productsInStock = currencyType == CurrencyType.MXN
-                 ? productsInStock.Where(c => c.Price >= 0).ToList()
+                        ? productsInStock.Where(c => c.Price >= 0).ToList()
                  : productsInStock.Where(c => c.PriceUsd >= 0).ToList();
 
                     // Almacenar en caché con una duración de 10 minutos
@@ -369,7 +379,7 @@ namespace WendlandtVentas.Web.Controllers
 
             var productPresentation = await _repository.GetAsync(new ProductPresentationExtendedSpecification(model.ProductPresentationId));
 
-           
+
 
             var item = new ProductPresentationItem
             {
@@ -671,6 +681,14 @@ namespace WendlandtVentas.Web.Controllers
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
 
+            // Validación de RFC antes de actualizar
+            if (model.IsInvoice == OrderType.Invoice)
+            {
+                var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
+                if (rfcValidation != null)
+                    return rfcValidation;
+            }
+
             var response = await _orderService.UpdateOrderAsync(model, User.Identity.Name);
 
             if (response.IsSuccess)
@@ -690,6 +708,21 @@ namespace WendlandtVentas.Web.Controllers
             _logger.LogError($"Error: {response.Message}");
             return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo editar el pedido"));
         }
+
+        private async Task<IActionResult> ValidateClientRFCAsync(int clientId)
+        {
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Cliente no encontrado."));
+
+            if (string.IsNullOrEmpty(client.RFC))
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se puede facturar: el cliente no tiene RFC registrado."));
+
+        
+
+            return null;
+        }
+
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, AdministratorAssistant, Sales, Distributor, Storekeeper, Billing, BillingAssistant")]
         [HttpGet]
