@@ -1,0 +1,75 @@
+﻿@model WendlandtVentas.Web.Models.ClientViewModels.ContactViewModel
+
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <form asp-action="AddContactSequential" method="post" 
+              id="contactForm"
+              data-ajax="true"
+              data-ajax-success="onContactSuccess">
+              
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Contacto</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" asp-for="ClientId" />
+                
+                <div class="form-group">
+                    <label asp-for="Name" class="control-label"></label>
+                    <input asp-for="Name" class="form-control" required />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label asp-for="Email" class="control-label"></label>
+                    <input asp-for="Email" class="form-control" required />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label asp-for="Cellphone" class="control-label"></label>
+                    <input asp-for="Cellphone" class="form-control" />
+                    <span asp-validation-for="Cellphone" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label asp-for="OfficePhone" class="control-label"></label>
+                    <input asp-for="OfficePhone" class="form-control" />
+                    <span asp-validation-for="OfficePhone" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label asp-for="Comments" class="control-label"></label>
+                    <textarea asp-for="Comments" class="form-control"></textarea>
+                    <span asp-validation-for="Comments" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnBackToClient" class="btn btn-secondary">Atrás</button>
+                <button type="submit" class="btn btn-primary">Guardar Contacto</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Función global para manejar el éxito del contacto
+    window.onContactSuccess = function(data) {
+        if (data.success) {
+            // Cerrar modal de contacto
+            $('#addContactSequential').modal('hide');
+            
+            // Recargar la grilla de clientes
+            var grid = document.getElementById('ClientsGrid').ej2_instances[0];
+            grid.refresh();
+            
+            // Mostrar mensaje de éxito
+            toastr.success('Cliente y contacto agregados correctamente');
+        } else {
+            // Mostrar errores
+            $('.modal-errores').html(data.message || 'Error al guardar el contacto');
+        }
+    };
+</script>

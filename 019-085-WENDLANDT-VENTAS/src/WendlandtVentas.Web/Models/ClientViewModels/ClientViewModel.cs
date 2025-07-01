@@ -50,5 +50,9 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         [Range(0, int.MaxValue, ErrorMessage = "Favor de introducir un número válido")]
         public int CreditDays { get; set; } = 15;
 
+        public ContactViewModel Contact { get; set; } = new ContactViewModel(); // ✅ Evita nulos
+
+        public bool IsNew { get; set; } = true; // Por defecto, asumimos es nuevo
+
     }
 }

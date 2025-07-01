@@ -126,6 +126,7 @@ namespace WendlandtVentas.Web.Controllers
                         c.SellerId,
                         Addresses = c.Addresses.Count,
                         Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
                     })
                     .ToListAsync();
 
@@ -188,6 +189,7 @@ namespace WendlandtVentas.Web.Controllers
                         c.SellerId,
                         Addresses = c.Addresses.Count,
                         Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
                     })
                     .ToListAsync();
 
@@ -250,6 +252,7 @@ namespace WendlandtVentas.Web.Controllers
                         c.SellerId,
                         Addresses = c.Addresses.Count,
                         Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
                     })
                     .ToListAsync();
 
@@ -653,6 +656,7 @@ namespace WendlandtVentas.Web.Controllers
                 Channels = new SelectList(channels.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 PayTypes = new SelectList(payTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 States = new SelectList(states.Select(x => new { Value = x.Id, Text = x.Name }), "Value", "Text"),
+                IsNew = true,
             };
 
             model.Sellers = _userManager.Users.Select(s => new SelectListItem
@@ -674,29 +678,47 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Add(ClientViewModel model)
         {
-            if (!ModelState.IsValid) return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+            if (!ModelState.IsValid)
+                return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
 
             try
             {
-                var client = new Client(model.Name);
-                client.Channel = model.Channel;
-                client.Classification = model.Classification;
-                client.StateId = model.StateId;
-                client.PayType = model.PayType;
-                client.RFC = string.IsNullOrEmpty(model.RFC) ? model.RFC : model.RFC.ToUpper();
-                client.City = string.IsNullOrEmpty(model.City) ? model.City : model.City.Trim();
-                client.SellerId = model.SellerId;
-                client.CreditDays = model.CreditDays;
-              
+                // Crear cliente y mapear campos
+                var client = new Client(model.Name)
+                {
+                    Channel = model.Channel,
+                    Classification = model.Classification,
+                    StateId = model.StateId,
+                    PayType = model.PayType,
+                    RFC = string.IsNullOrEmpty(model.RFC) ? model.RFC : model.RFC.ToUpper(),
+                    City = string.IsNullOrEmpty(model.City) ? model.City : model.City.Trim(),
+                    SellerId = model.SellerId,
+                    CreditDays = model.CreditDays
+                };
 
+                // Agregar cliente al repositorio
                 await _repository.AddAsync(client);
 
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Cliente guardado"));
+                // Crear contacto y mapear campos, asignar ClientId del cliente recién creado
+                var contact = new Contact(
+                model.Contact.Name,
+                model.Contact.Cellphone,
+                model.Contact.OfficePhone,  // asegúrate que venga en el ViewModel o pásalo como null/empty
+                model.Contact.Email,
+                model.Contact.Comments,
+                client.Id
+            );
+
+
+                // Agregar contacto al repositorio
+                await _repository.AddAsync(contact);
+
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Cliente y contacto guardados"));
             }
             catch (Exception e)
             {
                 _logger.LogError(e, $"Error en ClientController --> Add: " + e.Message);
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el cliente"));
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el cliente y contacto"));
             }
         }
 
@@ -732,7 +754,8 @@ namespace WendlandtVentas.Web.Controllers
                 City = client.City,
                 SellerId = client.SellerId,
                 CreditDays = client.CreditDays,
-               
+                IsNew = false
+
             };
 
             model.Sellers = _userManager.Users.Select(s => new SelectListItem

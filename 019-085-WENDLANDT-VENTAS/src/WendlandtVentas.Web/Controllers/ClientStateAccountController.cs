@@ -48,9 +48,15 @@ public class ClientStateAccountController : Controller
 
         // Obtener todas las órdenes del cliente (existente)
         var clientOrders = (await _repository.ListAsync(new OrdersByClientIdSpecification(clientId)))
-            .Where(o => !o.ProntoPago || o.OrderStatus == OrderStatus.Paid || o.OrderStatus == OrderStatus.PartialPayment)
-            // 👈 EXCLUYE las órdenes con ProntoPago = true
-            .ToList();
+        .Where(o =>
+            // Mostrar órdenes normales (ProntoPago = false)
+            !o.ProntoPago ||
+
+            // Mostrar órdenes ProntoPago SÓLO si están pagadas
+            (o.ProntoPago && o.OrderStatus == OrderStatus.Paid)
+        )
+        .ToList();
+
 
         // Filtrar órdenes (existente)
         var deliveredOrders = clientOrders.Where(c => c.OrderStatus == OrderStatus.Delivered).ToList();
