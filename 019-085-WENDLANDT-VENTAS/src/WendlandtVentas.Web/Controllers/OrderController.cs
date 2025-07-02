@@ -340,6 +340,7 @@ namespace WendlandtVentas.Web.Controllers
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
+
         public async Task<IActionResult> AddProduct([FromQuery] CurrencyType currencyType)
         {
             try
@@ -347,28 +348,14 @@ namespace WendlandtVentas.Web.Controllers
                 ViewData["Action"] = nameof(AddProduct);
                 ViewData["ModalTitle"] = "Agregar producto";
 
-                // Clave única para el caché, diferenciando por tipo de moneda
-                string cacheKey = $"ProductsInStock_{currencyType}";
-
-                if (!_memoryCache.TryGetValue(cacheKey, out List<ProductPresentation> productsInStock))
-                {
-                    // Consultar la base de datos si no está en caché
-                    productsInStock = (List<ProductPresentation>)await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
-
-                    // Filtrar por moneda
-                    productsInStock = currencyType == CurrencyType.MXN
-                 ? productsInStock.Where(c => c.Price >= 0).ToList()
-                 : productsInStock.Where(c => c.PriceUsd >= 0).ToList();
-
-                    // Almacenar en caché con una duración de 10 minutos
-                    _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
-                }
-
+                var productsInStock = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
+                if (currencyType == CurrencyType.MXN)
+                    productsInStock = productsInStock.Where(c => c.Price >= 0).ToList();
+                else
+                    productsInStock = productsInStock.Where(c => c.PriceUsd >= 0).ToList();
                 var model = new OrderAddProductViewModel
                 {
-                    ProductsPresentations = new SelectList(
-                        productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }),
-                        "Value", "Text")
+                    ProductsPresentations = new SelectList(productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }), "Value", "Text")
                 };
 
                 return PartialView("_AddProductModal", model);
@@ -400,12 +387,24 @@ namespace WendlandtVentas.Web.Controllers
             var client = await _repository.GetByIdAsync<Client>(clientId);
             if (client == null)
             {
-                return Json(new { hasRFC = false, message = "Cliente no encontrado." });
+                return Json(new
+                {
+                    hasRFC = false,
+                    isValid = false,
+                    message = "Cliente no encontrado."
+                });
             }
 
-            bool hasRFC = !string.IsNullOrEmpty(client.RFC);
-            return Json(new { hasRFC, message = hasRFC ? "" : "Este cliente no tiene RFC registrado." });
+            bool hasRFC = !string.IsNullOrWhiteSpace(client.RFC);
+
+            return Json(new
+            {
+                hasRFC,
+                isValid = hasRFC, // Solo lo igualamos para que el script funcione
+                message = hasRFC ? "" : "Este cliente no tiene RFC registrado."
+            });
         }
+
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
@@ -418,19 +417,11 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
+
         [HttpPost]
         public async Task<IActionResult> AddProductRow(OrderAddProductViewModel model)
         {
-
-            //Este metodo agrega mi producto al row despues de dar click en aceptar
-
             var productPresentation = await _repository.GetAsync(new ProductPresentationExtendedSpecification(model.ProductPresentationId));
-
-
-            // Selecciona el precio base en base a la moneda
-            var basePrice = model.CurrencyType == CurrencyType.MXN
-                ? productPresentation.Price
-                : productPresentation.PriceUsd;
 
             var item = new ProductPresentationItem
             {
@@ -447,12 +438,8 @@ namespace WendlandtVentas.Web.Controllers
                 ExistPresentation = model.ExistPresentation,
                 IsSeason = productPresentation.Product.Distinction == Distinction.Season,
                 IsPresent = model.IsPresent,
-                CanDelete = true,
-
-                //Agregamos esta propiedad para poder obtener el precio base y poder hacer operaciones con este
-                BasePriceFromProductPresentation = basePrice
+                CanDelete = true
             };
-
 
             return PartialView("_RowProduct", item);
         }
@@ -696,24 +683,31 @@ namespace WendlandtVentas.Web.Controllers
                 Delivery = order.Delivery,
                 DeliverySpecification = order.DeliverySpecification,
                 ProductsEdit = order.OrderProducts
-                    .Where(c => !c.IsDeleted)
-                    .Select(c => new ProductPresentationItem
+                .Where(c => !c.IsDeleted)
+                .Select(c =>
+                {
+                    var price = c.Price != 0 ? c.Price : (isMxnCurrency ? c.ProductPresentation.Price : c.ProductPresentation.PriceUsd);
+                    var subtotal = price * c.Quantity;
+
+                    return new ProductPresentationItem
                     {
                         ProductPresentationId = c.ProductPresentationId,
                         ProductName = c.ProductPresentation.NameExtended(),
-                        Price = c.Price != 0 ? c.Price : (isMxnCurrency ? c.ProductPresentation.Price : c.ProductPresentation.PriceUsd),
-                        BasePriceFromProductPresentation = isMxnCurrency ? c.ProductPresentation.Price : c.ProductPresentation.PriceUsd,
+                        Price = price,
+                        PriceString = price.FormatCurrency(),                 // ✅ Agregado
                         Quantity = c.Quantity,
-                        SubtotalDouble = c.Price * c.Quantity,
+                        SubtotalDouble = subtotal,
+                        Subtotal = subtotal.FormatCurrency(),                 // ✅ Agregado
                         PresentationId = c.ProductPresentation.PresentationId,
                         PresentationName = c.ProductPresentation.Presentation.Name,
                         ProductId = c.ProductPresentation.ProductId,
                         IsPresent = c.IsPresent,
                         CanDelete = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
-                    })
-                    .OrderBy(d => d.PresentationId)
-                    .ThenBy(d => d.IsPresent)
-                    .ToList(),
+                    };
+                })
+                .OrderBy(d => d.PresentationId)
+                .ThenBy(d => d.IsPresent)
+                .ToList(),
                 PresentationPromotionsEdit = presentationPromotions,
                 Clients = new SelectList(clients.OrderBy(c => c.Name), "Id", "Name"),
                 Addresses = new SelectList(filteredAddresses, "Id", "AddressLocation"),
