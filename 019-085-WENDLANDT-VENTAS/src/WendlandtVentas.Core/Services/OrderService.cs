@@ -140,21 +140,26 @@ namespace WendlandtVentas.Core.Services
                 ProntoPago = model.ProntoPago
             };
 
-            // Completar datos antes de guardar
-            if (model.IsInvoice == OrderType.Return)
-            {
-                order.UpdateReturnInformation(model.ReturnRemisionNumber, model.ReturnReason);
-            }
-            else
-            {
-                order.GenerateRemisionCode();
-            }
+            
 
             try
             {
                 await _repository.AddAsync(order);
 
                 var orderTypeName = model.IsInvoice == OrderType.Return ? "Devolución" : "Pedido";
+
+                // Completar datos antes de guardar
+                if (model.IsInvoice == OrderType.Return)
+                {
+                    order.UpdateReturnInformation(model.ReturnRemisionNumber, model.ReturnReason);
+                }
+                else
+                {
+                    order.GenerateRemisionCode();
+                }
+
+                await _repository.UpdateAsync(order);
+
                 var clientName = client != null ? client.Name : string.Empty;
                 var roles = new List<Role>() { Role.Administrator, Role.Storekeeper, Role.Billing, Role.BillingAssistant };
                 var title = $"{orderTypeName} {order.Id}";

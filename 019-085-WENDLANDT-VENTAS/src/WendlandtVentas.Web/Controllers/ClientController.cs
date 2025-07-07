@@ -53,7 +53,7 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> GetClientsData([FromBody] DataManagerRequest dm)
         {
             // Filtrar clientes excluyendo a los distribuidores
-            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification(c => c.Channel != Channel.Distributor));
+            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification(c => c.Channel == Channel.DirectSale));
 
             var dataSource = clients.Select(c => new
             {
@@ -141,6 +141,71 @@ namespace WendlandtVentas.Web.Controllers
                 return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
             }
         }
+
+        [HttpPost]
+        public async Task<IActionResult> GetWholesalerData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                {
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+                }
+
+                // Consulta base con los mayoristas
+                var wholesalersQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Wholesaler));
+
+                // Aplicar búsqueda si hay criterios
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda (Wholesaler): {searchValue}");
+
+                    wholesalersQuery = wholesalersQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                // Total antes de paginar
+                var totalCount = await wholesalersQuery.CountAsync();
+
+                // Aplicar paginación
+                var paginatedResults = await wholesalersQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                // Devolver resultados
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetWholesalerData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
 
         [HttpPost]
         public async Task<IActionResult> GetAutoServicesData([FromBody] DataManagerRequest dm)
@@ -778,7 +843,19 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(ClientViewModel model)
         {
-            if (!ModelState.IsValid) return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+            _logger.LogInformation($"IsNew: {model.IsNew}");
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(e => e.Value.Errors.Count > 0)
+                    .Select(e => $"{e.Key}: {string.Join(", ", e.Value.Errors.Select(x => x.ErrorMessage))}")
+                    .ToList();
+
+                _logger.LogError("Errores de modelo:\n" + string.Join("\n", errors));
+
+                return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+            }
 
             try
             {

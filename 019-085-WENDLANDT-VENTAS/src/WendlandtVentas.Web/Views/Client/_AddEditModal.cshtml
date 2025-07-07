@@ -1,6 +1,8 @@
 ﻿@model WendlandtVentas.Web.Models.ClientViewModels.ClientViewModel
 <div class="modal-dialog" role="document">
     <form asp-action="@ViewData["Action"]" asp-antiforgery="true" class="modal-content forma-ajax--modal">
+        @Html.HiddenFor(t => t.Id)
+        @Html.HiddenFor(m => m.IsNew)
         <div class="modal-header">
             <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -108,9 +110,11 @@
 <script>
     // Delegar evento para que funcione incluso en elementos cargados dinámicamente
     $(document).on('change', '#RequiereFactura', function () {
-        if ($(this).is(':checked') || $('#RFC').val().trim() !== "") {
+        if ($(this).is(':checked')) {
             $('#RFC').closest('.form-group').show();
         } else {
+            // Limpia el valor RFC para que la condición no mantenga el campo visible
+            $('#RFC').val('');
             $('#RFC').closest('.form-group').hide();
         }
     });

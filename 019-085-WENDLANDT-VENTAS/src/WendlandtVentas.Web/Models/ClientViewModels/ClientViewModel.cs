@@ -1,11 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using WendlandtVentas.Core.Entities.Enums;
 
 namespace WendlandtVentas.Web.Models.ClientViewModels
 {
-    public class ClientViewModel
+    public class ClientViewModel : IValidatableObject
     {
         public int Id { get; set; }
 
@@ -53,6 +54,20 @@ namespace WendlandtVentas.Web.Models.ClientViewModels
         public ContactViewModel Contact { get; set; } = new ContactViewModel(); // ✅ Evita nulos
 
         public bool IsNew { get; set; } = true; // Por defecto, asumimos es nuevo
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            var parent = validationContext.ObjectInstance as ClientViewModel;
+
+            if (parent != null && parent.IsNew)
+            {
+                if (string.IsNullOrWhiteSpace(Contact.Name))
+                    yield return new ValidationResult("El nombre del contacto es obligatorio.", new[] { "Contact.Name" });
+
+                if (string.IsNullOrWhiteSpace(Contact.Email))
+                    yield return new ValidationResult("El correo electrónico es obligatorio.", new[] { "Contact.Email" });
+            }
+        }
 
     }
 }
