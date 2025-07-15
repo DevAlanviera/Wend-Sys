@@ -348,11 +348,21 @@ namespace WendlandtVentas.Web.Controllers
                 ViewData["Action"] = nameof(AddProduct);
                 ViewData["ModalTitle"] = "Agregar producto";
 
-                var productsInStock = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
-                if (currencyType == CurrencyType.MXN)
-                    productsInStock = productsInStock.Where(c => c.Price >= 0).ToList();
-                else
-                    productsInStock = productsInStock.Where(c => c.PriceUsd >= 0).ToList();
+                string cacheKey = currencyType == CurrencyType.MXN ? "ProductsInStock_MXN" : "ProductsInStock_USD";
+     
+
+                var productsInStock = await _cacheService.GetOrSetAsync(
+                cacheKey,
+                async () =>
+                {
+                    var allProducts = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
+                    return currencyType == CurrencyType.MXN
+                        ? allProducts.Where(c => c.Price >= 0).ToList()
+                        : allProducts.Where(c => c.PriceUsd >= 0).ToList();
+                },
+                absoluteExpiration: null // <- aquí defines que no haya expiración
+            );
+
                 var model = new OrderAddProductViewModel
                 {
                     ProductsPresentations = new SelectList(productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }), "Value", "Text")
