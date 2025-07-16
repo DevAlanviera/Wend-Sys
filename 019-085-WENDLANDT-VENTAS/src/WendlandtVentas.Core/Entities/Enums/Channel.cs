@@ -10,5 +10,7 @@ namespace WendlandtVentas.Core.Entities.Enums
         [Display(Name = "Autoservicio")] Autoservicio,
         [Display(Name = "E-Commerce")] ECommerce,
         [Display(Name = "Tasting Room")] TastingRoom,
+        [Display(Name = "Almacén")] Almacen,
+        [Display(Name = "Maquila")] Maquila
     }
 }

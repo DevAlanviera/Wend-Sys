@@ -333,6 +333,121 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
+        [HttpPost]
+        public async Task<IActionResult> GetAlmacenData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+
+                var almacenQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Almacen));
+
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda (Almacen): {searchValue}");
+
+                    almacenQuery = almacenQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                var totalCount = await almacenQuery.CountAsync();
+
+                var paginatedResults = await almacenQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetAlmacenData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetMaquilaData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+
+                var maquilaQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Maquila));
+
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda (Maquila): {searchValue}");
+
+                    maquilaQuery = maquilaQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                var totalCount = await maquilaQuery.CountAsync();
+
+                var paginatedResults = await maquilaQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetMaquilaData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+
 
 
         [HttpPost]
