@@ -340,7 +340,6 @@ namespace WendlandtVentas.Web.Controllers
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
-
         public async Task<IActionResult> AddProduct([FromQuery] CurrencyType currencyType)
         {
             try

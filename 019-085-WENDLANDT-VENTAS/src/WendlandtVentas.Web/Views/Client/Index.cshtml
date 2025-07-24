@@ -21,9 +21,9 @@
 
 <!-- Controles de las pestañas -->
 <ul class="nav nav-tabs" id="clientTabs" role="tablist">
-    <!-- Clientes -->
+    <!-- Venta Directa -->
     <li class="nav-item" role="presentation">
-        <a class="nav-link active" id="clients-tab" data-toggle="tab" href="#clients" role="tab" aria-controls="clients" aria-selected="true">Clientes</a>
+        <a class="nav-link " id="clients-tab" data-toggle="tab" href="#clients" role="tab" aria-controls="clients" aria-selected="true">Venta Directa</a>
     </li>
     <!-- Distribuidores -->
     <li class="nav-item" role="presentation">
@@ -47,13 +47,46 @@
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="maquila-tab" data-toggle="tab" href="#maquila" role="tab" aria-controls="maquila" aria-selected="false">Maquila</a>
     </li>
+    <!-- Sin asignar -->
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="SA-tab" data-toggle="tab" href="#sa" role="tab" aria-controls="sa" aria-selected="false">Sin Asignar</a>
+    </li>
 
 </ul>
 
 <!-- Contenido de las pestañas -->
 <div class="tab-content" id="clientTabsContent">
+    <!-- Pestaña Sin Asignar -->
+    <div class="tab-pane fade show active" id="sa" role="tabpanel" aria-labelledby="sa-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="SaGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageCount="50"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetSaData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Classification", "Channel", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
     <!-- Pestaña de Clientes -->
-    <div class="tab-pane fade show active" id="clients" role="tabpanel" aria-labelledby="clients-tab">
+    <div class="tab-pane fade" id="clients" role="tabpanel" aria-labelledby="clients-tab">
         <div class="datatable-container mt-3">
             <ejs-grid id="ClientsGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
                 <e-grid-pagesettings pageCount="50"></e-grid-pagesettings>

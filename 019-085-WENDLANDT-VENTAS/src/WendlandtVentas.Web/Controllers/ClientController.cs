@@ -79,6 +79,35 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> GetSaData([FromBody] DataManagerRequest dm)
+        {
+            // Filtrar clientes excluyendo a los distribuidores
+            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification(c => c.Channel == null));
+
+            var dataSource = clients.Select(c => new
+            {
+                c.Id,
+                c.Name,
+                Classification = c.Classification?.Humanize() ?? "-",
+                Channel = c.Channel?.Humanize() ?? "-",
+                State = c.State?.Name ?? "-",
+                c.RFC,
+                c.City,
+                CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                PayType = c.PayType?.Humanize() ?? "-",
+                c.CreditDays,
+                c.SellerId,
+                Addresses = c.Addresses.Count,
+                Contacts = c.Contacts.Count,
+                Comments = c.Comment.Count(x => !x.IsDeleted), // Aquí estamos contando los comentarios no eliminados
+                AddCommentButtonClass = c.Comment.Count(x => !x.IsDeleted) >= 1 ? "btn-disabled" : "" // Deshabilitar si no hay comentarios
+            });
+
+            var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
+            return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
+        }
+
+        [HttpPost]
         public async Task<IActionResult> GetDistributorsData([FromBody] DataManagerRequest dm)
         {
             try

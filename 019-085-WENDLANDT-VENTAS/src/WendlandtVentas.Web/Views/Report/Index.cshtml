@@ -124,11 +124,24 @@
     <div class="mb-2">
         <ejs-button id="excel" content="Export To Excel" isPrimary="true"></ejs-button>
     </div>
-    <ejs-pivotview id="PivotView" height="1500" showGroupingBar="true" showFieldList="true" locale="es-Es" allowDrillThrough="true" allowExcelExport="true">
-        <e-datasourcesettings dataSource="@ViewBag.DataSource" expandAll="true" enableSorting="false" allowLabelFilter="true" allowValueFilter="true">
+    <ejs-pivotview id="PivotView" height="1500" showGroupingBar="true" showFieldList="true" locale="es-Es">
+        <e-datasourcesettings dataSource="@ViewBag.DataSource"
+                              expandAll="true"
+                              enableSorting="true"
+                              allowLabelFilter="true"
+                              allowValueFilter="true">
+
+            <!-- Configuración de orden para valores (versión RZ2010) -->
+            <e-sortsettings>
+                <e-sortcolumns>
+                    <e-sortcolumn name="Liters" order="Descending"></e-sortcolumn>
+                </e-sortcolumns>
+            </e-sortsettings>
+
             <e-formatsettings>
-                <e-field name="Liters" Type="number" format="N2"></e-field>
+                <e-field name="Liters" format="N2"></e-field>
             </e-formatsettings>
+
             <e-rows>
                 <e-field name="City" caption="Ciudad"></e-field>
             </e-rows>
@@ -136,10 +149,11 @@
                 <e-field name="Month" caption="Mes"></e-field>
             </e-columns>
             <e-values>
-                <e-field name="Liters" caption="Litros" ></e-field>
+                <e-field name="Liters" caption="Litros" type="Sum"></e-field>
             </e-values>
         </e-datasourcesettings>
     </ejs-pivotview>
+
 </div>
 
 @section scripts{
@@ -154,6 +168,7 @@
 </style>
 
 <script>
+       
 
     $('#btn-collapse').click(function () {
         var status = $(this).data('status');

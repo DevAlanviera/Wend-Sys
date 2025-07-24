@@ -1,4 +1,4 @@
-﻿﻿@using WendlandtVentas.Core.Entities.Enums
+﻿﻿﻿@using WendlandtVentas.Core.Entities.Enums
 @using WendlandtVentas.Core.Models.OrderViewModels
 @model OrderViewModel
 
@@ -19,7 +19,6 @@
     @if (Model.Id > 0)
     {
         @Html.HiddenFor(c => c.Id)
-        ;
     }
 
     <div class="row">
@@ -59,10 +58,10 @@
                                     </div>
                                 }
                                 <!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
-                               <!-- <div class="form-check mt-2">
-                                    <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
-                                    <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
-                                 </div>-->
+                                <!-- <div class="form-check mt-2">
+                                     <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
+                                     <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
+                                  </div>-->
                             </div>
                         </div>
                     }
@@ -260,13 +259,13 @@
                             </div>
                             <div class="row">
                                 <div class="col">
-                                    <h class="mt-3">Total</h>
+                                    <h5 class="mt-3">Total</h5>
                                 </div>
                                 <div class="col text-right p-0">
                                     <h5 class="text-success total-order">$0.00 MXN</h5>
                                 </div>
                             </div>
-                            <div class="text-muted mb-2.">
+                            <div class="text-muted mb-2">
                                 Total antes de impuestos.
                             </div>
                             <div class="text-center pt-3">
@@ -299,7 +298,7 @@
                             <div class="row justify-content-center">
                                 <h4 class="text-success total-order">$0.00</h4>
                             </div>
-                            <div class="text-muted mb-2.">
+                            <div class="text-muted mb-2">
                                 Total antes de impuestos.
                             </div>
                             <br />
