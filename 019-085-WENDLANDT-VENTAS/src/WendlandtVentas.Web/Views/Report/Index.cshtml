@@ -124,24 +124,11 @@
     <div class="mb-2">
         <ejs-button id="excel" content="Export To Excel" isPrimary="true"></ejs-button>
     </div>
-    <ejs-pivotview id="PivotView" height="1500" showGroupingBar="true" showFieldList="true" locale="es-Es">
-        <e-datasourcesettings dataSource="@ViewBag.DataSource"
-                              expandAll="true"
-                              enableSorting="true"
-                              allowLabelFilter="true"
-                              allowValueFilter="true">
-
-            <!-- Configuración de orden para valores (versión RZ2010) -->
-            <e-sortsettings>
-                <e-sortcolumns>
-                    <e-sortcolumn name="Liters" order="Descending"></e-sortcolumn>
-                </e-sortcolumns>
-            </e-sortsettings>
-
+    <ejs-pivotview id="PivotView" height="1500" showGroupingBar="true" showFieldList="true" locale="es-Es" allowDrillThrough="true" allowExcelExport="true">
+        <e-datasourcesettings dataSource="@ViewBag.DataSource" expandAll="true" enableSorting="false" allowLabelFilter="true" allowValueFilter="true">
             <e-formatsettings>
                 <e-field name="Liters" format="N2"></e-field>
             </e-formatsettings>
-
             <e-rows>
                 <e-field name="City" caption="Ciudad"></e-field>
             </e-rows>
@@ -149,7 +136,7 @@
                 <e-field name="Month" caption="Mes"></e-field>
             </e-columns>
             <e-values>
-                <e-field name="Liters" caption="Litros" type="Sum"></e-field>
+                <e-field name="Liters" caption="Litros"></e-field>
             </e-values>
         </e-datasourcesettings>
     </ejs-pivotview>
@@ -206,58 +193,58 @@
     });
 </script>
 
-<script>
-    $('#excel').on('click', function () {
-        var pivotObj = document.getElementById('PivotView').ej2_instances[0];
-        pivotObj.dataSourceSettings.expandAll = true;
+    <script>
+        $('#excel').on('click', function () {
+            var pivotObj = document.getElementById('PivotView').ej2_instances[0];
+            pivotObj.dataSourceSettings.expandAll = true;
 
-        var excelExportProperties = {
-            header: {
-                headerRows: 2,
-                rows: [
-                    { cells: [{ colSpan: 4, value: "Reporte de desplazamiento", style: { fontColor: '#C67878', fontSize: 20, hAlign: 'Center', bold: true } }] }
-                ]
-            }
-        };
-        pivotObj.excelExport(excelExportProperties);
-    });
+            var excelExportProperties = {
+                header: {
+                    headerRows: 2,
+                    rows: [
+                        { cells: [{ colSpan: 4, value: "Reporte de desplazamiento", style: { fontColor: '#C67878', fontSize: 20, hAlign: 'Center', bold: true } }] }
+                    ]
+                }
+            };
+            pivotObj.excelExport(excelExportProperties);
+        });
 
-    $('#StateId').change(function () {
-        const stateId = $(this).val();
-        UpdateSelectClients(stateId);
-    });
+        $('#StateId').change(function () {
+            const stateId = $(this).val();
+            UpdateSelectClients(stateId);
+        });
 
-    function UpdateSelectClients(stateId) {
-        var $spanLoad = $('#span-load');
-        var $selectClients = $('#ClientId');
-        $selectClients.html('');
-        $spanLoad.html("<i class='fa fa-spinner fa-spin'></i>");
+        function UpdateSelectClients(stateId) {
+            var $spanLoad = $('#span-load');
+            var $selectClients = $('#ClientId');
+            $selectClients.html('');
+            $spanLoad.html("<i class='fa fa-spinner fa-spin'></i>");
 
-        $.getJSON('@Url.Action("GetClients","Client")/?states=' + stateId,
-        function (data) {
-            if (data.length > 0) {
-                $spanLoad.html('');
-                $selectClients.append($("<option/>", {
-                    value: null,
-                    text: 'Todos'
-                }));
+            $.getJSON('@Url.Action("GetClients", "Client")/?states=' + stateId,
+                function (data) {
+                    if (data.length > 0) {
+                        $spanLoad.html('');
+                        $selectClients.append($("<option/>", {
+                            value: null,
+                            text: 'Todos'
+                        }));
 
-                $.each(data,
-                    function (index, item) {
-                         $selectClients.append($("<option/>",
-                                {
-                                    value: item.value,
-                                    text: item.text
-                                }));
-                    });
-            } else {
-                $selectClients.append($("<option/>", {
-                    value: 0,
-                    text: 'No hay clientes'
-                }));
-            }
-            $spanLoad.html('');
-            });
-    }
-</script>
+                        $.each(data,
+                            function (index, item) {
+                                $selectClients.append($("<option/>",
+                                    {
+                                        value: item.value,
+                                        text: item.text
+                                    }));
+                            });
+                    } else {
+                        $selectClients.append($("<option/>", {
+                            value: 0,
+                            text: 'No hay clientes'
+                        }));
+                    }
+                    $spanLoad.html('');
+                });
+        }
+    </script>
 }
