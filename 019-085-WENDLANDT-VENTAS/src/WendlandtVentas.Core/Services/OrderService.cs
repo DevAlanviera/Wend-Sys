@@ -652,16 +652,24 @@ namespace WendlandtVentas.Core.Services
             var clienteEmail = "alan.cordova@wendlandt.com.mx";
             var nombreCliente = order.Client.Name;
 
-            var asunto = "Estado de Cuenta - Cervecería Wendlandt De México";
+            var asunto = "¡Pedido realizado con éxito! - Cervecería Wendlandt de México";
             var mensaje = $@"
             <p>Hola {nombreCliente},</p>
-            <p>Aquí está tu enlace a las facturas realizadas por CERVECERÍA WENDLANDT DE MÉXICO:</p>
+            <p>¡Tu pedido ha sido registrado correctamente! 🎉</p>
+            <p>Adjunto a este correo encontrarás un <strong>PDF con el detalle de tu pedido</strong>, incluyendo la lista de productos que solicitaste.</p>
+
+            <p>También puedes consultar tus facturas y el estado de tu cuenta haciendo clic en el siguiente enlace:</p>
+
             <a href='https://sistemawendlandt.com/ClientStateAccount/{order.ClientId}' 
-                style='display:inline-block;padding:12px 24px;background-color:#d6f5f5;
-                       color:#005f5f;text-decoration:none;border-radius:12px;font-weight:500;'>
+               style='display:inline-block;padding:12px 24px;background-color:#d6f5f5;
+                      color:#005f5f;text-decoration:none;border-radius:12px;font-weight:500;'>
                 Revisar estado de cuenta
             </a>
-            <p>Gracias por tu preferencia.</p>";
+
+            <p>Gracias por confiar en Cervecería Wendlandt de México. ¡Esperamos que disfrutes tu pedido! 🍺</p>
+
+            <p>Salud,<br/>
+            El equipo de Wendlandt</p>";
 
             return await _emailSender.SendEmailAsync(
                 clienteEmail,
@@ -670,6 +678,5 @@ namespace WendlandtVentas.Core.Services
                 perfil: "Emailpagos"
             );
         }
-
     }
 }
