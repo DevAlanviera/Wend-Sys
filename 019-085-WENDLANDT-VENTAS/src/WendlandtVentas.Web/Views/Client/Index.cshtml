@@ -14,27 +14,79 @@
         <li>
             <a href="#addModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Agregar</a>
             <a href="#importModal" class="btn btn-primary btn-modal-action"><i class="fa fa-plus"></i> Importar</a>
-            <a href="~/resources/template.xlsx" target="_blank" class="btn btn-success  "><i class="fa fa-file-excel"></i> Descargar template</a>
+            <a href="~/resources/template.xlsx" target="_blank" class="btn btn-success moderno  "><i class="fa fa-file-excel"></i> Descargar template</a>
         </li>
     </ul>
 </section>
 
-
-<!-- Contenido de las pestañas -->
 <!-- Controles de las pestañas -->
 <ul class="nav nav-tabs" id="clientTabs" role="tablist">
+    <!-- Venta Directa -->
     <li class="nav-item" role="presentation">
-        <a class="nav-link active" id="clients-tab" data-toggle="tab" href="#clients" role="tab" aria-controls="clients" aria-selected="true">Clientes</a>
+        <a class="nav-link " id="clients-tab" data-toggle="tab" href="#clients" role="tab" aria-controls="clients" aria-selected="true">Venta Directa</a>
     </li>
+    <!-- Distribuidores -->
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="distributors-tab" data-toggle="tab" href="#distributors" role="tab" aria-controls="distributors" aria-selected="false">Distribuidores</a>
     </li>
+    <!-- Mayoristas -->
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="wholesalers-tab" data-toggle="tab" href="#wholesalers" role="tab" aria-controls="wholesalers" aria-selected="false">Mayoristas</a>
+    </li>
+    <!-- Auto Servicios -->
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="autoservices-tab" data-toggle="tab" href="#autoservices" role="tab" aria-controls="autoservices" aria-selected="false">Auto servicios</a>
+    </li>
+    <!-- Tasting Rooms -->
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="tastingroom-tab" data-toggle="tab" href="#tastingroom" role="tab" aria-controls="tastingroom" aria-selected="false">Tasting Rooms</a>
+    </li>
+     <li class="nav-item" role="presentation">
+        <a class="nav-link" id="almacen-tab" data-toggle="tab" href="#almacen" role="tab" aria-controls="almacen" aria-selected="false">Almacén</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="maquila-tab" data-toggle="tab" href="#maquila" role="tab" aria-controls="maquila" aria-selected="false">Maquila</a>
+    </li>
+    <!-- Sin asignar -->
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="SA-tab" data-toggle="tab" href="#sa" role="tab" aria-controls="sa" aria-selected="false">Sin Asignar</a>
+    </li>
+
 </ul>
 
 <!-- Contenido de las pestañas -->
 <div class="tab-content" id="clientTabsContent">
+    <!-- Pestaña Sin Asignar -->
+    <div class="tab-pane fade show active" id="sa" role="tabpanel" aria-labelledby="sa-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="SaGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageCount="50"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetSaData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Classification", "Channel", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
     <!-- Pestaña de Clientes -->
-    <div class="tab-pane fade show active" id="clients" role="tabpanel" aria-labelledby="clients-tab">
+    <div class="tab-pane fade" id="clients" role="tabpanel" aria-labelledby="clients-tab">
         <div class="datatable-container mt-3">
             <ejs-grid id="ClientsGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
                 <e-grid-pagesettings pageCount="50"></e-grid-pagesettings>
@@ -72,6 +124,7 @@
                 <e-grid-columns>
                     <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
                     <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
                     <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
                     <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
                     <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
@@ -90,6 +143,152 @@
             </ejs-grid>
         </div>
     </div>
+
+    <!-- Pestaña de Mayoristas -->
+    <div class="tab-pane fade" id="wholesalers" role="tabpanel" aria-labelledby="wholesalers-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="WholesalersGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageSize="50" pageSizes="@(new[] {"50", "100", "200"})"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetWholesalerData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Channel", "Classification", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
+
+    <!-- Pestaña de Auto Servicios -->
+    <div class="tab-pane fade" id="autoservices" role="tabpanel" aria-labelledby="autoservices-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="AutoServicessGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageSize="50" pageSizes="@(new[] {"50", "100", "200"})"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetAutoServicesData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Channel", "Classification", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
+    <!-- Pestaña de Tasting Rooms -->
+    <div class="tab-pane fade" id="tastingroom" role="tabpanel" aria-labelledby="tastingroom-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="TastingRoomsGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageSize="50" pageSizes="@(new[] {"50", "100", "200"})"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetTastingRoomData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Channel", "Classification", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
+    <!--Tab de almacen-->
+    <div class="tab-pane fade " id="almacen" role="tabpanel" aria-labelledby="almacen-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="AlmacenGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageCount="50"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetAlmacenData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Classification", "Channel", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
+    <!--Tab de Maquila-->
+    <div class="tab-pane fade" id="maquila" role="tabpanel" aria-labelledby="maquila-tab">
+        <div class="datatable-container mt-3">
+            <ejs-grid id="MaquilaGrid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+                <e-grid-pagesettings pageCount="50"></e-grid-pagesettings>
+                <e-data-manager url="@Url.Action("GetMaquilaData")" adaptor="UrlAdaptor"></e-data-manager>
+                <e-grid-searchsettings fields="@(new[] { "Name", "Classification", "Channel", "State", "RFC", "City", "CreationDate", "PayType" })"></e-grid-searchsettings>
+                <e-grid-columns>
+                    <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
+                    <e-grid-column field="classification" headerText="Clasificación" width="200" template="#classificationTemplate"></e-grid-column>
+                    <e-grid-column field="channel" headerText="Canal" width="200"></e-grid-column>
+                    <e-grid-column field="state" headerText="Estado" width="200"></e-grid-column>
+                    <e-grid-column field="payType" headerText="Forma de pago" width="200"></e-grid-column>
+                    <e-grid-column field="rfc" headerText="RFC" width="200"></e-grid-column>
+                    <e-grid-column field="city" headerText="Ciudad" width="200"></e-grid-column>
+                    <e-grid-column field="creditDays" headerText="Días de crédito" width="200" textAlign="Center"></e-grid-column>
+                    <e-grid-column field="seller" headerText="Vendedor" width="200"></e-grid-column>
+                    <e-grid-column field="creationDate" headerText="Fecha de alta" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" width="200"></e-grid-column>
+                    <e-grid-column field="addresses" headerText="Direcciones" template="#addressesButtons" width="200"></e-grid-column>
+                    <e-grid-column field="contacts" headerText="Contactos" template="#contactsButtons" width="200"></e-grid-column>
+                    <e-grid-column field="comments" headerText="Comentarios" template="#commentsButtons" width="200"></e-grid-column>
+                    <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+                </e-grid-columns>
+            </ejs-grid>
+        </div>
+    </div>
+
 </div>
 <style type="text/css" class="cssStyles">
     .detailtable td {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using WendlandtVentas.Core.Entities.Enums;
+using static WendlandtVentas.Core.Models.OrderViewModels.OrderWithShipmentsDto;
 
 namespace WendlandtVentas.Core.Models.OrderViewModels
 {
@@ -17,11 +18,19 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         [JsonPropertyName("amount")]
         public double Amount { get; set; }
         public string AmountString { get; set; }
+
+        //Agregamos esta propiedad para mostrar el saldo pendiente
+        public double PendingAmount { get; set; }
         public double InitialAmount { get; set; }
         public string User { get; set; }
         public string TransferToken { get; set; }
         public DateTime DeliveryDate { get; set; }
         public DateTime DueDate { get; set; }
         public List<int> ClientOrders { get; set; } = new List<int>();
+
+        // Obtenemos la propiedad realamount y en caso de que tenga, la utilizamos
+        public decimal RealAmount { get; set; }
+
+        public bool isPaid { get; set; }
     }
 }

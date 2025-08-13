@@ -26,7 +26,7 @@
             {
                 <div class="form-group">
                     <label asp-for="Price"></label>
-                    <input asp-for="Price" class="form-control" min="0" step="0.01" type="number" />
+                    <input asp-for="Price" id="Price" class="form-control" min="0" step="0.01" type="number" />
                     <span asp-validation-for="Price" class="text-danger"></span>
                 </div>
             }
@@ -34,14 +34,21 @@
             {
                 <div class="form-group">
                     <label asp-for="Price"></label>
-                    <input asp-for="Price" class="form-control" min="0" step="0.01" type="number" hidden />
+                    <input asp-for="Price" class="form-control" min="0" step="0.01" type="number" disabled />
                     <span asp-validation-for="Price" class="text-danger"></span>
                 </div>
             }
+             @if (Model.IsAuthorized(User))
+            {
             <div class="form-check form-check-inline">
                 <label asp-for="IsPresent"></label>
                 <input asp-for="IsPresent" class="form-check-input ml-1 mb-1" />
-            </div>
+                </div>
+            }
+            else
+            {
+                
+            }
             <div class="modal-errors text-danger"></div>
         </div>
         <div class="modal-footer">
@@ -50,3 +57,16 @@
         </div>
     </form>
 </div>
+
+<!--<script>
+    $(document).on("change", "#ProductPresentationId", function () {
+        var value = $(this).val();
+        var id = value.split("-")[0];
+        var currencyType = $("#CurrencyType").val();
+
+        $.get("/Order/GetProductPrice", { currencyType: currencyType, id: id })
+            .done(function (price) {
+                $("#Price").val(price); // Funciona tanto si es visible como si es hidden
+            });
+    });
+</script>-->

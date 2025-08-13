@@ -17,7 +17,7 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
         public int Quantity { get; set; }
         
         [Required(ErrorMessage = "Campo requerido")]
-        [Display(Name = "Precio")]
+       // [Display(Name = "Precio")]
         [Range(1, int.MaxValue, ErrorMessage = "El campo tiene que ser mayor a cero")]
         public decimal Price { get; set; }
 
@@ -41,7 +41,9 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
         public bool IsAuthorized(ClaimsPrincipal user)
         {//Se quito al AdministratorCommercial y Billing
 
-            return user.IsInRole("Administrator") || user.IsInRole("Storekeeper");
+            return user.IsInRole("Administrator") || user.IsInRole("Billing") || user.IsInRole("Billing assistant");
+
+
         }
     }
 }

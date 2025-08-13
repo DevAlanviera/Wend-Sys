@@ -12,7 +12,7 @@ namespace WendlandtVentas.Core.Entities
         public ProductPresentation ProductPresentation { get; private set; }
         public int Quantity { get; private set; }
         public bool IsPresent { get; private set; }
-        public decimal Price { get; private set; }
+        public decimal Price { get; internal set; }
 
 
         public OrderProduct() { }

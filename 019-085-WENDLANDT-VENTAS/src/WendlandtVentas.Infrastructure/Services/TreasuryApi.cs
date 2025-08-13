@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using RestSharp;
 using System;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading.Tasks;
 using WendlandtVentas.Core;
 using WendlandtVentas.Core.Interfaces;
@@ -59,6 +60,36 @@ namespace WendlandtVentas.Infrastructure.Services
             {
                 _logger.LogError(e, $"Error inesperado al enviar la información a tesorería");
                 return (false, "Error inesperado al enviar la información a tesorería");
+            }
+        }
+
+        public async Task<(bool IsSuccess, OrderWithShipmentsDto Response)> GetOrderWithShipmentsAsync(int orderId)
+        {
+            var dto = new OrderIdRequestDto
+            {
+                OrderId = orderId,
+                TransferToken = _treasuryServerSettings.TransferToken
+            };
+
+            try
+            {
+                var request = new RestRequest();
+                request.AddJsonBody(dto);
+                var restClient = new RestClient($"{_treasuryServerSettings.Server}{_treasuryServerSettings.Endpoint}/GetOrderWithShipments");
+                var result = await restClient.ExecutePostAsync(request);
+
+                if (result.IsSuccessful)
+                {
+                    var response = JsonConvert.DeserializeObject<OrderWithShipmentsDto>(result.Content);
+                    return (true, response);
+                }
+
+                return (false, null);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error al consultar orden con shipments en tesorería");
+                return (false, null);
             }
         }
     }

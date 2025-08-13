@@ -53,7 +53,36 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> GetClientsData([FromBody] DataManagerRequest dm)
         {
             // Filtrar clientes excluyendo a los distribuidores
-            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification(c => c.Channel != Channel.Distributor));
+            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification(c => c.Channel == Channel.DirectSale));
+
+            var dataSource = clients.Select(c => new
+            {
+                c.Id,
+                c.Name,
+                Classification = c.Classification?.Humanize() ?? "-",
+                Channel = c.Channel?.Humanize() ?? "-",
+                State = c.State?.Name ?? "-",
+                c.RFC,
+                c.City,
+                CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                PayType = c.PayType?.Humanize() ?? "-",
+                c.CreditDays,
+                c.SellerId,
+                Addresses = c.Addresses.Count,
+                Contacts = c.Contacts.Count,
+                Comments = c.Comment.Count(x => !x.IsDeleted), // Aquí estamos contando los comentarios no eliminados
+                AddCommentButtonClass = c.Comment.Count(x => !x.IsDeleted) >= 1 ? "btn-disabled" : "" // Deshabilitar si no hay comentarios
+            });
+
+            var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
+            return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetSaData([FromBody] DataManagerRequest dm)
+        {
+            // Filtrar clientes excluyendo a los distribuidores
+            var clients = await _repository.ListExistingAsync(new ClientExtendedSpecification(c => c.Channel == null));
 
             var dataSource = clients.Select(c => new
             {
@@ -121,13 +150,12 @@ namespace WendlandtVentas.Web.Controllers
                         c.City,
                         CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
                         PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+
                         c.CreditDays,
                         c.SellerId,
                         Addresses = c.Addresses.Count,
                         Contacts = c.Contacts.Count,
-                        Comments = c.Comment.Count(x => !x.IsDeleted), // Aquí estamos contando los comentarios no eliminados
-                        AddCommentButtonClass = c.Comment.Count(x => !x.IsDeleted) >= 1 ? "btn-disabled" : "", // Deshabilitar si no hay comentarios,
-                        DiscountPercentage = c.DiscountPercentage ?? 0
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
                     })
                     .ToListAsync();
 
@@ -142,6 +170,313 @@ namespace WendlandtVentas.Web.Controllers
                 return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
             }
         }
+
+        [HttpPost]
+        public async Task<IActionResult> GetWholesalerData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                {
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+                }
+
+                // Consulta base con los mayoristas
+                var wholesalersQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Wholesaler));
+
+                // Aplicar búsqueda si hay criterios
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda (Wholesaler): {searchValue}");
+
+                    wholesalersQuery = wholesalersQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                // Total antes de paginar
+                var totalCount = await wholesalersQuery.CountAsync();
+
+                // Aplicar paginación
+                var paginatedResults = await wholesalersQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                // Devolver resultados
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetWholesalerData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> GetAutoServicesData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                {
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+                }
+
+                // Consulta base a la base de datos con los distribuidores
+                var autoServicesQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Autoservicio));
+
+                // Aplicar búsqueda en la base de datos si hay criterios de búsqueda
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda: {searchValue}");
+
+                    autoServicesQuery = autoServicesQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                // Obtener el total de registros antes de aplicar paginación
+                var totalCount = await autoServicesQuery.CountAsync();
+
+                // Aplicar paginación en la base de datos
+                var paginatedResults = await autoServicesQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                // Devolver resultado con paginación
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetAutoServicesData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetTastingRoomData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                {
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+                }
+
+                // Consulta base a la base de datos con los distribuidores
+                var tastingRoomQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.TastingRoom));
+
+                // Aplicar búsqueda en la base de datos si hay criterios de búsqueda
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda: {searchValue}");
+
+                    tastingRoomQuery = tastingRoomQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                // Obtener el total de registros antes de aplicar paginación
+                var totalCount = await tastingRoomQuery.CountAsync();
+
+                // Aplicar paginación en la base de datos
+                var paginatedResults = await tastingRoomQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                // Devolver resultado con paginación
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetAutoServicesData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetAlmacenData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+
+                var almacenQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Almacen));
+
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda (Almacen): {searchValue}");
+
+                    almacenQuery = almacenQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                var totalCount = await almacenQuery.CountAsync();
+
+                var paginatedResults = await almacenQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetAlmacenData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetMaquilaData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+
+                var maquilaQuery = _repository.GetQueryable(new ClientExtendedSpecification(c => c.Channel == Channel.Maquila));
+
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda (Maquila): {searchValue}");
+
+                    maquilaQuery = maquilaQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                var totalCount = await maquilaQuery.CountAsync();
+
+                var paginatedResults = await maquilaQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetMaquilaData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+
 
 
         [HttpPost]
@@ -165,6 +500,7 @@ namespace WendlandtVentas.Web.Controllers
             var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
             return dm.RequiresCounts ? new JsonResult(new { result = dataResult.DataResult, dataResult.Count }) : new JsonResult(dataResult.DataResult);
         }
+
 
         [HttpPost]
         public async Task<IActionResult> GetDataAddresses([FromBody] DataManagerRequest dm, int id)
@@ -529,6 +865,7 @@ namespace WendlandtVentas.Web.Controllers
                 Channels = new SelectList(channels.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 PayTypes = new SelectList(payTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 States = new SelectList(states.Select(x => new { Value = x.Id, Text = x.Name }), "Value", "Text"),
+                IsNew = true,
             };
 
             model.Sellers = _userManager.Users.Select(s => new SelectListItem
@@ -550,38 +887,47 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Add(ClientViewModel model)
         {
-            if (!ModelState.IsValid) return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+            if (!ModelState.IsValid)
+                return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
 
             try
             {
-                var client = new Client(model.Name);
-                client.Channel = model.Channel;
-                client.Classification = model.Classification;
-                client.StateId = model.StateId;
-                client.PayType = model.PayType;
-                client.RFC = string.IsNullOrEmpty(model.RFC) ? model.RFC : model.RFC.ToUpper();
-                client.City = string.IsNullOrEmpty(model.City) ? model.City : model.City.Trim();
-                client.SellerId = model.SellerId;
-                client.CreditDays = model.CreditDays;
-
-                // Asignar el descuento solo si el canal es "Distribuidor"
-                if (model.Channel == Channel.Distributor)
+                // Crear cliente y mapear campos
+                var client = new Client(model.Name)
                 {
-                    client.DiscountPercentage = model.DiscountPercentage;
-                }
-                else
-                {
-                    client.DiscountPercentage = null; // O cualquier valor por defecto
-                }
+                    Channel = model.Channel,
+                    Classification = model.Classification,
+                    StateId = model.StateId,
+                    PayType = model.PayType,
+                    RFC = string.IsNullOrEmpty(model.RFC) ? model.RFC : model.RFC.ToUpper(),
+                    City = string.IsNullOrEmpty(model.City) ? model.City : model.City.Trim(),
+                    SellerId = model.SellerId,
+                    CreditDays = model.CreditDays
+                };
 
+                // Agregar cliente al repositorio
                 await _repository.AddAsync(client);
 
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Cliente guardado"));
+                // Crear contacto y mapear campos, asignar ClientId del cliente recién creado
+                var contact = new Contact(
+                model.Contact.Name,
+                model.Contact.Cellphone,
+                model.Contact.OfficePhone,  // asegúrate que venga en el ViewModel o pásalo como null/empty
+                model.Contact.Email,
+                model.Contact.Comments,
+                client.Id
+            );
+
+
+                // Agregar contacto al repositorio
+                await _repository.AddAsync(contact);
+
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Cliente y contacto guardados"));
             }
             catch (Exception e)
             {
                 _logger.LogError(e, $"Error en ClientController --> Add: " + e.Message);
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el cliente"));
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el cliente y contacto"));
             }
         }
 
@@ -617,7 +963,8 @@ namespace WendlandtVentas.Web.Controllers
                 City = client.City,
                 SellerId = client.SellerId,
                 CreditDays = client.CreditDays,
-                DiscountPercentage = client.DiscountPercentage // Incluir el descuento del distribuidor
+                IsNew = false
+
             };
 
             model.Sellers = _userManager.Users.Select(s => new SelectListItem
@@ -635,11 +982,24 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_AddEditModal", model);
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(ClientViewModel model)
         {
-            if (!ModelState.IsValid) return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+            _logger.LogInformation($"IsNew: {model.IsNew}");
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(e => e.Value.Errors.Count > 0)
+                    .Select(e => $"{e.Key}: {string.Join(", ", e.Value.Errors.Select(x => x.ErrorMessage))}")
+                    .ToList();
+
+                _logger.LogError("Errores de modelo:\n" + string.Join("\n", errors));
+
+                return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+            }
 
             try
             {
@@ -659,15 +1019,7 @@ namespace WendlandtVentas.Web.Controllers
                 client.SellerId = model.SellerId;
                 client.CreditDays = model.CreditDays;
 
-                // Actualizar el descuento del distribuidor
-                if (model.Channel == Channel.Distributor)
-                {
-                    client.DiscountPercentage = model.DiscountPercentage;
-                }
-                else
-                {
-                    client.DiscountPercentage = null; // Si no es distribuidor, el descuento es nulo
-                }
+                
 
                 await _repository.UpdateAsync(client);
 

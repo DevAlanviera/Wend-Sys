@@ -57,6 +57,9 @@
                     @Html.DropDownListFor(m => m.Status, Model.StatusList, "Seleccionar estado", new { @class = "form-control status-select", @style = "width:100%" })
                     <span asp-validation-for="Status" class="text-danger"></span>
                 </div>
+
+
+                
                 <div class="col mb-3" id="invoicecode" @(Model.Status == OrderStatus.OnRoute && Model.Type == OrderType.Invoice ? string.Empty : "hidden")>
                     <label asp-for="InvoiceCode"></label> <b class="text-danger">*</b>
                     <input asp-for="InvoiceCode" class="form-control" />
@@ -67,7 +70,24 @@
                     <input asp-for="DeliveryDay" class="form-control date-picker" value="@Model.DeliveryDay" />
                     <span asp-validation-for="DeliveryDay" class="text-danger"></span>
                 </div>
+
+                <div class="col mb-3" id="realAmountGroup"
+                @(Model.Status == OrderStatus.OnRoute && Model.PrecioEspecial ? "" : "hidden")>
+                    <label asp-for="RealAmount"></label> <b class="text-danger">*</b>
+                    <input asp-for="RealAmount" class="form-control" type="text" min="0" step="0.01" />
+                    <span asp-validation-for="RealAmount" class="text-danger"></span>
+                </div>
+
+
             </div>
+
+            <!--Agregamos este checkbox, COMENTADO HASTA QUE ESTE EN PRODUCCION
+            <div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.OnRoute ? string.Empty : "hidden")>
+                <label>
+                    <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Precio Especial?
+                </label>
+            </div>-->
+
             <div class="form-group" id="initialAmount" hidden>
                 <label asp-for="InitialAmount"></label>
                 <input asp-for="InitialAmount" class="form-control" type="number" min="0" step="0.01" />
@@ -91,7 +111,29 @@
 </div>
 
 <script>
+
+    function toggleRealAmountVisibility() {
+                const isOnRoute = $("#Status").find('option:selected').text() == "En ruta";
+                const isPrecioEspecialChecked = $("#PrecioEspecial").is(":checked");
+
+                if (isOnRoute && isPrecioEspecialChecked) {
+                    $('#realAmountGroup').removeAttr('hidden');
+                } else {
+                    $('#realAmountGroup').attr('hidden', '');
+                    $('#RealAmount').val(''); // Limpiar el campo al ocultarlo
+                }
+            }
+
     $(function () {
+        // Inicialización
+        if ($("#Status").find('option:selected').text() == "Pago parcial") {
+            $('#initialAmount').removeAttr('hidden');
+        }
+
+        toggleRealAmountVisibility(); // Aplicar visibilidad inicial
+
+
+
         if ($("#Status").find('option:selected').text() == "Pago parcial")
             $('#initialAmount').removeAttr('hidden');
 
@@ -101,6 +143,13 @@
             theme: 'bootstrap4'
         });
     });
+
+    // Evento change para PrecioEspecial
+    $("#PrecioEspecial").change(function () {
+        toggleRealAmountVisibility();
+    });
+
+
 
     $("#Status").on('change', function () {
         if ($(this).find('option:selected').text() == "En ruta" && $('#Type').val() == 'Invoice')
@@ -113,9 +162,60 @@
         else
             $('#initialAmount').attr('hidden', '');
 
+        if ($(this).find('option:selected').text() == "En ruta") 
+            $('#precioEspecialGroup').removeAttr('hidden');
+        else  
+        $('#precioEspecialGroup').attr('hidden', '');
+            
+            
+
         if ($(this).find('option:selected').text() == "Entregado")
             $('#deliveryDay').removeAttr('hidden');
         else
             $('#deliveryDay').attr('hidden', '');
+
+        toggleRealAmountVisibility();
+
+        // Evento click para el botón Guardar
+        $("#btnGuardar").click(async function (e) {
+            e.preventDefault(); // Prevenir el comportamiento por defecto del formulario
+
+            const precioEspecial = $("#PrecioEspecial").is(":checked");
+            const estado = $("#Status option:selected").text();
+            const orderId = $("#OrderId").val();
+
+            let realAmount = 0.0;
+            if (precioEspecial && estado === "En ruta") {
+                const inputVal = parseFloat($("#RealAmount").val());
+                if (!isNaN(inputVal)) {
+                    realAmount = inputVal;
+                }
+            }
+
+            try {
+                const response = await fetch('/Order/ActualizarTotal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        Id: orderId,
+                        PrecioEspecial: precioEspecial,
+                        RealAmount: realAmount
+                    })
+                });
+
+                const result = await response.text();
+                // Manejo del resultado (puedes agregar notificaciones aquí)
+                console.log(result);
+
+                // Cerrar el modal después de guardar si es necesario
+                $('.modal').modal('hide');
+
+            } catch (error) {
+                console.error('Error al guardar:', error);
+            }
+        });
+
+
+
     });
 </script>

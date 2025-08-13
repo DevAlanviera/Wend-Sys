@@ -43,6 +43,32 @@ namespace WendlandtVentas.Core.Services
            
         }
 
+        public async Task<T> GetOrSetAsync<T>(string key, Func<Task<T>> getItemCallback, TimeSpan? absoluteExpiration = null)
+        {
+            if (_memoryCache.TryGetValue(key, out T cacheEntry))
+            {
+                return cacheEntry;
+            }
+
+            cacheEntry = await getItemCallback();
+
+            if (absoluteExpiration.HasValue)
+            {
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(absoluteExpiration.Value);
+
+                _memoryCache.Set(key, cacheEntry, cacheEntryOptions);
+            }
+            else
+            {
+                // ✅ Guardar sin expiración
+                _memoryCache.Set(key, cacheEntry);
+            }
+
+            return cacheEntry;
+        }
+
+
         private void InvalidateCacheByPrefix(string prefix)
         {
             var cacheEntries = _memoryCache.GetType()

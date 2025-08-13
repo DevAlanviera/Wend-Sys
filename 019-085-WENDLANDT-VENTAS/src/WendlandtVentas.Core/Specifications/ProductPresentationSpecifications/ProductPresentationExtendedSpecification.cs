@@ -9,6 +9,7 @@ namespace WendlandtVentas.Core.Specifications.ProductPresentationSpecifications
             AddInclude(c => c.Movements);
             AddInclude(c => c.Product);
             AddInclude(c => c.Presentation);
+            
         }
 
         public ProductPresentationExtendedSpecification() : base(c => true)

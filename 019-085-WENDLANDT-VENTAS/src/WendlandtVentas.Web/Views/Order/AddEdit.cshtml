@@ -1,6 +1,7 @@
-﻿@using WendlandtVentas.Core.Entities.Enums
+﻿﻿﻿@using WendlandtVentas.Core.Entities.Enums
 @using WendlandtVentas.Core.Models.OrderViewModels
 @model OrderViewModel
+
 
 <h4 class="mb-3">
     <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-sm btn-secondary">
@@ -19,16 +20,15 @@
     @if (Model.Id > 0)
     {
         @Html.HiddenFor(c => c.Id)
-        ;
     }
 
     <div class="row">
-        <div class="col-9">
+        <div class="col-12 col-lg-9">
             <div class="card card-body">
                 <div class="row">
                     @if (Model.IsInvoice != OrderType.Export && Model.IsInvoice != OrderType.Return)
                     {
-                        <div class="col-5 col-lg-3 col-xl-2 mr-5 mr-sm-auto">
+                        <div class="col-12 col-sm-5 col-md-4 col-lg-3 col-xl-2 mb-3 mb-sm-0 mr-sm-5 mr-lg-auto">
                             <div class="form-group">
                                 <label asp-for="IsInvoice" class="pb-1"></label>
                                 <br />
@@ -58,25 +58,22 @@
                                         </label>
                                     </div>
                                 }
+                                @*<!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
+                            <!-- <div class="form-check mt-2">
+                            <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
+                            <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
+                            </div>-->*@
                             </div>
                         </div>
                     }
-                    @*La remisión se volvio automatica si se llega a querer manual descomentar esto y acomodar con UI*@
-                    @*<div class="col-6 col-lg-4 col-xl-3">
-                    <div class="form-group">
-                    <label asp-for="RemissionCode"></label>
-                    <input asp-for="RemissionCode" class="form-control" />
-                    <span asp-validation-for="RemissionCode" class="text-danger"></span>
-                    </div>
-                    </div>*@
-                    <div class="col-6 col-lg-4 col-xl-3" id="invoice" @(Model.IsInvoice == OrderType.Invoice ? string.Empty : "hidden")>
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3 mb-3 mb-sm-0" id="invoice" @(Model.IsInvoice == OrderType.Invoice ? string.Empty : "hidden")>
                         <div class="form-group">
                             <label asp-for="InvoiceCode"></label>
                             <input asp-for="InvoiceCode" class="form-control" readonly />
                             <span asp-validation-for="InvoiceCode" class="text-danger"></span>
                         </div>
                     </div>
-                    <div class="col col-lg col-xl">
+                    <div class="col-12 col-md-12 col-lg col-xl">
                         <div class="form-group">
                             <label asp-for="ClientId"></label> <b class="text-danger">*</b>
                             @Html.DropDownListFor(m => m.ClientId, Model.Clients, "Seleccionar cliente", new { @class = "form-control select2", @style = "width:100%;" })
@@ -86,7 +83,7 @@
                 </div>
                 <section id="noreturn" class="@(Model.IsInvoice == OrderType.Return ? "d-none" : "")">
                     <div class="row">
-                        <div class="col col-lg col-xl">
+                        <div class="col-12 col-lg col-xl">
                             <div class="form-group">
                                 <label asp-for="AddressId"></label>
                                 @Html.DropDownListFor(m => m.AddressId, Model.Addresses, "Seleccionar dirección", new { @class = "form-control select2", @style = "width:100%;" })
@@ -95,14 +92,7 @@
                         </div>
                     </div>
                     <div class="row">
-                        @*<div class="col-6 col-lg-6 col-xl-6">
-                        <div class="form-group">
-                        <label asp-for="Delivery"></label>
-                        <input asp-for="Delivery" class="form-control" />
-                        <span asp-validation-for="Delivery" class="text-danger"></span>
-                        </div>
-                        </div>*@
-                        <div class="col col-lg col-xl">
+                        <div class="col-12 col-lg col-xl">
                             <div class="form-group">
                                 <label asp-for="DeliverySpecification"></label>
                                 <input asp-for="DeliverySpecification" class="form-control" />
@@ -111,36 +101,35 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-2 col-lg-2 col-xl-2">
+                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
                             <div class="form-group">
                                 <label asp-for="PaymentPromiseDate"></label>
-                                <input asp-for="PaymentPromiseDate" class="form-control date-picker" />
+                                <input asp-for="PaymentPromiseDate" class="form-control date-picker" autocomplete="off" />
                                 <span asp-validation-for="PaymentPromiseDate" class="text-danger"></span>
                             </div>
                         </div>
-                        <div class="col-2 col-lg-2 col-xl-2">
+                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
                             <div class="form-group">
                                 <label asp-for="PaymentDate"></label>
-                                <input asp-for="PaymentDate" class="form-control date-picker" />
+                                <input asp-for="PaymentDate" class="form-control date-picker" autocomplete="off" />
                                 <span asp-validation-for="PaymentDate" class="text-danger"></span>
                             </div>
                         </div>
-                        <div class="col-2 col-lg-2 col-xl-2">
+                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2">
                             <div class="form-group">
                                 <label asp-for="DeliveryDay"></label>
-                                <input asp-for="DeliveryDay" class="form-control date-picker" />
+                                <input asp-for="DeliveryDay" class="form-control date-picker" autocomplete="off" />
                                 <span asp-validation-for="DeliveryDay" class="text-danger"></span>
                             </div>
                         </div>
-                        <div class="col-3 col-lg-3 col-xl-3">
+                        <div class="col-6 col-sm-6 col-md-6 col-lg-3 col-xl-3">
                             <div class="form-group">
                                 <label asp-for="PayType"></label>
                                 @Html.DropDownListFor(m => m.PayType, Model.PayTypes, new { @class = "form-control select2", @style = "width:100%;" })
-                                @*<input asp-for="PayType" class="form-control" readonly />*@
                                 <span asp-validation-for="PayType" class="text-danger"></span>
                             </div>
                         </div>
-                        <div class="col-3 col-lg-3 col-xl-3">
+                        <div class="col-12 col-sm-6 col-md-6 col-lg-3 col-xl-3">
                             <div class="form-group">
                                 <label asp-for="CurrencyType"></label>
                                 @Html.DropDownListFor(m => m.CurrencyTypes, Model.CurrencyTypes, new { @class = "form-control select2", @style = "width:100%;" })
@@ -161,14 +150,14 @@
                 </section>
                 <section id="return" class="@(Model.IsInvoice != OrderType.Return ? "d-none" : "")">
                     <div class="row">
-                        <div class="col-3">
+                        <div class="col-12 col-md-4 col-lg-3 mb-3 mb-md-0">
                             <div class="form-group">
                                 <label asp-for="ReturnRemisionNumber"></label>
                                 @Html.DropDownListFor(m => m.ReturnRemisionNumber, Model.ReturnRemisionNumberOptions, new { @class = "form-control select2", @style = "width:100%;" })
                                 <span asp-validation-for="ReturnRemisionNumber" class="text-danger"></span>
                             </div>
                         </div>
-                        <div class="col-9">
+                        <div class="col-12 col-md-8 col-lg-9">
                             <div class="form-group">
                                 <label asp-for="ReturnReason"></label>
                                 <input asp-for="ReturnReason" value="@Model.ReturnReason" class="form-control" />
@@ -180,22 +169,24 @@
             </div>
             <div class="card">
                 <div class="card-header bg-gray-200">
-                    <h4 style="display:inline">Productos</h4>
-                    @if (Model.CanEditProducts)
-                    {
-                        <div class="float-right">
-                            <button type="button" id="addProduct" class="btn btn-link"><i class="fa fa-plus"></i> Agregar producto</button>
-                        </div>
-                    }
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <h4 class="mb-2 mb-md-0">Productos</h4>
+                        @if (Model.CanEditProducts)
+                        {
+                            <div class="mt-2 mt-md-0">
+                                <button type="button" id="addProduct" class="btn btn-link btn-modal-action"><i class="fa fa-plus"></i> Agregar producto</button>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="p-3 border">
-                        <div class="row border-bottom p-2">
-                            <div class="col-4"><b>Producto</b></div>
-                            <div class="col-2"><b class="float-right">Precio</b></div>
-                            <div class="col-2"><b class="float-right">Cantidad</b></div>
-                            <div class="col-2"><b class="float-right">Subtotal</b></div>
-                            <div class="col-2"></div>
+                    <div class="p-2 p-sm-3 border">
+                        <div class="row border-bottom p-2 d-none d-sm-flex">
+                            <div class="col-12 col-sm-4"><b>Producto</b></div>
+                            <div class="col-6 col-sm-2 text-sm-right"><b>Precio</b></div>
+                            <div class="col-6 col-sm-2 text-sm-right"><b>Cantidad</b></div>
+                            <div class="col-6 col-sm-2 text-sm-right"><b>Subtotal</b></div>
+                            <div class="col-6 col-sm-2"></div>
                         </div>
                         <div id="content-products" class="pt-2">
                             @if (Model.ProductsEdit.Any())
@@ -213,9 +204,10 @@
                     </div>
                 </div>
             </div>
-            <div class="card">
+
+            <div class="card mt-3">
                 <div class="card-header bg-gray-200">
-                    <h4>Promociones aplicadas</h4>
+                    <h4 class="mb-0">Promociones aplicadas</h4>
                 </div>
                 <div id="content-promotions" class="card-body">
                     @if (Model.PresentationPromotionsEdit.Any())
@@ -232,97 +224,103 @@
                 </div>
             </div>
         </div>
-        <div class="col-3">
-            <div class="sticky-top">
-                <div class="d-none d-xl-block">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="row">
+        <div class="col-12 col-md-4 col-lg-3 order-md-last mb-4 mb-lg-0">
+            <div class="sticky-top" style="top: 20px;">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <!-- Versión para pantallas medianas/grandes -->
+                        <div class="d-none d-md-block">
+                            <div class="row align-items-center mb-2">
                                 <div class="col">
-                                    <h5>Subtotal</h5>
+                                    <h5 class="mb-0">Subtotal</h5>
                                 </div>
-                                <div class="col text-right p-0">
-                                    <h5 class="subtotal-order">$0.00 MXN</h5>
+                                <div class="col-auto text-right">
+                                    <h5 class="mb-0 subtotal-order">$0.00 MXN</h5>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row align-items-center mb-2">
                                 <div class="col">
-                                    <h5>Descuentos</h5>
+                                    <h5 class="mb-0">Descuentos</h5>
                                 </div>
-                                <div class="col text-right p-0">
-                                    <h5 class="discount-order">$0.00 MXN</h5>
+                                <div class="col-auto text-right">
+                                    <h5 class="mb-0 discount-order">$0.00 MXN</h5>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row align-items-center mb-3 mt-2">
                                 <div class="col">
-                                    <h class="mt-3">Total</h>
+                                    <h4 class="mb-0">Total</h4>
                                 </div>
-                                <div class="col text-right p-0">
-                                    <h5 class="text-success total-order">$0.00 MXN</h5>
+                                <div class="col-auto text-right">
+                                    <h4 class="mb-0 text-success total-order">$0.00 MXN</h4>
                                 </div>
                             </div>
-                            <div class="text-muted mb-2.">
+                            <div class="text-muted small mb-3">
                                 Total antes de impuestos.
                             </div>
-                            <div class="text-center pt-3">
-                                <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-secondary">
+                            <div class="d-flex justify-content-between pt-2">
+                                <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-secondary flex-grow-1 mr-2">
                                     Cancelar
                                 </a>
-                                <button type="submit" class="btn btn-primary ml-3">Guardar</button>
+                                <button type="button" class="btn btn-primary flex-grow-1 ml-2 btn-guardar">Guardar</button>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div class="d-xl-none">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="row justify-content-center">
+
+                        <!-- Versión para móviles -->
+                        <div class="d-md-none">
+                            <div class="text-center mb-3">
                                 <h5>Subtotal</h5>
+                                <h4 class="subtotal-order">$0.00 MXN</h4>
                             </div>
-                            <div class="row justify-content-center">
-                                <h5 style="text-align:center" class="subtotal-order">$0.00</h5>
-                            </div>
-                            <div class="row justify-content-center">
+                            <div class="text-center mb-3">
                                 <h5>Descuentos</h5>
+                                <h4 class="discount-order">$0.00 MXN</h4>
                             </div>
-                            <div class="row justify-content-center">
-                                <h5 class="discount-order">$0.00</h5>
-                            </div>
-                            <div class="row justify-content-center">
+                            <div class="text-center mb-3">
                                 <h4>Total</h4>
+                                <h3 class="text-success total-order">$0.00 MXN</h3>
                             </div>
-                            <div class="row justify-content-center">
-                                <h4 class="text-success total-order">$0.00</h4>
-                            </div>
-                            <div class="text-muted mb-2.">
+                            <div class="text-muted small mb-3 text-center">
                                 Total antes de impuestos.
                             </div>
-                            <br />
-                            <div class="row justify-content-center">
-                                <button type="submit" class="btn btn-primary">Guardar</button>
-                            </div>
-                            <br />
-                            <div class="row justify-content-center">
-                                <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-secondary">
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-primary btn-lg btn-guardar">Guardar</button>
+                                <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-secondary btn-lg">
                                     Cancelar
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-errores text-danger"></div>
-                <div class="alerts"></div>
+                <div class="modal-errores text-danger mt-2"></div>
+                <div class="alerts mt-2"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal de confirmación -->
+    <div class="modal fade" id="confirmarGuardadoModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmación</h5>
+                </div>
+                <div class="modal-body">
+                    El pedido se guardará como <strong class="tipo-orden-texto">[tipo]</strong>.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirmarEnvio">Confirmar</button>
+                </div>
             </div>
         </div>
     </div>
 </form>
 
-@section Modals{
+@section Modals {
     <div class="modal" id="addProductModal" tabindex="false" role="dialog" aria-labelledby="addProductModal-label"></div>
     <div class="modal modal-focus-first" id="addPromotionsModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddPromotions")"></div>
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
 }
-@section Scripts{
+@section Scripts {
     <script>
         $(document).ready(function () {
             $("#addProduct").on("click", function () {
@@ -331,6 +329,75 @@
                     .done(function (data) {
                         $('#addProductModal').html(data);
                         $('#addProductModal').modal('show');
+
+                        var $btnSave = $('#btnSaveProduct');
+                        $btnSave.prop('disabled', true);
+
+                        // Configuración optimizada de Select2 con caché local
+                        $('#addProductModal .select2').select2({
+                            theme: 'bootstrap4',
+                            placeholder: "Seleccionar producto",
+                            minimumInputLength: 0,
+                            cache: true, // Habilita caché local de Select2
+                            ajax: {
+                                url: '@Url.Action("SearchProductsAjax", "Order")',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                    return {
+                                        currencyType: currencyType,
+                                        term: params.term || '',
+                                        page: params.page || 1,
+                                        _: Date.now() // Evita caché del navegador para nuevas búsquedas
+                                    };
+                                },
+                                processResults: function (data, params) {
+                                    params.page = params.page || 1;
+                                    return {
+                                        results: data.results,
+                                        pagination: {
+                                            more: data.pagination.more
+                                        }
+                                    };
+                                },
+                                transport: function (params, success, failure) {
+                                    // Implementación personalizada para mejor manejo de caché
+                                    var cacheKey = `products_${currencyType}_${params.data.term || 'all'}_${params.data.page}`;
+                                    var cachedData = sessionStorage.getItem(cacheKey);
+
+                                    if (cachedData && !params.data.term) {
+                                        success(JSON.parse(cachedData));
+                                    } else {
+                                        $.ajax(params)
+                                            .done(function (data) {
+                                                if (!params.data.term) {
+                                                    sessionStorage.setItem(cacheKey, JSON.stringify(data));
+                                                }
+                                                success(data);
+                                            })
+                                            .fail(failure);
+                                    }
+                                }
+                            }
+                        })
+                        // Al seleccionar producto, obtener el precio y habilitar botón
+                        $('.select2').on('select2:select', function (e) {
+                            $btnSave.prop('disabled', true);
+                            var value = e.params.data.id;
+                            var selectKeyValues = value.split("-");
+                            var id = selectKeyValues[0];
+
+                            $.get("@Url.Action("GetProductPrice", "Order")", {
+                                currencyType: currencyType,
+                                id: id
+                            })
+                                .done(function (data) {
+                                    $('#Price').val(data);
+                                    $btnSave.prop('disabled', false);
+                                });
+                        });
+
+                    
                     });
             });
 
@@ -343,19 +410,119 @@
             });
         });
     </script>
+
     <script>
-        $('#addProductModal').on('show.coreui.modal', function () {
-            $(document).on("change", "#ProductPresentationId", function () {
-                var selectKeyValues = $(this).val().split("-");
-                var id = selectKeyValues[0];
-                var currencyType = $('#CurrencyType').val();
-                $.get("@Url.Action("GetProductPrice", "Order")", { currencyType: currencyType, id: id })
-                    .done(function (data) {
-                        $('#Price').val(data);
-                    });
+        let confirmedSubmit = false;
+
+        // Listener para cambio de cliente y tipo de facturación
+        // Listener para cambio de cliente y tipo de facturación
+        async function handleInvoiceAndClientChanges() {
+            const clientId = $('#ClientId').val();
+            const selectedRadio = document.querySelector('input[name="IsInvoice"]:checked');
+            const invoiceType = selectedRadio ? selectedRadio.value : null;
+            const $saveButton = $('#btn-guardar');
+
+            console.log("Tipo de facturación seleccionado:", invoiceType);
+
+            // Si NO es facturación, habilitamos el botón y ocultamos mensajes
+            if (invoiceType !== "@OrderType.Invoice") {
+                $saveButton.prop('disabled', false);
+                $('.modal-errores').empty().hide();
+                return;
+            }
+
+            // Si ES facturación, verificamos los requisitos
+            if (!clientId) {
+                console.warn("Para facturación, debe seleccionar un cliente");
+                $saveButton.prop('disabled', true);
+                $('.modal-errores').html(`
+                    <div class="alert alert-warning">
+                        Debe seleccionar un cliente para facturación
+                    </div>
+                `).show();
+                return;
+            }
+
+            // Verificamos el RFC solo para facturación con cliente seleccionado
+            const hasValidRFC = await checkClientRFCAsync();
+            $saveButton.prop('disabled', !hasValidRFC);
+        }
+
+        // Evento para cambios en el cliente
+        $('#ClientId').on('change', handleInvoiceAndClientChanges);
+
+        // Evento para cambios en los radio buttons
+        $('input[name="IsInvoice"]').on('change', handleInvoiceAndClientChanges);
+
+        // Ejecutamos al cargar la página para validación inicial
+        $(document).ready(function () {
+            handleInvoiceAndClientChanges();
+        });
+
+        async function checkClientRFCAsync() {
+            const clientId = $('#ClientId').val();
+            if (!clientId) return false;
+
+            try {
+                const response = await $.get("@Url.Action("CheckClientRFC", "Order")", { clientId });
+                if (!response.hasRFC) {
+                    $('.modal-errores').html(`
+                        <div class="alert alert-warning">
+                            ${response.message || "Este cliente no tiene RFC registrado."}
+                        </div>
+                    `).show();
+                    return false;
+                } else {
+                    $('.modal-errores').empty().hide();
+                    return true;
+                }
+            } catch (err) {
+                console.error("Error al verificar RFC", err);
+                $('.modal-errores').html(`
+                    <div class="alert alert-danger">
+                        Error al verificar el RFC del cliente.
+                    </div>
+                `).show();
+                return false;
+            }
+        }
+
+        $(document).ready(function () {
+            let confirmarEnvio = false;
+
+            // Interceptamos el click en el botón "Guardar"
+            $('.btn-guardar').on('click', function (e) {
+                e.preventDefault(); // Evita que se envíe aún
+
+                // Obtener el tipo de orden seleccionado
+                let radioSeleccionado = $('input[name="IsInvoice"]:checked');
+
+                if (radioSeleccionado.length) {
+                    // Obtenemos el texto de la etiqueta asociada al radio button
+                    radioSeleccionado = radioSeleccionado.closest('.form-check').find('.form-check-label').text().trim();
+                }
+                // Actualizar el texto en el modal
+                $('.tipo-orden-texto').text(radioSeleccionado);
+                $('#confirmarGuardadoModal').modal('show'); // Muestra el modal
+            });
+
+            // Al confirmar desde el modal
+            $('#confirmarEnvio').on('click', function () {
+                confirmarEnvio = true;
+                $('#confirmarGuardadoModal').modal('hide');
+                $('#forma-order').submit(); // Envía el formulario
+            });
+
+            // Opcional: evitar doble envío si alguien confirma muchas veces
+            $('#forma-order').on('submit', function (e) {
+                if (!confirmarEnvio) {
+                    e.preventDefault(); // Si no viene del modal, bloquea
+                }
             });
         });
+     
     </script>
+    
     <script>
         $(function () {
             $(".date-picker").datepicker({
@@ -415,12 +582,12 @@
                     break;
                 case 'warning':
                     $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                                             <strong>Acción inválida: </strong>
-                                                               ${json.body}
-                                                               <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                                  <span aria-hidden="true">&times;</span>
-                                                               </button>
-                                                           </div>`);
+                                                                     <strong>Acción inválida: </strong>
+                                                                       ${json.body}
+                                                                       <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                          <span aria-hidden="true">&times;</span>
+                                                                       </button>
+                                                                   </div>`);
                     $form.find(".alert").alert()
                     break;
             }
@@ -442,52 +609,6 @@
                 $('#noreturn').removeClass('d-none');
             }
 
-        });
-    </script>
-    <script>
-        $(document).ready(function () {
-            // Verificar RFC al cambiar el tipo de pedido
-            $('input:radio[name=IsInvoice]').on('change', function () {
-                if ($(this).val() === "@OrderType.Invoice") { // Si se selecciona Facturación
-                    var clientId = $('#ClientId').val(); // Obtener el ID del cliente seleccionado
-
-                    if (clientId) {
-                        // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
-                            if (!response.hasRFC) {
-                                // Mostrar mensaje de error si no tiene RFC
-                                $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
-                            } else {
-                                // Ocultar el mensaje de error si tiene RFC
-                                $('.modal-errores').hide();
-                            }
-                        });
-                    }
-                } else {
-                    // Ocultar el mensaje de error si no es Facturación
-                    $('.modal-errores').hide();
-                }
-            });
-
-            // Verificar RFC al cambiar el cliente
-            $('#ClientId').change(function () {
-                if ($('input:radio[name=IsInvoice]:checked').val() === "@OrderType.Invoice") { // Si Facturación está seleccionado
-                    var clientId = $(this).val(); // Obtener el ID del cliente seleccionado
-
-                    if (clientId) {
-                        // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
-                            if (!response.hasRFC) {
-                                // Mostrar mensaje de error si no tiene RFC
-                                $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
-                            } else {
-                                // Ocultar el mensaje de error si tiene RFC
-                                $('.modal-errores').hide();
-                            }
-                        });
-                    }
-                }
-            });
         });
     </script>
 
@@ -540,12 +661,12 @@
                     case 'warning':
                         $form.find('button[type="submit"]').prop("disabled", true);
                         $form.find(".alerts").html(`<div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                                         <strong>Acción inválida: </strong>
-                                                           ${json.body}
-                                                           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                              <span aria-hidden="true">&times;</span>
-                                                           </button>
-                                                       </div>`);
+                                                                 <strong>Acción inválida: </strong>
+                                                                   ${json.body}
+                                                                   <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                                      <span aria-hidden="true">&times;</span>
+                                                                   </button>
+                                                               </div>`);
                         $form.find(".alert").alert()
                         break;
                 }
@@ -842,28 +963,6 @@
             $('.total-order').text(formatter.format(total.toFixed(2)) + ' ' + $('#CurrencyType').val());
         }
     </script>
-    <!-- script para verificar si el cliente tiene RFC -->
-    <script>
-        $(document).ready(function () {
-            $('#ClientId').change(function () {
-                if ($('input:radio[name=IsInvoice]:checked').val() === "@OrderType.Invoice") { // Si Facturación está seleccionado
-                    var clientId = $(this).val(); // Obtener el ID del cliente seleccionado
-
-                    if (clientId) {
-                        // Verificar si el cliente tiene RFC
-                        $.get("@Url.Action("CheckClientRFC", "Order")", { clientId: clientId }, function (response) {
-                            if (!response.hasRFC) {
-                                // Mostrar mensaje de error si no tiene RFC
-                                $('.modal-errores').html(`<p class="text-danger">No se puede guardar como factura porque el cliente no tiene RFC registrado.</p>`).show();
-                            } else {
-                                // Ocultar el mensaje de error si tiene RFC
-                                $('.modal-errores').hide();
-                            }
-                        });
-                    }
-                }
-            });
-        });
-    </script>
+  
 
 }

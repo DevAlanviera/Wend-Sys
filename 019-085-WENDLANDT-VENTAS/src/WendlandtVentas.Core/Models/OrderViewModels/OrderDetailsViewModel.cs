@@ -72,5 +72,20 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         //Agregamos la referencia de bitacoraItemModel
         public List<BitacoraItemModel> BitacoraEntries { get; set; }
 
+        //Agregamos la propiedad para pronto pago
+        public bool ProntoPago { get; set; }
+
+        //Agregamos esta propiedad para calcular el total de los descuentos
+        public decimal TotalDescuentoProntoPago { get; set; }
+
+
+        //Propiedad para introducir el monto real con descuento
+        public decimal? RealAmount { get; set; }
+
+        // Vemos si tiene precio especial
+        public bool PrecioEspecial { get; set; } 
+
+
+
     }
 }

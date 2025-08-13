@@ -94,5 +94,9 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         [Display(Name = "Motivo de devolución")]
         public string ReturnReason { get; set; }
 
+
+        //Checkbox para pronto pago
+        public bool ProntoPago { get; set; }
+
     }
 }

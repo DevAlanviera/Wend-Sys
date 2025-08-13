@@ -13,5 +13,6 @@ namespace WendlandtVentas.Core.Entities.Enums
         [Display(Name = "Cancelado")] Cancelled,
         [Display(Name = "Pago parcial")] PartialPayment,
         [Display(Name = "Pagado")] Paid,
+        [Display(Name = "Notificado de cancelación")] CancelRequest,
     }
 }

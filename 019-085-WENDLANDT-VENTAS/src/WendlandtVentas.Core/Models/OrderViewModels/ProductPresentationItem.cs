@@ -9,7 +9,9 @@
         public int ProductId { get; set; }
         public string ProductName { get; set; }
         public string PriceString { get; set; }
-        public decimal Price { get; set; }
+        public decimal Price { get; set; } // Precio actual (puede tener descuento)
+        //public decimal BasePriceFromProductPresentation { get; set; } // Precio original sin descuento
+
         public int Quantity { get; set; }
         public bool IsPresent { get; set; }
         public decimal SubtotalDouble { get; set; }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Extensions;
 using Monobits.SharedKernel.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Interfaces;
 using WendlandtVentas.Core.Models.OrderViewModels;
 using WendlandtVentas.Web.Models.ReportViewModels;
+using WendlandtVentas.Web.Extensions;
 
 namespace WendlandtVentas.Web.Controllers
 {
@@ -111,6 +113,7 @@ namespace WendlandtVentas.Web.Controllers
                     OrderId = c.OrderId,
                     Order = $"Pedido {c.OrderId}",
                     Client = c.Order.Client.Name,
+                    Channel = c.Order?.Client?.Channel != null ? c.Order.Client.Channel.GetDisplayName() : "Desconocido",
                     State = c.Order.Client.State == null ? "Ninguno" : c.Order.Client.State.Name,
                     City = string.IsNullOrEmpty(c.Order.Client.City) ? "Ninguna" : c.Order.Client.City,
                     ProductId = c.ProductPresentation.ProductId,

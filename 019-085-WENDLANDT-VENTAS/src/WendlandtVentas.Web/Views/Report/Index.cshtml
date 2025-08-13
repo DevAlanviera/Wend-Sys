@@ -140,6 +140,7 @@
             </e-values>
         </e-datasourcesettings>
     </ejs-pivotview>
+
 </div>
 
 @section scripts{
@@ -154,6 +155,7 @@
 </style>
 
 <script>
+       
 
     $('#btn-collapse').click(function () {
         var status = $(this).data('status');
@@ -191,58 +193,58 @@
     });
 </script>
 
-<script>
-    $('#excel').on('click', function () {
-        var pivotObj = document.getElementById('PivotView').ej2_instances[0];
-        pivotObj.dataSourceSettings.expandAll = true;
+    <script>
+        $('#excel').on('click', function () {
+            var pivotObj = document.getElementById('PivotView').ej2_instances[0];
+            pivotObj.dataSourceSettings.expandAll = true;
 
-        var excelExportProperties = {
-            header: {
-                headerRows: 2,
-                rows: [
-                    { cells: [{ colSpan: 4, value: "Reporte de desplazamiento", style: { fontColor: '#C67878', fontSize: 20, hAlign: 'Center', bold: true } }] }
-                ]
-            }
-        };
-        pivotObj.excelExport(excelExportProperties);
-    });
+            var excelExportProperties = {
+                header: {
+                    headerRows: 2,
+                    rows: [
+                        { cells: [{ colSpan: 4, value: "Reporte de desplazamiento", style: { fontColor: '#C67878', fontSize: 20, hAlign: 'Center', bold: true } }] }
+                    ]
+                }
+            };
+            pivotObj.excelExport(excelExportProperties);
+        });
 
-    $('#StateId').change(function () {
-        const stateId = $(this).val();
-        UpdateSelectClients(stateId);
-    });
+        $('#StateId').change(function () {
+            const stateId = $(this).val();
+            UpdateSelectClients(stateId);
+        });
 
-    function UpdateSelectClients(stateId) {
-        var $spanLoad = $('#span-load');
-        var $selectClients = $('#ClientId');
-        $selectClients.html('');
-        $spanLoad.html("<i class='fa fa-spinner fa-spin'></i>");
+        function UpdateSelectClients(stateId) {
+            var $spanLoad = $('#span-load');
+            var $selectClients = $('#ClientId');
+            $selectClients.html('');
+            $spanLoad.html("<i class='fa fa-spinner fa-spin'></i>");
 
-        $.getJSON('@Url.Action("GetClients","Client")/?states=' + stateId,
-        function (data) {
-            if (data.length > 0) {
-                $spanLoad.html('');
-                $selectClients.append($("<option/>", {
-                    value: null,
-                    text: 'Todos'
-                }));
+            $.getJSON('@Url.Action("GetClients", "Client")/?states=' + stateId,
+                function (data) {
+                    if (data.length > 0) {
+                        $spanLoad.html('');
+                        $selectClients.append($("<option/>", {
+                            value: null,
+                            text: 'Todos'
+                        }));
 
-                $.each(data,
-                    function (index, item) {
-                         $selectClients.append($("<option/>",
-                                {
-                                    value: item.value,
-                                    text: item.text
-                                }));
-                    });
-            } else {
-                $selectClients.append($("<option/>", {
-                    value: 0,
-                    text: 'No hay clientes'
-                }));
-            }
-            $spanLoad.html('');
-            });
-    }
-</script>
+                        $.each(data,
+                            function (index, item) {
+                                $selectClients.append($("<option/>",
+                                    {
+                                        value: item.value,
+                                        text: item.text
+                                    }));
+                            });
+                    } else {
+                        $selectClients.append($("<option/>", {
+                            value: 0,
+                            text: 'No hay clientes'
+                        }));
+                    }
+                    $spanLoad.html('');
+                });
+        }
+    </script>
 }

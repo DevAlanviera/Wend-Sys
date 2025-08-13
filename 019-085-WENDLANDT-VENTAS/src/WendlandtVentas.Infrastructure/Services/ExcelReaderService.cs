@@ -29,7 +29,8 @@ namespace WendlandtVentas.Infrastructure.Services
             _asyncRepository = asyncRepository;
             _userManager = userManager;
         }
-
+        //Pronto pago plantillas: Facturacion celdas I30 - J30, S30,T30
+        //REMISSION: I3 - J30, S30,T30
         public async Task<List<Client>> ExtractData(XLWorkbook spreadSheetDocument)
         {
             try
@@ -92,6 +93,21 @@ namespace WendlandtVentas.Infrastructure.Services
             else
                 excelFile = "Remisión Wendlandt.xlsx";
 
+            /*if (model.TypeEnum == OrderType.Invoice)
+            {
+                excelFile = model.ProntoPago
+                    ? "Facturación Wendlandt - Pronto Pago.xlsx"  // Si tiene pronto pago
+                    : "Facturación Wendlandt.xlsx";   // Si no tiene pronto pago
+            }
+            else
+            {
+                excelFile = model.ProntoPago
+                    ? "Remisión Wendlandt - Pronto Pago.xlsx"  // Si tiene pronto pago
+                    : "Remisión Wendlandt.xlsx";    // Si no tiene pronto pago
+            }*/
+
+
+
             var guidExcel = $"{Guid.NewGuid()}.xlsx";
             var guidPdf = $"{Guid.NewGuid()}.pdf";
             var pdfCreated = guidPdf;
@@ -125,7 +141,11 @@ namespace WendlandtVentas.Infrastructure.Services
                     worksheet.Range["S27"].Text = model.SubTotal;
                     worksheet.Range["S28"].Text = model.IVA;
                     worksheet.Range["S29"].Text = model.IEPS;
-                    worksheet.Range["S30"].Text = model.Total;
+
+                 
+                    worksheet.Range["S30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
+                    worksheet.Range["I30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
+
 
                     worksheet.Range["H7"].Text = model.CreateDate.Day.ToString();
                     worksheet.Range["I7"].Text = model.CreateDate.Month.ToString();
@@ -194,9 +214,15 @@ namespace WendlandtVentas.Infrastructure.Services
                 {
                     worksheet.Range["E3"].Text = model.RemissionCode;
                     worksheet.Range["O3"].Text = model.RemissionCode;
+                    worksheet.Range["I30"].Text = model.RealAmount.HasValue
+                        ? model.RealAmount.Value.ToString("C2")
+                        : (model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal);
+                    worksheet.Range["S30"].Text = model.RealAmount.HasValue
+                        ? model.RealAmount.Value.ToString("C2")
+                        : (model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal);
 
-                    worksheet.Range["I30"].Text = model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal;
-                    worksheet.Range["S30"].Text = model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal;
+
+
 
                     worksheet.Range["E5"].Text = model.CreateDate.Day.ToString();
                     worksheet.Range["G5"].Text = model.CreateDate.Month.ToString();
@@ -243,6 +269,8 @@ namespace WendlandtVentas.Infrastructure.Services
                         : model.Comment;
                     worksheet.Range["D32"].Text += $"{model.Weight} Kg.";
 
+                   
+
                     worksheet.Range["O5"].Text = model.CreateDate.Day.ToString();
                     worksheet.Range["Q5"].Text = model.CreateDate.Month.ToString();
                     worksheet.Range["S5"].Text = model.CreateDate.Year.ToString();
@@ -267,7 +295,7 @@ namespace WendlandtVentas.Infrastructure.Services
                 int i = model.TypeEnum == OrderType.Remission ? 15 : 14;
                 foreach (var product in model.Products)
                 {
-                    if (i < 26)
+                    if (i < 30)
                     {
                         worksheet.Range[$"B{i}"].Text = product.Quantity.ToString();
                         worksheet.Range[$"C{i}"].Text = product.PresentationLiters;

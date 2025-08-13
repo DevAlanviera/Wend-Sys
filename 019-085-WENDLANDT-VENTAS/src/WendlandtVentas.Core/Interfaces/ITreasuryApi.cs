@@ -7,5 +7,10 @@ namespace WendlandtVentas.Core.Interfaces
     {
         public Task<(bool IsSuccess, string Response)> AddIncomeAsync(OrdersIncomeDto income);
         public Task<(bool IsSuccess, string Response)> GetBalancesAsync(OrdersIncomeDto income);
+
+        //Implementamos metodo para obtener pagos por orden
+        public Task<(bool IsSuccess, OrderWithShipmentsDto Response)> GetOrderWithShipmentsAsync(int orderId);
+
+
     }
 }

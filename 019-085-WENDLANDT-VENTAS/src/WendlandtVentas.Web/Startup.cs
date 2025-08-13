@@ -103,7 +103,8 @@ namespace WendlandtVentas.Web
 
             CreateIdentityIfNotCreated(services); 
             services.Configure<BrandSettings>(Configuration.GetSection("Brand"));
-            services.Configure<EmailSettings>(Configuration.GetSection("Email"));
+            services.Configure<EmailSettings>("Email", Configuration.GetSection("Email"));
+            services.Configure<EmailSettings>("Emailpagos", Configuration.GetSection("Emailpagos"));
             services.Configure<IdentityServerSettings>(Configuration.GetSection("IdentityServer"));
             services.Configure<LogBookServerSettings>(Configuration.GetSection("LogBookServer"));
             services.Configure<OneSignalConfiguration>(Configuration.GetSection("OneSignalConfiguration"));

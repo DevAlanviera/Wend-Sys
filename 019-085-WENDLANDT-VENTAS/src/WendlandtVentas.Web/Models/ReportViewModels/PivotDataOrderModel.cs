@@ -11,6 +11,7 @@
         public double Liters { get; set; }
         public decimal TotalProduct { get; set; }
         public string Client { get; set; }
+        public string Channel { get; set; }
         public string State { get; set; }
         public string City { get; set; }
         public int PresentationId { get; set; }

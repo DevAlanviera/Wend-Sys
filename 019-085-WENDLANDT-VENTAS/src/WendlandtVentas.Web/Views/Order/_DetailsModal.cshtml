@@ -23,6 +23,10 @@
                             <th>Tipo</th>
                             <th>Fecha de creación</th>
                             <th>Por</th>
+                            @if(Model.ProntoPago)
+                            {
+                                <th>Pronto Pago</th>
+                            }
                             <th>Remisión</th>
                             @if (Model.TypeEnum == OrderType.Invoice)
                             {
@@ -36,6 +40,10 @@
                             <td><text class="text-info"><b>@Model.Type</b></text></td>
                             <td>@Model.CreateDate.ToString("dd/MM/yyyy")</td>
                             <td>@Model.User</td>
+                            @if (Model.ProntoPago)
+                            {
+                                <td>Sí</td>
+                            }
                             <td>@Model.RemissionCode</td>
                             @if (Model.TypeEnum == OrderType.Invoice)
                             {
@@ -58,6 +66,13 @@
                                 <th><text class="float-right">IVA</text></th>
                             }
                             <th><text class="float-right">Total</text></th>
+                             @if (Model.PrecioEspecial)
+                                {
+                                <th>
+                                    <text class="float-right">Monto Real</text>
+                                </th>
+                    
+                                }
                         </tr>
                     </thead>
                     <tbody>
@@ -72,7 +87,24 @@
                                 <td><text class="float-right">@Model.IEPS</text></td>
                                 <td><text class="float-right">@Model.IVA</text></td>
                             }
-                            <td><text class="float-right text-success"><b>@Model.Total</b></text></td>
+                            <td>
+                                
+                                    @if (Model.PrecioEspecial)
+                                    {
+                                        <s><b>@Model.Total</b></s>
+                                    }
+                                    else
+                                    {
+                                    <b><text class="float-right text-success">@Model.Total</text></b>
+                                    }
+                                
+                            </td>
+                            @if (Model.PrecioEspecial)
+                            {
+                                <td>
+                                    <b><text class="float-right text-success">@Model.RealAmount?.ToString("C")</text></b>
+                                </td>
+                            }
                         </tr>
                     </tbody>
                 </table>
@@ -142,7 +174,7 @@
                             <td>@Model.Client.PayType</td>
                             <td>@Model.Client.Channel</td>
                             <td>@Model.Client.State</td>
-                            <td colspan="5">
+                            <td>
                                 @if (Model.Client.Comments != null && Model.Client.Comments.Any())
                                 {
                                     @string.Join(", ", Model.Client.Comments.Select(c => c.Comments))
@@ -163,23 +195,28 @@
                         <th>Nombre</th>
                         <th><text class="float-right">Cantidad</text></th>
                         <th><text class="float-right">Precio</text></th>
+                       
                         <th><text class="float-right">Subtotal</text></th>
+                       
                     </tr>
-                    @foreach (var item in Model.Products)
+                   @foreach (var item in Model.Products)
                     {
                         <tr>
                             <td>@item.PresentationLiters</td>
                             <td><text class="float-right">@item.Quantity</text></td>
+                            <!--<td><text class="float-right">item.Price.FormatCurrency()</text></td>-->
                             <td><text class="float-right">@item.Price.FormatCurrency()</text></td>
-                            <td><text class="float-right">@item.Total.FormatCurrency()</text></td>
+                            <td><text class="float-right">@((item.Quantity * item.Price).FormatCurrency())</text></td>
+                            
                         </tr>
                     }
                     <tr>
-                        <td><b>TOTAL</b></td>
-                        <td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>
-                        <td></td>
+                    <td><b>TOTAL</b></td>
+                    <td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>
+                            <td></td>
+
                         <td><text class="float-right"><b>@Model.SubTotal</b></text></td>
-                    </tr>
+                </tr>
                 </table>
             </div>
             @if (Model.Promotions.Any())
@@ -208,12 +245,14 @@
                                 <td><text class="float-right">@promotionGroup.Sum(c => c.DiscountMoney).FormatCurrency()</text></td>
                             </tr>
                         }
+                        
                         <tr>
                             <td colspan="2"><b>TOTAL</b></td>
                             @*<td><text class="float-right">@Model.Products.Sum(c => c.Quantity)</text></td>*@
                             <td></td>
                             <td><text class="float-right"><b>@Model.Promotions.Sum(c => c.DiscountMoney).FormatCurrency()</b></text></td>
                         </tr>
+                       
                     </table>
                    
                 </div>

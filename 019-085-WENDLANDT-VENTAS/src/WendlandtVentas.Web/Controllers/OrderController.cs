@@ -6,7 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Drawing.Charts;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -38,12 +41,15 @@ using WendlandtVentas.Core.Specifications.PromotionSpecifications;
 using WendlandtVentas.Infrastructure.Commons;
 using WendlandtVentas.Infrastructure.Data;
 using WendlandtVentas.Infrastructure.Repositories;
+using WendlandtVentas.Infrastructure.Services;
 using WendlandtVentas.Web.Extensions;
 using WendlandtVentas.Web.Libs;
 using WendlandtVentas.Web.Models.ClientViewModels;
 using WendlandtVentas.Web.Models.OrderViewModels;
+using WendlandtVentas.Web.Models.ProductViewModels;
 using WendlandtVentas.Web.Models.PromotionViewModels;
 using WendlandtVentas.Web.Models.TableModels;
+using Order = WendlandtVentas.Core.Entities.Order;
 
 namespace WendlandtVentas.Web.Controllers
 {
@@ -64,6 +70,7 @@ namespace WendlandtVentas.Web.Controllers
         private readonly ITreasuryApi _treasuryApi;
         private readonly IBitacoraService _bitacoraService;
         private readonly IBitacoraRepository _bitacoraRepository;
+        private readonly IEmailSender _emailSender;
 
         public OrderController(IAsyncRepository repository,
             ILogger<ProductController> logger,
@@ -78,7 +85,8 @@ namespace WendlandtVentas.Web.Controllers
             IBitacoraRepository bitacoraRepository,
             AppDbContext dbContext,
             IMemoryCache memoryCache,
-            CacheService cacheService)
+            CacheService cacheService,
+            IEmailSender emailSender)
         {
             _repository = repository;
             _logger = logger;
@@ -94,6 +102,7 @@ namespace WendlandtVentas.Web.Controllers
             _dbContext = dbContext;
             _memoryCache = memoryCache;
             _cacheService = cacheService;
+            _emailSender = emailSender;
         }
 
         public class CachedDataResult
@@ -160,8 +169,11 @@ namespace WendlandtVentas.Web.Controllers
 
                 // Mapear datos al modelo de la tabla
                 cachedData = filteredOrders
-                    .Where(c => c.Type != OrderType.Return) // Filtrar órdenes de tipo "Return"
-                    .Select(c => new OrderTableModel
+                .Where(c => c.Type != OrderType.Return)
+                .Select(c => new
+                {
+                    Order = c,
+                    Model = new OrderTableModel
                     {
                         Id = c.Id,
                         Type = c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize(),
@@ -171,15 +183,21 @@ namespace WendlandtVentas.Web.Controllers
                         PaymentDate = c.PaymentDate == DateTime.MinValue ? string.Empty : c.PaymentDate.ToLocalTime().FormatDateShortMx(),
                         PaymentPromiseDate = c.PaymentPromiseDate == DateTime.MinValue ? string.Empty : c.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
                         CreateDate = c.CreatedAt.ToLocalTime().FormatDateShortMx(),
-                        Total = c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency(),
+                        Total = c.RealAmount.HasValue && c.RealAmount.Value != 0
+                        ? c.RealAmount.Value.FormatCurrency()
+                        : (c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency()),
                         Client = c.Client.Name,
                         StatusEnum = c.OrderStatus,
                         Comment = c.Comment,
                         Address = c.Address ?? string.Empty,
                         CanEdit = c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString())
-                    })
-                    .OrderByDescending(c => c.Id) // Ordenar por Id en orden descendente
-                    .ToList();
+                    }
+                })
+                .OrderBy(x => x.Order.OrderStatus != OrderStatus.InProcess) // Solo "En proceso" al inicio
+                .ThenByDescending(x => x.Order.CreatedAt)                   // Luego orden por fecha
+                .Select(x => x.Model)
+                .ToList();
+
 
                 // Guardar en caché con duración de 10 minutos
                 var cacheEntryOptions = new MemoryCacheEntryOptions()
@@ -276,6 +294,15 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
+
+            // Validación de RFC antes de guardar
+            if (model.IsInvoice == OrderType.Invoice)
+            {
+                var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
+                if (rfcValidation != null)
+                    return rfcValidation;
+            } 
+
             var filters = new Dictionary<string, string>
             {
                 {
@@ -292,13 +319,23 @@ namespace WendlandtVentas.Web.Controllers
             if (ordersPending.Any() && model.Type != OrderType.Return)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
 
-            var response = await _orderService.AddOrderAsync(model, User.Identity.Name);
+            var client = await GetByIdWithContactsAsync(model.ClientId);
+            var primerEmail = client?.Contacts?.FirstOrDefault()?.Email;
+
+            var response = await _orderService.AddOrderAsync(model, User.Identity.Name, primerEmail);
 
             if (response.IsSuccess)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, response.Message));
 
             _logger.LogError($"Error: {response.Message}");
             return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el pedido"));
+        }
+
+        public async Task<Client> GetByIdWithContactsAsync(int clientId)
+        {
+            return await _dbContext.Clients
+                .Include(c => c.Contacts)
+                .FirstOrDefaultAsync(c => c.Id == clientId);
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
@@ -310,28 +347,24 @@ namespace WendlandtVentas.Web.Controllers
                 ViewData["Action"] = nameof(AddProduct);
                 ViewData["ModalTitle"] = "Agregar producto";
 
-                // Clave única para el caché, diferenciando por tipo de moneda
-                string cacheKey = $"ProductsInStock_{currencyType}";
+                string cacheKey = currencyType == CurrencyType.MXN ? "ProductsInStock_MXN" : "ProductsInStock_USD";
+     
 
-                if (!_memoryCache.TryGetValue(cacheKey, out List<ProductPresentation> productsInStock))
+                var productsInStock = await _cacheService.GetOrSetAsync(
+                cacheKey,
+                async () =>
                 {
-                    // Consultar la base de datos si no está en caché
-                    productsInStock = (List<ProductPresentation>)await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
-
-                    // Filtrar por moneda
-                    productsInStock = currencyType == CurrencyType.MXN
-                        ? productsInStock.Where(c => !c.Price.Equals(decimal.Zero)).ToList()
-                        : productsInStock.Where(c => !c.PriceUsd.Equals(decimal.Zero)).ToList();
-
-                    // Almacenar en caché con una duración de 10 minutos
-                    _memoryCache.Set(cacheKey, productsInStock, TimeSpan.FromMinutes(10));
-                }
+                    var allProducts = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
+                    return currencyType == CurrencyType.MXN
+                        ? allProducts.Where(c => c.Price >= 0).ToList()
+                        : allProducts.Where(c => c.PriceUsd >= 0).ToList();
+                },
+                absoluteExpiration: null // <- aquí defines que no haya expiración
+            );
 
                 var model = new OrderAddProductViewModel
                 {
-                    ProductsPresentations = new SelectList(
-                        productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }),
-                        "Value", "Text")
+                    ProductsPresentations = new SelectList(productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }), "Value", "Text")
                 };
 
                 return PartialView("_AddProductModal", model);
@@ -342,6 +375,99 @@ namespace WendlandtVentas.Web.Controllers
                 return PartialView("_AddProductModal");
             }
         }
+
+        [ResponseCache(Duration = 300)] // Cache HTTP por 5 minutos
+        [HttpGet]
+        public async Task<IActionResult> SearchProductsAjax(
+     [FromQuery] CurrencyType currencyType,
+     [FromQuery] string term,
+     [FromQuery] int page = 1,
+     [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                string cacheKey = $"ProductsSearch_{currencyType}_{term?.ToLower() ?? "all"}_{page}_{pageSize}";
+
+                var result = await _cacheService.GetOrSetAsync(cacheKey, async () => {
+                    var allProducts = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
+
+                    var filtered = currencyType == CurrencyType.MXN
+                        ? allProducts.Where(c => c.Price >= 0)
+                        : allProducts.Where(c => c.PriceUsd >= 0);
+
+                    if (!string.IsNullOrWhiteSpace(term))
+                    {
+                        term = term.ToLower();
+                        filtered = filtered.Where(p => p.NameExtended().ToLower().Contains(term));
+                    }
+
+                    var total = filtered.Count();
+
+                    var products = filtered
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .Select(x => new
+                        {
+                            id = $"{x.Id}-{x.PresentationId}",
+                            text = x.NameExtended(),
+                            price = currencyType == CurrencyType.MXN ? x.Price : x.PriceUsd
+                        })
+                        .ToList();
+
+                    return new
+                    {
+                        results = products,
+                        pagination = new { more = (page * pageSize) < total }
+                    };
+                }, TimeSpan.FromMinutes(5)); // Cache por 5 minutos
+
+                return Json(result);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error searching products");
+                return Json(new { results = new List<object>(), pagination = new { more = false } });
+            }
+        }
+
+        private async Task<IActionResult> ValidateClientRFCAsync(int clientId)
+        {
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Cliente no encontrado."));
+
+            if (string.IsNullOrEmpty(client.RFC))
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se puede facturar: el cliente no tiene RFC registrado."));
+
+         
+
+            return null;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CheckClientRFC(int clientId)
+        {
+            var client = await _repository.GetByIdAsync<Client>(clientId);
+            if (client == null)
+            {
+                return Json(new
+                {
+                    hasRFC = false,
+                    isValid = false,
+                    message = "Cliente no encontrado."
+                });
+            }
+
+            bool hasRFC = !string.IsNullOrWhiteSpace(client.RFC);
+
+            return Json(new
+            {
+                hasRFC,
+                isValid = hasRFC, // Solo lo igualamos para que el script funcione
+                message = hasRFC ? "" : "Este cliente no tiene RFC registrado."
+            });
+        }
+
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
@@ -354,15 +480,11 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
+
         [HttpPost]
         public async Task<IActionResult> AddProductRow(OrderAddProductViewModel model)
         {
-
-            //Este metodo agrega mi producto al row despues de dar click en aceptar
-
             var productPresentation = await _repository.GetAsync(new ProductPresentationExtendedSpecification(model.ProductPresentationId));
-
-           
 
             var item = new ProductPresentationItem
             {
@@ -379,9 +501,8 @@ namespace WendlandtVentas.Web.Controllers
                 ExistPresentation = model.ExistPresentation,
                 IsSeason = productPresentation.Product.Distinction == Distinction.Season,
                 IsPresent = model.IsPresent,
-                CanDelete = true,
+                CanDelete = true
             };
-
 
             return PartialView("_RowProduct", item);
         }
@@ -625,30 +746,39 @@ namespace WendlandtVentas.Web.Controllers
                 Delivery = order.Delivery,
                 DeliverySpecification = order.DeliverySpecification,
                 ProductsEdit = order.OrderProducts
-                    .Where(c => !c.IsDeleted)
-                    .Select(c => new ProductPresentationItem
+                .Where(c => !c.IsDeleted)
+                .Select(c =>
+                {
+                    var price = c.Price != 0 ? c.Price : (isMxnCurrency ? c.ProductPresentation.Price : c.ProductPresentation.PriceUsd);
+                    var subtotal = price * c.Quantity;
+
+                    return new ProductPresentationItem
                     {
                         ProductPresentationId = c.ProductPresentationId,
                         ProductName = c.ProductPresentation.NameExtended(),
-                        Price = c.Price != 0 ? c.Price : (isMxnCurrency ? c.ProductPresentation.Price : c.ProductPresentation.PriceUsd),
+                        Price = price,
+                        PriceString = price.FormatCurrency(),                 // ✅ Agregado
                         Quantity = c.Quantity,
-                        SubtotalDouble = c.Price * c.Quantity,
+                        SubtotalDouble = subtotal,
+                        Subtotal = subtotal.FormatCurrency(),                 // ✅ Agregado
                         PresentationId = c.ProductPresentation.PresentationId,
                         PresentationName = c.ProductPresentation.Presentation.Name,
                         ProductId = c.ProductPresentation.ProductId,
                         IsPresent = c.IsPresent,
                         CanDelete = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
-                    })
-                    .OrderBy(d => d.PresentationId)
-                    .ThenBy(d => d.IsPresent)
-                    .ToList(),
+                    };
+                })
+                .OrderBy(d => d.PresentationId)
+                .ThenBy(d => d.IsPresent)
+                .ToList(),
                 PresentationPromotionsEdit = presentationPromotions,
                 Clients = new SelectList(clients.OrderBy(c => c.Name), "Id", "Name"),
                 Addresses = new SelectList(filteredAddresses, "Id", "AddressLocation"),
                 PayTypes = new SelectList(Enum.GetValues(typeof(PayType)).Cast<PayType>().Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CurrencyTypes = new SelectList(new[] { order.CurrencyType }.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CanEditProducts = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
-                Comment = order.Comment
+                Comment = order.Comment,
+                ProntoPago = order.ProntoPago
             };
 
             return View("AddEdit", model);
@@ -659,10 +789,23 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(OrderViewModel model)
         {
+
+
+            
             if (!ModelState.IsValid)
                 return Json(AjaxFunctions.GenerateJsonError(string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
+
+
+
+            // Validación de RFC antes de actualizar
+            if (model.IsInvoice == OrderType.Invoice)
+            {
+                var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
+                if (rfcValidation != null)
+                    return rfcValidation;
+            }
 
             var response = await _orderService.UpdateOrderAsync(model, User.Identity.Name);
 
@@ -694,7 +837,7 @@ namespace WendlandtVentas.Web.Controllers
             var status = Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>().Where(c => !(c == OrderStatus.ReadyDeliver || c == OrderStatus.Faceted)).OrderBy(x => x).AsEnumerable();
             if (User.IsInRole(Role.Sales.ToString()))
             {
-                status = status.Where(c => !c.Equals(OrderStatus.Paid));
+                status = status.Where(c => c != OrderStatus.Paid && c != OrderStatus.Cancelled);
             }
             else if (User.IsInRole(Role.AdministratorAssistant.ToString()))
             {
@@ -706,7 +849,7 @@ namespace WendlandtVentas.Web.Controllers
             }
             else if (User.IsInRole(Role.BillingAssistant.ToString()))
             {
-                status = status.Where(c => !c.Equals(OrderStatus.Delivered) && !c.Equals(OrderStatus.Cancelled));
+                status = status.Where(c => !c.Equals(OrderStatus.Delivered) && !c.Equals(OrderStatus.CancelRequest));
             }
 
             var client = await _repository.GetByIdAsync<Client>(order.ClientId);
@@ -720,6 +863,8 @@ namespace WendlandtVentas.Web.Controllers
                 Comments = order.Comment,
                 Type = order.Type,
                 InvoiceCode = order.InvoiceCode,
+                PrecioEspecial = order.PrecioEspecial,
+                RealAmount = order.RealAmount,
                 Client = new ClientTableModel
                 {
                     Name = client.Name,
@@ -747,6 +892,7 @@ namespace WendlandtVentas.Web.Controllers
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
 
+            // Validaciones específicas por estado
             if (model.Type == OrderType.Invoice && string.IsNullOrEmpty(model.InvoiceCode) && model.Status == OrderStatus.OnRoute)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo cambiar el estado. El número de factura es requerido."));
 
@@ -756,61 +902,101 @@ namespace WendlandtVentas.Web.Controllers
             if (model.Status == OrderStatus.Delivered && string.IsNullOrEmpty(model.DeliveryDay))
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Seleccione una fecha de entrega."));
 
+            // Nueva validación para RealAmount
+            if (model.Status == OrderStatus.OnRoute && model.PrecioEspecial && model.RealAmount <= 0)
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Debe ingresar un monto real válido cuando activa precio especial"));
+
             try
             {
                 var email = User.Identity.Name;
                 var order = await _repository.GetAsync(new OrderExtendedSpecification(model.OrderId));
-                //Aqui esta obteniendo el id de la persona que tiene el nombre por medio del id registrado en la orden
                 var user = await _userManager.FindByIdAsync(order.UserId);
 
-               
-
+                // Validación de monto inicial
                 var orderTotal = order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total;
                 if (orderTotal < model.InitialAmount)
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Monto inicial no puede ser mayor que el total del pedido."));
 
+
                 var currentStatusOrder = order.OrderStatus;
+                // Actualizar estado y campos adicionales
                 order.ChangeStatus(model.Status, model.Comments ?? "", model.InvoiceCode ?? "");
 
+                // 🚨 Enviar correo si se solicita cancelación
+                if (model.Status == OrderStatus.CancelRequest)
+                {
+
+                    var clientName = order.Client?.Name ?? "Cliente desconocido";
+
+                    var emailBody = $@"
+                    Se ha solicitado la cancelación del pedido #{order.Id} 
+                    del cliente {clientName} 
+                    con fecha {DateTime.Now:dd/MM/yyyy HH:mm}.";
+                    //noreplywendlandt@gmail.com
+                    //Noreply1234!
+                    await _emailSender.SendEmailAsync(
+                        "cobranza@wendlandt.com.mx", // 🔁 Cambia esto por el correo real que debe recibir la notificación
+                        $"Solicitud de cancelación del pedido #{order.Id}",
+                        emailBody
+                    );
+                }
+
+                // Manejo de RealAmount para estado "En ruta"
+                if (model.Status == OrderStatus.OnRoute && model.PrecioEspecial)
+                {
+                    order.PrecioEspecial = true;
+                    order.RealAmount = (decimal)model.RealAmount;
+                }
+                else
+                {
+                    order.PrecioEspecial = false;
+                    order.RealAmount = null;
+                }
+
+                // Manejo de fecha de entrega
                 if (model.Status == OrderStatus.Delivered)
                 {
                     var client = await _repository.GetByIdAsync<Client>(order.ClientId);
-                    var deliveryDay = string.IsNullOrEmpty(model.DeliveryDay) ? DateTime.MinValue : DateTime.ParseExact(model.DeliveryDay, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+                    var deliveryDay = DateTime.ParseExact(model.DeliveryDay, "dd/MM/yyyy", CultureInfo.InvariantCulture);
                     order.Delivered(deliveryDay.ToUniversalTime(), deliveryDay.AddDays(client.CreditDays + 1).ToUniversalTime());
                 }
 
                 await _repository.UpdateAsync(order);
 
+                // Manejo de inventario
                 var messageDiscountInventory = string.Empty;
                 if (!order.InventoryDiscount && model.Status != OrderStatus.Cancelled)
                 {
                     var response = await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
                     order.ToggleInventoryDiscount();
                     await _repository.UpdateAsync(order);
-
                     messageDiscountInventory = response.Message;
                 }
-
-                if (order.InventoryDiscount && model.Status == OrderStatus.Cancelled)
+                else if (order.InventoryDiscount && model.Status == OrderStatus.Cancelled)
                 {
                     var response = await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
                     order.ToggleInventoryDiscount();
                     await _repository.UpdateAsync(order);
                 }
 
+                // Manejo de pagos
                 if (model.Status == OrderStatus.Paid || model.Status == OrderStatus.PartialPayment)
                 {
+                    double amountToSend = order.RealAmount.HasValue && order.RealAmount.Value > 0
+                        ? Math.Min(model.InitialAmount, (double)order.RealAmount.Value)
+                        : orderTotal;
+
                     var income = new OrdersIncomeDto
                     {
                         OrderId = order.Id,
                         OrderType = order.Type,
                         CurrencyType = order.CurrencyType,
                         RemissionCode = order.RemissionCode,
-                        Amount = order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total,
+                        Amount = amountToSend,
                         InitialAmount = model.InitialAmount,
                         User = User.Identity.Name
                     };
-
+                    //COMENTADO DE MOMENTO PARA QUE NO INTENTE ENVIAR DATOSA TESORERIA
                     var apiResult = await _treasuryApi.AddIncomeAsync(income);
                     if (apiResult.IsSuccess)
                     {
@@ -836,8 +1022,10 @@ namespace WendlandtVentas.Web.Controllers
 
                         return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Cambio de estado no guardado. No se pudo enviar el pago a Tesorería"));
                     }
+                    _cacheService.InvalidateOrderCache();
                 }
 
+                // Notificaciones y bitácora
                 var success = await _notificationService.NotifyChangeOrderStateAsync(order.Id, order.OrderStatus, email);
                 if (success)
                 {
@@ -846,10 +1034,7 @@ namespace WendlandtVentas.Web.Controllers
                     await _bitacoraRepository.AddAsync(bitacora);
                     _cacheService.InvalidateOrderCache();
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. Inventario actualizado"));
-                
                 }
-                    
-                //return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, $"Cambio de estado guardado. Notificación enviada. {messageDiscountInventory}"));
 
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, $"Cambio de estado guardado. Notificación no enviada. Inventario actualizado"));
             }
@@ -858,6 +1043,61 @@ namespace WendlandtVentas.Web.Controllers
                 _logger.LogError(e, $"Error en método ChangeStatus: {e.Message}");
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo cambiar el estado."));
             }
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> ActualizarTotal([FromBody] ActualizarTotalViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest("Datos inválidos");
+
+            // Actualizar en la base de datos principal
+            var result = await _orderService.ActualizarTotalAsync(
+                model.Id,
+                model.RealAmount,
+                model.PrecioEspecial,
+                User.Identity.Name
+            );
+
+            if (!result.IsSuccess)
+                return StatusCode(500, result.Message);
+
+            return Ok("Monto actualizado correctamente.");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Recalculate(int id, bool prontoPago)
+        {
+            var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
+            if (order == null) return NotFound();
+
+            var recalculatedItems = order.OrderProducts.Select(op =>
+            {
+                var precioBase = prontoPago ? op.Price * 0.95m : op.Price;
+
+                var presentationPromotions = op.ProductPresentation.Presentation.PresentationPromotions
+                    .Where(pp => pp.Promotion.IsActive);
+
+                // Convertimos el descuento (double) a decimal
+                var totalDiscount = presentationPromotions
+                    .Sum(pp => (decimal)pp.Promotion.Discount * precioBase); // aplica sobre precioBase
+
+                var precioFinal = precioBase - totalDiscount;
+
+                return new
+                {
+                    ProductId = op.ProductPresentation.Product.Id,
+                    ProductName = op.ProductPresentation.Product.Name,
+                    PrecioBase = Math.Round(precioBase, 2),
+                    TotalDiscount = Math.Round(totalDiscount, 2),
+                    PrecioFinal = Math.Round(precioFinal, 2)
+                };
+            }).ToList();
+
+            var total = recalculatedItems.Sum(x => x.PrecioFinal);
+
+            return Json(new { precios = recalculatedItems, total = Math.Round(total, 2) });
         }
 
         [HttpGet]
@@ -892,6 +1132,8 @@ namespace WendlandtVentas.Web.Controllers
                 Comment = order.Comment,
                 CollectionComment = order.CollectionComment,
                 Weight = weight,
+                RealAmount = order.RealAmount,
+                PrecioEspecial = order.PrecioEspecial,
                 Address = new AddressItemModel
                 {
                     Name = order.AddressName,
@@ -899,6 +1141,7 @@ namespace WendlandtVentas.Web.Controllers
                     AddressLocation = order.Address,
                     DeliverySpecification = order.DeliverySpecification
                 },
+                ProntoPago = order.ProntoPago,
                 Client = new ClientItemModel
                 {
                     Id = order.ClientId,
@@ -907,6 +1150,16 @@ namespace WendlandtVentas.Web.Controllers
                     Name = order.Client.Name,
                     Classification = order.Client.Classification == null ? "-" : order.Client.Classification.Humanize(),
                     State = order.Client.State == null ? "-" : order.Client.State.Name,
+                    Comments = (order.Client.Comment != null && order.Client.Comment.Any())
+                    ? new List<CommentsItemModel>
+                      {
+                          new CommentsItemModel
+                          {
+                              Id = order.Client.Comment.First().Id,
+                              Comments = order.Client.Comment.First().Comments
+                          }
+                      }
+                    : new List<CommentsItemModel>()
                 },
                 Products = order.OrderProducts.Where(c => !c.IsDeleted).Select(c => new ProductItemModel
                 {
@@ -943,8 +1196,8 @@ namespace WendlandtVentas.Web.Controllers
                      Accion = b.Accion,
                 }).ToList()
             };
-        
 
+           
             return PartialView("_DetailsModal", model);
         }
 
@@ -979,6 +1232,25 @@ namespace WendlandtVentas.Web.Controllers
             var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
             var user = await _userManager.FindByIdAsync(order.UserId);
             var weight = await CalcOrderWeight(id);
+
+            // Cálculo del total de descuento por pronto pago
+            decimal totalProntoPagoDescuento = 0;
+
+            foreach (var product in order.OrderProducts.Where(p => !p.IsDeleted))
+            {
+                var precioBase = order.CurrencyType == CurrencyType.MXN
+                    ? product.ProductPresentation.Price
+                    : product.ProductPresentation.PriceUsd;
+
+                var precioUsado = product.Price != 0 ? product.Price : precioBase;
+
+                if (precioUsado < precioBase)
+                {
+                    var descuentoUnitario = precioBase - precioUsado;
+                    totalProntoPagoDescuento += descuentoUnitario * product.Quantity;
+                }
+            }
+
             var model = new OrderDetailsViewModel
             {
                 Id = order.Id,
@@ -995,12 +1267,15 @@ namespace WendlandtVentas.Web.Controllers
                 IVA = order.IVA.FormatCurrency(),
                 Status = order.OrderStatus.Humanize(),
                 SubTotal = order.SubTotal.FormatCurrency(),
-                Total = order.Total.FormatCurrency(),
+                Total = (order.RealAmount.HasValue && order.RealAmount.Value != 0.0m || order.PrecioEspecial)
+                ? order.RealAmount.GetValueOrDefault().FormatCurrency()
+                : order.Total.FormatCurrency(),
                 Discount = order.Discount.FormatCurrency(),
                 User = user != null ? user.Name : "-",
                 Comment = order.Comment,
                 CollectionComment = order.CollectionComment,
                 Weight = weight,
+                ProntoPago = order.ProntoPago,
                 Address = new AddressItemModel
                 {
                     Name = order.AddressName,
@@ -1016,7 +1291,17 @@ namespace WendlandtVentas.Web.Controllers
                     Classification = order.Client.Classification == null ? "-" : order.Client.Classification.Humanize(),
                     State = order.Client.State == null ? "-" : order.Client.State.Name,
                     City = string.IsNullOrEmpty(order.Client.City) ? "-" : order.Client.City,
-                    RFC = string.IsNullOrEmpty(order.Client.RFC) ? "-" : order.Client.RFC
+                    RFC = string.IsNullOrEmpty(order.Client.RFC) ? "-" : order.Client.RFC,
+                    Comments = (order.Client.Comment != null && order.Client.Comment.Any())
+                    ? new List<CommentsItemModel>
+                      {
+                          new CommentsItemModel
+                          {
+                              Id = order.Client.Comment.First().Id,
+                              Comments = order.Client.Comment.First().Comments
+                          }
+                      }
+                    : new List<CommentsItemModel>()
                 },
                 Products = order.OrderProducts.Where(c => !c.IsDeleted).Select(c => new ProductItemModel
                 {
@@ -1044,7 +1329,9 @@ namespace WendlandtVentas.Web.Controllers
                         ? d.ProductPresentation.Price
                         : d.ProductPresentation.PriceUsd
                     }).ToList()
-                })
+                }),
+                TotalDescuentoProntoPago = totalProntoPagoDescuento,
+                
             };
             try
             {
@@ -1059,6 +1346,20 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
+        /*[HttpPost]
+        public async Task<IActionResult> EnviarEstadoCuenta(int orderId)
+        {
+            Console.WriteLine("ENVIANDO EMAIL DESDE SERVICIO...");
+
+            var enviado = await _orderService.EnviarEstadoCuentaAsync(orderId);
+
+            if (enviado)
+                return Ok("Estado de cuenta enviado con éxito.");
+            else
+                return StatusCode(500, "Error al enviar el correo.");
+        }*/
+
+
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing, BillingAssistant")]
         [HttpGet("{controller}/Delete/{id}")]
         public IActionResult DeleteView(int id)
@@ -1070,7 +1371,7 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_DeleteModal", $"{id}");
         }
 
-        [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, , BillingAssistant")]
+        [Authorize(Roles = "Administrator")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -1089,7 +1390,7 @@ namespace WendlandtVentas.Web.Controllers
                 order.OrderPromotions.ToList().ForEach(c => c.Delete());
                 order.Delete();
                 await _repository.UpdateAsync(order);
-
+                _cacheService.InvalidateOrderCache();
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Pedido eliminado"));
             }
             catch (Exception e)
