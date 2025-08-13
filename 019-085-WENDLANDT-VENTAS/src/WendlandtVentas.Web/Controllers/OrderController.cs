@@ -1201,20 +1201,6 @@ namespace WendlandtVentas.Web.Controllers
             return PartialView("_DetailsModal", model);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> CheckClientRFC(int clientId)
-        {
-            var client = await _repository.GetByIdAsync<Client>(clientId);
-            if (client == null)
-            {
-                return Json(new { hasRFC = false, message = "Cliente no encontrado." });
-            }
-
-            bool hasRFC = !string.IsNullOrEmpty(client.RFC);
-            return Json(new { hasRFC, message = hasRFC ? "" : "Este cliente no tiene RFC registrado." });
-        }
-
-
         public async Task<IActionResult> PrintOrder(int id)
         {
             var currentPath = Environment.CurrentDirectory;
