@@ -119,7 +119,10 @@
 </div>
 
 <div class="datatable-container">
-    <ejs-grid id="Grid" cssClass="~/css/NewMono.css" class="datatable" locale="es-MX" allowTextWrap="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search", "Print" })">
+    <ejs-grid id="Grid" cssClass="~/css/NewMono.css" class="datatable" locale="es-MX" allowTextWrap="true" allowPaging="true" allowSorting="true"
+              enableAdaptiveUI="true"
+              height="auto"
+              width="100%" cssClass="e-responsive datatable" toolbar="@(new List<string>() { "Search", "Print" })">
         <!-- Configuración del DataManager -->
         <e-data-manager url="@targetUrl" adaptor="UrlAdaptor"></e-data-manager>
 
@@ -288,6 +291,7 @@
                 case "Pago parcial": return "badge-piggy";        // Rosita
                 case "Pagado": return "badge-piggy";              // Rosita
                 case "Cancelado": return "badge-cancelado";       // Rojo
+                case "Notificado de cancelación": return "badge-notificado";
                 default: return "badge-default";
             }
         }
@@ -302,6 +306,7 @@
                 case "Pago parcial":
                 case "Pagado": return '<i class="bi bi-cash-stack"></i>';              // 🐷
                 case "Cancelado": return '<i class="fa fa-times-circle"></i>';         // ❌
+                case "Notificado de cancelación": return '<i class="fa fa-exclamation-circle"></i>'; // ❗
                 default: return '';
             }
         }
@@ -315,6 +320,7 @@
                 case "Pago parcial": return "Pago parcial";
                 case "Pagado": return "Pagado";
                 case "Cancelado": return "Cancelado";
+                case "Notificado de cancelación": return "Notificado de cancelación";
                 default: return status;
             }
         }

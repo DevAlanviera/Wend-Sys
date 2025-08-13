@@ -174,7 +174,7 @@
                             <td>@Model.Client.PayType</td>
                             <td>@Model.Client.Channel</td>
                             <td>@Model.Client.State</td>
-                            <td colspan="5">
+                            <td>
                                 @if (Model.Client.Comments != null && Model.Client.Comments.Any())
                                 {
                                     @string.Join(", ", Model.Client.Comments.Select(c => c.Comments))

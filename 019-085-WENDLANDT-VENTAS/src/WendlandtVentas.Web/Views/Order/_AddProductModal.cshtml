@@ -38,11 +38,17 @@
                     <span asp-validation-for="Price" class="text-danger"></span>
                 </div>
             }
-
+             @if (Model.IsAuthorized(User))
+            {
             <div class="form-check form-check-inline">
                 <label asp-for="IsPresent"></label>
                 <input asp-for="IsPresent" class="form-check-input ml-1 mb-1" />
-            </div>
+                </div>
+            }
+            else
+            {
+                
+            }
             <div class="modal-errors text-danger"></div>
         </div>
         <div class="modal-footer">

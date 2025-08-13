@@ -261,7 +261,7 @@
                                 <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-secondary flex-grow-1 mr-2">
                                     Cancelar
                                 </a>
-                                <button type="submit" id="btn-guardar" class="btn btn-primary flex-grow-1 ml-2">Guardar</button>
+                                <button type="button" class="btn btn-primary flex-grow-1 ml-2 btn-guardar">Guardar</button>
                             </div>
                         </div>
 
@@ -283,7 +283,7 @@
                                 Total antes de impuestos.
                             </div>
                             <div class="d-grid gap-2">
-                                <button type="submit" id="btn-guardar" class="btn btn-primary btn-lg">Guardar</button>
+                                <button type="button" class="btn btn-primary btn-lg btn-guardar">Guardar</button>
                                 <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-secondary btn-lg">
                                     Cancelar
                                 </a>
@@ -321,6 +321,96 @@
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
 }
 @section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#addProduct").on("click", function () {
+                var currencyType = $('#CurrencyType').val();
+                $.get("@Url.Action("AddProduct", "Order")", { currencyType: currencyType })
+                    .done(function (data) {
+                        $('#addProductModal').html(data);
+                        $('#addProductModal').modal('show');
+
+                        var $btnSave = $('#btnSaveProduct');
+                        $btnSave.prop('disabled', true);
+
+                        // Configuración optimizada de Select2 con caché local
+                        $('#addProductModal .select2').select2({
+                            theme: 'bootstrap4',
+                            placeholder: "Seleccionar producto",
+                            minimumInputLength: 0,
+                            cache: true, // Habilita caché local de Select2
+                            ajax: {
+                                url: '@Url.Action("SearchProductsAjax", "Order")',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                    return {
+                                        currencyType: currencyType,
+                                        term: params.term || '',
+                                        page: params.page || 1,
+                                        _: Date.now() // Evita caché del navegador para nuevas búsquedas
+                                    };
+                                },
+                                processResults: function (data, params) {
+                                    params.page = params.page || 1;
+                                    return {
+                                        results: data.results,
+                                        pagination: {
+                                            more: data.pagination.more
+                                        }
+                                    };
+                                },
+                                transport: function (params, success, failure) {
+                                    // Implementación personalizada para mejor manejo de caché
+                                    var cacheKey = `products_${currencyType}_${params.data.term || 'all'}_${params.data.page}`;
+                                    var cachedData = sessionStorage.getItem(cacheKey);
+
+                                    if (cachedData && !params.data.term) {
+                                        success(JSON.parse(cachedData));
+                                    } else {
+                                        $.ajax(params)
+                                            .done(function (data) {
+                                                if (!params.data.term) {
+                                                    sessionStorage.setItem(cacheKey, JSON.stringify(data));
+                                                }
+                                                success(data);
+                                            })
+                                            .fail(failure);
+                                    }
+                                }
+                            }
+                        })
+                        // Al seleccionar producto, obtener el precio y habilitar botón
+                        $('.select2').on('select2:select', function (e) {
+                            $btnSave.prop('disabled', true);
+                            var value = e.params.data.id;
+                            var selectKeyValues = value.split("-");
+                            var id = selectKeyValues[0];
+
+                            $.get("@Url.Action("GetProductPrice", "Order")", {
+                                currencyType: currencyType,
+                                id: id
+                            })
+                                .done(function (data) {
+                                    $('#Price').val(data);
+                                    $btnSave.prop('disabled', false);
+                                });
+                        });
+
+                    
+                    });
+            });
+
+            $('#CurrencyTypes').attr('disabled', 'disabled');
+
+            $('#CurrencyTypes').on('change', function () {
+                $('#content-promotions').html('');
+                $('#CurrencyType').val($(this).val());
+                CalculateTotals();
+            });
+        });
+    </script>
+
     <script>
         let confirmedSubmit = false;
 
@@ -401,7 +491,7 @@
             let confirmarEnvio = false;
 
             // Interceptamos el click en el botón "Guardar"
-            $('#btn-guardar').on('click', function (e) {
+            $('.btn-guardar').on('click', function (e) {
                 e.preventDefault(); // Evita que se envíe aún
 
                 // Obtener el tipo de orden seleccionado
@@ -432,41 +522,7 @@
         });
      
     </script>
-
-
-    <script>
-        $(document).ready(function () {
-            $("#addProduct").on("click", function () {
-                var currencyType = $('#CurrencyType').val();
-                $.get("@Url.Action("AddProduct", "Order")", { currencyType: currencyType })
-                    .done(function (data) {
-                        $('#addProductModal').html(data);
-                        $('#addProductModal').modal('show');
-                    });
-            });
-
-            $('#CurrencyTypes').attr('disabled', 'disabled');
-
-            $('#CurrencyTypes').on('change', function () {
-                $('#content-promotions').html('');
-                $('#CurrencyType').val($(this).val());
-                CalculateTotals();
-            });
-        });
-    </script>
-    <script>
-        $('#addProductModal').on('show.coreui.modal', function () {
-            $(document).on("change", "#ProductPresentationId", function () {
-                var selectKeyValues = $(this).val().split("-");
-                var id = selectKeyValues[0];
-                var currencyType = $('#CurrencyType').val();
-                $.get("@Url.Action("GetProductPrice", "Order")", { currencyType: currencyType, id: id })
-                    .done(function (data) {
-                        $('#Price').val(data);
-                    });
-            });
-        });
-    </script>
+    
     <script>
         $(function () {
             $(".date-picker").datepicker({

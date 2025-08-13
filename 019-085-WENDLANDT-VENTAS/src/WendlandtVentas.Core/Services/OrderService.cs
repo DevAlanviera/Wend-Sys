@@ -146,11 +146,10 @@ namespace WendlandtVentas.Core.Services
             {
                 await _repository.AddAsync(order);
 
-                var orderTypeName = model.IsInvoice == OrderType.Return ? "Devolución" : "Pedido";
-
-                // Completar datos antes de guardar
+                var orderTypeName = "Pedido";
                 if (model.IsInvoice == OrderType.Return)
                 {
+                    orderTypeName = "Devolución";
                     order.UpdateReturnInformation(model.ReturnRemisionNumber, model.ReturnReason);
                 }
                 else
