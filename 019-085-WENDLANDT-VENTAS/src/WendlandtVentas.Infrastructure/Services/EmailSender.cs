@@ -23,9 +23,14 @@ public class EmailSender : IEmailSender
         _brandSettings = brandSettings.Value;
     }
 
-    public async Task<bool> SendEmailAsync(string email, string subject, string message, string file = null, string perfil = "Email")
+    public async Task<bool> SendEmailAsync(string email,
+    string subject,
+    string message,
+    string file = null,
+    byte[] attachmentBytes = null,
+    string attachmentName = null,
+    string perfil = "Email")
     {
-        
         var settings = _emailSettingsSnapshot.Get(perfil);
 
         using var client = new SmtpClient(settings.Server, settings.Port)
@@ -44,18 +49,28 @@ public class EmailSender : IEmailSender
 
         mail.To.Add(email);
 
+        // Adjuntar archivo desde ruta en disco
         if (!string.IsNullOrWhiteSpace(file) && File.Exists(file))
         {
             mail.Attachments.Add(new Attachment(file));
         }
 
+        // Adjuntar archivo desde memoria
+        if (attachmentBytes != null && !string.IsNullOrWhiteSpace(attachmentName))
+        {
+            using var ms = new MemoryStream(attachmentBytes);
+            mail.Attachments.Add(new Attachment(ms, attachmentName, "application/pdf"));
+            // Nota: MemoryStream no se cierra hasta que se envíe el correo
+        }
+
         await client.SendMailAsync(mail);
         return true;
     }
+
 }
 
 
-    public class EmailModel
+public class EmailModel
         {
             public string Email { get; set; }
             public string Subject { get; set; }

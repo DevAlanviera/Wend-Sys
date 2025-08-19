@@ -15,6 +15,7 @@
     <None Include="bundleconfig.json" />
     <None Include="compilerconfig.json" />
     <None Include="wwwroot\js\monobits\dist\monolibs.js" />
+    <None Include="wwwroot\js\productLoader.js" />
     <None Include="wwwroot\lib\datepicker\js\bootstrap-datepicker.js" />
   </ItemGroup>
 
@@ -47,6 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="scripts\" />
     <Folder Include="Services\" />
     <Folder Include="wwwroot\lib\coreui\js\" />
   </ItemGroup>

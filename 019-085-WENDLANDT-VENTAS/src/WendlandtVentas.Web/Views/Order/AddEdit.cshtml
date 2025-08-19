@@ -323,86 +323,102 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
+
+            // Abrir modal y configurar Select2 usando caché si existe
             $("#addProduct").on("click", function () {
-                var currencyType = $('#CurrencyType').val();
+                const currencyType = $('#CurrencyType').val();
+
                 $.get("@Url.Action("AddProduct", "Order")", { currencyType: currencyType })
                     .done(function (data) {
-                        $('#addProductModal').html(data);
-                        $('#addProductModal').modal('show');
+                        const $modal = $('#addProductModal');
+                        $modal.html(data);
+                        $modal.modal('show');
 
-                        var $btnSave = $('#btnSaveProduct');
+                        // Botón Guardar dentro del modal (no tiene id en tu markup)
+                        const $btnSave = $modal.find('button[type="submit"]');
                         $btnSave.prop('disabled', true);
 
-                        // Configuración optimizada de Select2 con caché local
+                        // Select del modal
+                        const $select = $modal.find('.select2');
+
+                        // --- Intentar usar datos precargados en sessionStorage ---
+                        // Opción A (preload global): clave simple que sugerimos en el preloader
+                        const globalCacheKey = `products_${currencyType}`;
+                        let globalCache = null;
+                        try {
+                            const raw = sessionStorage.getItem(globalCacheKey);
+                            if (raw) globalCache = JSON.parse(raw);
+                        } catch (e) {
+                            // ignorar errores de parseo
+                        }
+
+                        // Si tienes caché granular por página/término, detecta cualquiera
+                        const hasGranularCache = (function () {
+                            for (let i = 0; i < sessionStorage.length; i++) {
+                                const k = sessionStorage.key(i);
+                                if (k && k.startsWith(`products_${currencyType}_`)) return true;
+                            }
+                            return false;
+                        })();
+
+                        // Si hay caché global y trae results, preinyecta opciones al <select>
+                        if (globalCache && Array.isArray(globalCache.results)) {
+                            const opts = [];
+                            for (const item of globalCache.results) {
+                                if (!item || typeof item.id === 'undefined') continue;
+                                // Evitar duplicados si el servidor ya generó opciones
+                                if ($select.find(`option[value="${item.id}"]`).length === 0) {
+                                    opts.push(new Option(item.text || item.name || item.id, item.id, false, false));
+                                }
+                            }
+                            if (opts.length) $select.append(opts);
+                        }
+
+                        // Inicializar Select2 con AJAX + transport con caché (granular o global)
+                        var cacheKey = "products_MXN_all_1";
+                        var cachedData = JSON.parse(sessionStorage.getItem(cacheKey) || "null") || { results: [] };
+
                         $('#addProductModal .select2').select2({
                             theme: 'bootstrap4',
                             placeholder: "Seleccionar producto",
                             minimumInputLength: 0,
-                            cache: true, // Habilita caché local de Select2
-                            ajax: {
-                                url: '@Url.Action("SearchProductsAjax", "Order")',
-                                dataType: 'json',
-                                delay: 250,
-                                data: function (params) {
-                                    return {
-                                        currencyType: currencyType,
-                                        term: params.term || '',
-                                        page: params.page || 1,
-                                        _: Date.now() // Evita caché del navegador para nuevas búsquedas
-                                    };
-                                },
-                                processResults: function (data, params) {
-                                    params.page = params.page || 1;
-                                    return {
-                                        results: data.results,
-                                        pagination: {
-                                            more: data.pagination.more
-                                        }
-                                    };
-                                },
-                                transport: function (params, success, failure) {
-                                    // Implementación personalizada para mejor manejo de caché
-                                    var cacheKey = `products_${currencyType}_${params.data.term || 'all'}_${params.data.page}`;
-                                    var cachedData = sessionStorage.getItem(cacheKey);
-
-                                    if (cachedData && !params.data.term) {
-                                        success(JSON.parse(cachedData));
-                                    } else {
-                                        $.ajax(params)
-                                            .done(function (data) {
-                                                if (!params.data.term) {
-                                                    sessionStorage.setItem(cacheKey, JSON.stringify(data));
-                                                }
-                                                success(data);
-                                            })
-                                            .fail(failure);
-                                    }
-                                }
+                            data: cachedData.results,
+                            matcher: function (params, data) {
+                                if ($.trim(params.term) === '') return data;
+                                if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) return data;
+                                return null;
                             }
-                        })
-                        // Al seleccionar producto, obtener el precio y habilitar botón
-                        $('.select2').on('select2:select', function (e) {
+                        });
+
+                        // Cuando selecciona un producto, obtener precio y habilitar guardar
+                        $select.on('select2:select', function (e) {
                             $btnSave.prop('disabled', true);
-                            var value = e.params.data.id;
-                            var selectKeyValues = value.split("-");
-                            var id = selectKeyValues[0];
+
+                            const value = e.params.data.id;
+                            const parts = String(value).split("-");
+                            const id = parts[0];
 
                             $.get("@Url.Action("GetProductPrice", "Order")", {
                                 currencyType: currencyType,
                                 id: id
-                            })
-                                .done(function (data) {
-                                    $('#Price').val(data);
-                                    $btnSave.prop('disabled', false);
-                                });
+                            }).done(function (data) {
+                                $('#Price').val(data);
+                                $btnSave.prop('disabled', false);
+                            }).fail(function () {
+                                $btnSave.prop('disabled', false);
+                            });
                         });
 
-                    
+                        // Limpieza al cerrar modal (evita fugas de memoria)
+                        $modal.off('hidden.bs.modal._cleanup').on('hidden.bs.modal._cleanup', function () {
+                            try { $select.select2('destroy'); } catch (e) { }
+                            $modal.empty();
+                        });
                     });
             });
 
+            // Tu lógica existente de CurrencyTypes
             $('#CurrencyTypes').attr('disabled', 'disabled');
-
             $('#CurrencyTypes').on('change', function () {
                 $('#content-promotions').html('');
                 $('#CurrencyType').val($(this).val());

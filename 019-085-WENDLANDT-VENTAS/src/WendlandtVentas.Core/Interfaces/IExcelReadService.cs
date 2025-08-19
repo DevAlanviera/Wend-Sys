@@ -12,5 +12,7 @@ namespace WendlandtVentas.Core.Interfaces
     {
         Task<List<Client>> ExtractData(XLWorkbook spreadSheetDocument);
         Task<string> FillData(string path, OrderDetailsViewModel model);
+
+        Task<byte[]> FillDataAndReturnPdfAsync(string path, OrderDetailsViewModel model);
     }
 }

@@ -38,6 +38,7 @@ namespace WendlandtVentas.Core.Services
         private readonly IInventoryService _inventoryService;
         private readonly ILogger<OrderService> _logger;
         private readonly IEmailSender _emailSender;
+        private readonly IExcelReadService _excelReaderService;
 
         private readonly IBitacoraService _bitacoraService;
 
@@ -45,7 +46,7 @@ namespace WendlandtVentas.Core.Services
             IAsyncRepository repository, INotificationService notificationService,
             IBitacoraService bitacoraService,
             IInventoryService inventoryService, ILogger<OrderService> logger,
-            CacheService cacheService, IEmailSender emailSender)
+            CacheService cacheService, IEmailSender emailSender, IExcelReadService excelReaderService)
         {
             _userManager = userManager;
             _repository = repository;
@@ -55,6 +56,7 @@ namespace WendlandtVentas.Core.Services
             _logger = logger;
             _cacheService = cacheService;
             _emailSender = emailSender;
+            _excelReaderService = excelReaderService;
         }
 
 
@@ -179,6 +181,27 @@ namespace WendlandtVentas.Core.Services
                         _logger.LogWarning("No se pudo enviar el estado de cuenta del pedido {OrderId}", order.Id);
                     }
                 }*/
+
+                try
+                {
+
+                    // 1. Generar PDF del pedido usando ExcelReaderService
+                    var pdfBytes = await _excelReaderService.FillDataAndReturnPdfAsync("wwwroot/resources", order);
+
+
+                    // 2.3 Enviar correo al cliente con el PDF adjunto
+                    var enviado = await EnviarEstadoCuentaAsync(order.Id, clienteEmail, pdfBytes);
+
+                    if (!enviado)
+                        _logger.LogWarning("No se pudo enviar el estado de cuenta del pedido {OrderId}", order.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al generar PDF o enviar correo para el pedido {OrderId}", order.Id);
+                }
+
+
+
 
                 return new Response(true, "Pedido guardado");
 
@@ -642,7 +665,56 @@ namespace WendlandtVentas.Core.Services
             return _repository.GetQueryableExisting<Order>().Select(c => new SelectListItem(c.RemissionCode, c.RemissionCode)).ToListAsync();
         }
 
-        public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmaill)
+
+        public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmail, byte[] pdfAdjunto = null)
+        {
+            // 1️⃣ Obtener la orden y validar
+            var order = await _repository.GetByIdAsync<Order>(orderId);
+            if (order == null)
+                return false;
+
+            var nombreCliente = order.Client.Name;
+
+            // 2️⃣ Generar asunto y mensaje HTML
+            var asunto = $"¡Pedido #{order.Id} realizado con éxito! - Cervecería Wendlandt de México";
+            var mensaje = GenerarMensajeHtmlEstadoCuenta(nombreCliente, order.ClientId);
+
+            // 3️⃣ Enviar correo
+            return await _emailSender.SendEmailAsync(
+                       email:"alan.cordova@wendlandt.com.mx", //clienteEmail,
+                        subject: asunto,
+                        message: mensaje,
+                        file: null,
+                        attachmentBytes: pdfAdjunto,
+                        attachmentName: pdfAdjunto != null ? $"Pedido_{order.Id}.pdf" : null,
+                        perfil: "Emailpagos"
+            );
+        }
+
+        // Método auxiliar para generar el mensaje HTML
+        private string GenerarMensajeHtmlEstadoCuenta(string nombreCliente, int clientId)
+        {
+            return $@"
+            <p>Hola {nombreCliente},</p>
+            <p>¡Tu pedido ha sido registrado correctamente! 🎉</p>
+            <p>Adjunto a este correo encontrarás un <strong>PDF con el detalle de tu pedido</strong>, incluyendo la lista de productos que solicitaste.</p>
+
+            <p>También puedes consultar tus facturas y el estado de tu cuenta haciendo clic en el siguiente enlace:</p>
+
+            <a href='https://sistemawendlandt.com/ClientStateAccount/{clientId}' 
+               style='display:inline-block;padding:12px 24px;background-color:#d6f5f5;
+                      color:#005f5f;text-decoration:none;border-radius:12px;font-weight:500;'>
+                Revisar estado de cuenta
+            </a>
+
+            <p>Gracias por confiar en Cervecería Wendlandt de México. ¡Esperamos que disfrutes tu pedido! 🍺</p>
+
+            <p>Salud,<br/>
+            El equipo de Wendlandt</p>";
+        }
+
+
+        /*public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmaill)
         {
             var order = await _repository.GetByIdAsync<Order>(orderId);
 
@@ -677,6 +749,6 @@ namespace WendlandtVentas.Core.Services
                 mensaje,
                 perfil: "Emailpagos"
             );
-        }
+        }*/
     }
 }

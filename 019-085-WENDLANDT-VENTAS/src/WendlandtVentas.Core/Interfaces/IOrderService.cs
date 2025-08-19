@@ -15,7 +15,9 @@ namespace WendlandtVentas.Core.Interfaces
         Task<Response> ActualizarTotalAsync(int orderId, decimal nuevoTotal, bool precioEspecial, string currrentUserEmail);
 
         //Agregamos este metodo para poder enviar el correo
-        Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmail);
+        //Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmail);
+
+        public Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmail, byte[] pdfAdjunto = null);
 
 
         //IQueryable<Order> FilterValues(FilterViewModel filter);

@@ -121,6 +121,11 @@
     @*<script src="~/js/monobits/dist/monolibs.js" asp-append-version="true"></script>*@
     <script src="~/js/app.min.js" asp-append-version="true"></script>
     <script src="~/lib/datepicker/js/bootstrap-datepicker.js"></script>
+    <div style="display:none">
+        <select id="productSelectPreload" style="width: 100%"></select>
+        <input type="hidden" id="CurrencyTypeGlobal" value="MXN" />
+    </div>
+    <script src="~/js/productLoader.js"></script>
     
 
     @RenderSection("Scripts", false)
