@@ -66,7 +66,10 @@ namespace WendlandtVentas.Web
             // https://www.microsoft.com/en-us/download/details.aspx?id=54284
             services.AddDbContext<AppDbContext>(c =>
                 c.UseSqlServer(Configuration.GetConnectionString("CatalogConnection")),
-    ServiceLifetime.Scoped);
+            ServiceLifetime.Scoped);
+
+            // Un servicio de negocio
+            services.AddScoped<IOrderService, OrderService>();
 
             // Add Identity DbContext
             services.AddDbContext<AppIdentityDbContext>(options =>

@@ -375,9 +375,44 @@ namespace WendlandtVentas.Infrastructure.Services
                 return result.ToString();
             }
 
-            public Task<byte[]> FillDataAndReturnPdfAsync(string path, OrderDetailsViewModel model)
+           /* public Task<byte[]> FillDataAndReturnPdfAsync(string path, Order order)
             {
-                var excelFile = model.TypeEnum == OrderType.Invoice
+
+            var model = new OrderDetailsViewModel
+            {
+                TypeEnum = order.Type, // Enum OrderType (Invoice, Remission, Return, etc.)
+                InvoiceCode = order.InvoiceCode,
+                RemissionCode = order.RemissionCode,
+                SubTotal = order.SubTotal.ToString("C"),
+                IVA = order.IVA.ToString("C"),
+                IEPS = order.IEPS.ToString("C"),
+                Total = order.Total.ToString("C"),
+                RealAmount = order.RealAmount,
+                CreateDate = order.CreatedAt,
+                Client = new ClientViewModel
+                {
+                    Name = order.Client?.Name,
+                    City = order.Client?.City,
+                    RFC = order.Client?.RFC
+                },
+                Address = new AddressViewModel
+                {
+                    AddressLocation = order.Address?.AddressLocation
+                },
+                CollectionComment = order.CollectionComment,
+                Comment = order.Comment,
+                Weight = order.Weight,
+                Products = order.Products?.Select(p => new ProductViewModel
+                {
+                    Quantity = p.Quantity,
+                    PresentationLiters = p.PresentationLiters,
+                    Price = p.Price,
+                    Total = p.Total
+                }).ToList()
+            };
+
+
+            var excelFile = model.TypeEnum == OrderType.Invoice
                     ? "Facturación Wendlandt.xlsx"
                     : "Remisión Wendlandt.xlsx";
 
@@ -501,9 +536,9 @@ namespace WendlandtVentas.Infrastructure.Services
                     return Task.FromResult(pdfStream.ToArray());
                 }
                 }
-            }
+            }*/
 
-            private string ShortenText(string text)
+           /* private string ShortenText(string text)
             {
                 return string.IsNullOrEmpty(text)
                     ? string.Empty
@@ -517,6 +552,6 @@ namespace WendlandtVentas.Infrastructure.Services
 
                 string commentText = string.Join(" ", commentsList.Select(c => c.Comments));
                 return InsertLineBreaks(commentText, 25);
-            }
+            }*/
         }
     }

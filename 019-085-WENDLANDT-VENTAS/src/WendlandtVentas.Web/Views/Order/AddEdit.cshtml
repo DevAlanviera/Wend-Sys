@@ -58,11 +58,11 @@
                                         </label>
                                     </div>
                                 }
-                                @*<!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
-                            <!-- <div class="form-check mt-2">
+                                <!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
+                            <div class="form-check mt-2">
                             <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
                             <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
-                            </div>-->*@
+                            </div>
                             </div>
                         </div>
                     }
@@ -424,8 +424,32 @@
                 $('#CurrencyType').val($(this).val());
                 CalculateTotals();
             });
+
+            function toggleRequiredFields() {
+                const selected = $('input[name="OrderType"]:checked').val();
+
+                if (selected === "Devolucion") {
+                    $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
+                        .prop('required', false)
+                        .closest('.form-group').hide();
+                } else {
+                    $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
+                        .prop('required', true)
+                        .closest('.form-group').show();
+                }
+            }
+
+            // Detectar cambios
+            $(document).on('change', 'input[name="OrderType"]', toggleRequiredFields);
+
+            // Ejecutar al inicio
+            toggleRequiredFields();
+
+
+
         });
     </script>
+
 
     <script>
         let confirmedSubmit = false;

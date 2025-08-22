@@ -81,12 +81,12 @@
 
             </div>
 
-            <!--Agregamos este checkbox, COMENTADO HASTA QUE ESTE EN PRODUCCION
+            <!--Agregamos este checkbox, COMENTADO HASTA QUE ESTE EN PRODUCCION-->
             <div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.OnRoute ? string.Empty : "hidden")>
                 <label>
                     <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Precio Especial?
                 </label>
-            </div>-->
+            </div>
 
             <div class="form-group" id="initialAmount" hidden>
                 <label asp-for="InitialAmount"></label>

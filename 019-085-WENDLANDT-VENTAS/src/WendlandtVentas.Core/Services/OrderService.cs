@@ -182,7 +182,7 @@ namespace WendlandtVentas.Core.Services
                     }
                 }*/
 
-                try
+                /*try
                 {
 
                     // 1. Generar PDF del pedido usando ExcelReaderService
@@ -198,7 +198,7 @@ namespace WendlandtVentas.Core.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error al generar PDF o enviar correo para el pedido {OrderId}", order.Id);
-                }
+                }*/
 
 
 
@@ -714,7 +714,7 @@ namespace WendlandtVentas.Core.Services
         }
 
 
-        /*public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmaill)
+        public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmaill)
         {
             var order = await _repository.GetByIdAsync<Order>(orderId);
 
@@ -749,6 +749,61 @@ namespace WendlandtVentas.Core.Services
                 mensaje,
                 perfil: "Emailpagos"
             );
+        }
+
+        /*public async Task<bool> EnviarEncuestaSatisfaccionAsync()
+        {
+            try
+            {
+                // 1. Obtener todos los clientes con su contacto
+                var clientes = await _repository.GetAsync<Client>();
+
+                if (clientes == null || !clientes.Any())
+                    return false;
+
+                foreach (var cliente in clientes)
+                {
+                    var nombreCliente = cliente.Name;
+                    var clienteEmail = cliente.Contact?.Email;
+
+                    // Si el cliente no tiene correo, saltamos
+                    if (string.IsNullOrWhiteSpace(clienteEmail))
+                        continue;
+
+                    // 2. Construir asunto y cuerpo del correo
+                    var asunto = "Queremos saber tu opinión 🍺 - Cervecería Wendlandt de México";
+
+                    var mensaje = $@"
+                <p>Hola {nombreCliente},</p>
+                <p>Gracias por confiar en <strong>Cervecería Wendlandt</strong>.</p>
+                <p>Tu opinión es muy importante para nosotros. Por eso, queremos invitarte a contestar 
+                nuestra breve encuesta de satisfacción para seguir mejorando tu experiencia con nosotros.</p>
+
+                <a href='https://sistemawendlandt.com/EncuestaSatisfaccion/{cliente.Id}' 
+                   style='display:inline-block;padding:12px 24px;background-color:#ffd966;
+                          color:#000;text-decoration:none;border-radius:12px;font-weight:500;'>
+                    Responder encuesta
+                </a>
+
+                <p>¡Gracias por tu tiempo y por ser parte de nuestra comunidad! 🍻</p>
+                <p>Salud,<br/>El equipo de Wendlandt</p>";
+
+                    // 3. Enviar correo
+                    await _emailSender.SendEmailAsync(
+                        clienteEmail,
+                        asunto,
+                        mensaje,
+                        perfil: "Emailpagos"
+                    );
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar encuestas de satisfacción a los clientes");
+                return false;
+            }
         }*/
     }
 }

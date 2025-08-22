@@ -290,6 +290,17 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Add(OrderViewModel model)
         {
+
+            // Validación condicional:
+            // Si es devolución, no validamos estas fechas
+            if (model.IsInvoice == OrderType.Return)
+            {
+                ModelState.Remove(nameof(model.PaymentPromiseDate));
+                ModelState.Remove(nameof(model.PaymentDate));
+                ModelState.Remove(nameof(model.DeliveryDay));
+            }
+
+
             if (!ModelState.IsValid)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
