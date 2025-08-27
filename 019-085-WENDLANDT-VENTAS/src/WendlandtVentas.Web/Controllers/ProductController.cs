@@ -188,7 +188,7 @@ namespace WendlandtVentas.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> Add(ProductViewModel model)
         {
-            var product = new Product();
+            Product product = new Product();
 
             try
             {

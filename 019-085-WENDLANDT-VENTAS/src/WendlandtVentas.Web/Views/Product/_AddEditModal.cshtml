@@ -1,7 +1,7 @@
 ﻿@using WendlandtVentas.Core.Entities.Enums;
 @model WendlandtVentas.Web.Models.ProductViewModels.ProductViewModel
 <div class="modal-dialog" role="document">
-    <form data-action="@ViewData["Action"]" id="form-product" class="modal-content">
+    <form asp-action="@ViewData["Action"]" asp-controller="Product" method="post" id="form-product" class="modal-content">
         <div class="modal-header">
             <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">

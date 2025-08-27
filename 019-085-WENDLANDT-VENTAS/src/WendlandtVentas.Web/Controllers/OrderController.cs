@@ -285,6 +285,7 @@ namespace WendlandtVentas.Web.Controllers
             return View("AddEdit", model);
         }
 
+
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -387,7 +388,7 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
-        [ResponseCache(Duration = 300)] // Cache HTTP por 5 minutos
+       [ResponseCache(Duration = 300)] // Cache HTTP por 5 minutos
         [HttpGet]
         public async Task<IActionResult> SearchProductsAjax(
      [FromQuery] CurrencyType currencyType,
