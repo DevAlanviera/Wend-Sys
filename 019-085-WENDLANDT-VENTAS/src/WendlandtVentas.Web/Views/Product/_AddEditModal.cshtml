@@ -1,7 +1,7 @@
 ﻿@using WendlandtVentas.Core.Entities.Enums;
 @model WendlandtVentas.Web.Models.ProductViewModels.ProductViewModel
 <div class="modal-dialog" role="document">
-    <form asp-action="@ViewData["Action"]" asp-controller="Product" method="post" id="form-product" class="modal-content">
+    <form data-action="@ViewData["Action"]" id="form-product" class="modal-content">
         <div class="modal-header">
             <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -107,138 +107,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary btn-modal-action">Guardar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
         </div>
     </form>
 </div>
-<script>
-    $(document).ready(function () {
-        // Manejar cambio en checkboxes de presentación
-        $('.presentation-check').change(function () {
-            var presentationId = $(this).val();
-            var isChecked = $(this).is(':checked');
-
-            // Habilitar/deshabilitar campos relacionados
-            $('.price-' + presentationId).prop('disabled', !isChecked);
-            $('.priceUsd-' + presentationId).prop('disabled', !isChecked);
-            $('.weight-' + presentationId).prop('disabled', !isChecked);
-
-            // Limpiar campos si se deselecciona
-            if (!isChecked) {
-                $('.price-' + presentationId).val('').removeAttr('required');
-                $('.priceUsd-' + presentationId).val('').removeAttr('required');
-                $('.weight-' + presentationId).val('').removeAttr('required');
-            } else {
-                $('.price-' + presentationId).attr('required', 'true');
-                $('.priceUsd-' + presentationId).attr('required', 'true');
-                $('.weight-' + presentationId).attr('required', 'true');
-            }
-        });
-
-        // Manejar cambio en radio buttons de distinción
-        $('.radio-distinction').change(function () {
-            var distinctionValue = $(this).val();
-            var seasonGroup = $('.input-season');
-
-            // Mostrar/ocultar campo de temporada
-            if (distinctionValue === 'Season') { // Cambiado para que funcione con el valor string
-                seasonGroup.removeClass('d-none');
-                $('#Season').attr('required', 'true');
-            } else {
-                seasonGroup.addClass('d-none');
-                $('#Season').val('').removeAttr('required');
-            }
-        });
-
-        // Interceptar el envío del formulario
-        $('#form-product').on('submit', function (e) {
-            e.preventDefault();
-
-            // Resetear errores
-            $('.modal-errors').html('');
-            $('.btn-modal-action').prop('disabled', true)
-                .html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...');
-
-            // Construir el array PresentationPricesAdd
-            var presentationPrices = [];
-            var hasErrors = false;
-
-            $('.presentation-check:checked').each(function () {
-                var presentationId = $(this).val();
-                var priceInput = $('.price-' + presentationId);
-                var priceUsdInput = $('.priceUsd-' + presentationId);
-                var weightInput = $('.weight-' + presentationId);
-
-                var price = parseFloat(priceInput.val()) || 0;
-                var priceUsd = parseFloat(priceUsdInput.val()) || 0;
-                var weight = parseFloat(weightInput.val()) || 0;
-
-                // Validar campos requeridos
-                if (price <= 0) {
-                    priceInput.addClass('is-invalid');
-                    hasErrors = true;
-                } else {
-                    priceInput.removeClass('is-invalid');
-                }
-
-                if (priceUsd <= 0) {
-                    priceUsdInput.addClass('is-invalid');
-                    hasErrors = true;
-                } else {
-                    priceUsdInput.removeClass('is-invalid');
-                }
-
-                if (weight <= 0) {
-                    weightInput.addClass('is-invalid');
-                    hasErrors = true;
-                } else {
-                    weightInput.removeClass('is-invalid');
-                }
-
-                if (!hasErrors) {
-                    presentationPrices.push({
-                        PresentationId: parseInt(presentationId),
-                        Price: price,
-                        PriceUsd: priceUsd,
-                        Weight: weight
-                    });
-                }
-            });
-
-            if (hasErrors) {
-                $('.modal-errors').html('<p class="text-danger">Todos los campos de precios y peso deben ser mayores a 0 para las presentaciones seleccionadas</p>');
-                $('.btn-modal-action').prop('disabled', false).html('Guardar');
-                return false;
-            }
-
-            if (presentationPrices.length === 0) {
-                $('.modal-errors').html('<p class="text-danger">Seleccione al menos una presentación</p>');
-                $('.btn-modal-action').prop('disabled', false).html('Guardar');
-                return false;
-            }
-
-            // Crear input hidden para enviar los datos como JSON
-            $('#form-product').find('input[name="PresentationPricesAdd"]').remove();
-
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'PresentationPricesAdd',
-                value: JSON.stringify(presentationPrices)
-            }).appendTo('#form-product');
-
-            // Continuar con el envío normal del formulario
-            this.submit();
-        });
-
-        // Inicializar estado de campos al cargar
-        $('.presentation-check:checked').each(function () {
-            $(this).trigger('change');
-        });
-
-        // Inicializar distinción basado en el valor actual
-        var currentDistinction = '@Model.Distinction';
-        if (currentDistinction) {
-            $('input[name="radioDistinction"][value="' + currentDistinction + '"]').trigger('change');
-        }
-    });
-</script>

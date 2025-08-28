@@ -217,7 +217,7 @@ namespace WendlandtVentas.Web.Controllers
                 // Si falla al agregar las presentaciones, borramos el producto nuevo.
                 if (product.Id > 0)
                     await _repository.DeleteAsync(product);
-                
+
                 _logger.LogInformation($"Error: {e.Message}");
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el producto"));
             }

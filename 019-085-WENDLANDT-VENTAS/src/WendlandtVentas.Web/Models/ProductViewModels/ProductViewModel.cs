@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using WendlandtVentas.Core.Entities.Enums;
@@ -22,8 +23,11 @@ namespace WendlandtVentas.Web.Models.ProductViewModels
         public SelectList Distinctions { get; set; }
 
         [Required(ErrorMessage = "Campo requerido")]
+        [BindRequired]
         public IEnumerable<PresentationPrice> PresentationPricesAdd { get; set; } = new List<PresentationPrice>();
+        [BindNever]
         public IEnumerable<PresentationPrice> PresentationsEdit { get; set; } = new List<PresentationPrice>();
+        [BindNever]
         public IEnumerable<PresentationPrice> Presentations { get; set; } = new List<PresentationPrice>();
     }
 
