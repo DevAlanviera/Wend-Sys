@@ -526,39 +526,69 @@
             }
         }
 
-        $(document).ready(function () {
+                $(document).ready(function () {
             let confirmarEnvio = false;
+            let alreadySubmitted = false;
 
-            // Interceptamos el click en el botón "Guardar"
-            $('.btn-guardar').on('click', function (e) {
-                e.preventDefault(); // Evita que se envíe aún
+            // Selector del botón y del formulario
+            const $btnGuardar = $('.btn-guardar');
+            const $btnConfirmarModal = $('#confirmarEnvio');
+            const $form = $('#forma-order');
 
-                // Obtener el tipo de orden seleccionado
-                let radioSeleccionado = $('input[name="IsInvoice"]:checked');
+            $btnGuardar.on('click.confirmacion', function (e) {
+                e.preventDefault();
 
-                if (radioSeleccionado.length) {
-                    // Obtenemos el texto de la etiqueta asociada al radio button
-                    radioSeleccionado = radioSeleccionado.closest('.form-check').find('.form-check-label').text().trim();
+                // --- CAMBIO AQUÍ: Ya no deshabilitamos el botón al abrir el modal ---
+                // Solo verificamos si ya se envió para no hacer nada
+                if (alreadySubmitted) return;
+
+                // Obtener tipo de orden para el texto del modal
+                let $radioSeleccionado = $('input[name="IsInvoice"]:checked');
+                let textoTipo = "Pedido";
+                if ($radioSeleccionado.length) {
+                    textoTipo = $radioSeleccionado.closest('.form-check')
+                                                 .find('.form-check-label').text().trim();
                 }
-                // Actualizar el texto en el modal
-                $('.tipo-orden-texto').text(radioSeleccionado);
-                $('#confirmarGuardadoModal').modal('show'); // Muestra el modal
+
+                $('.tipo-orden-texto').text(textoTipo);
+                $('#confirmarGuardadoModal').modal('show');
             });
 
-            // Al confirmar desde el modal
-            $('#confirmarEnvio').on('click', function () {
-                confirmarEnvio = true;
-                $('#confirmarGuardadoModal').modal('hide');
-                $('#forma-order').submit(); // Envía el formulario
-            });
-
-            // Opcional: evitar doble envío si alguien confirma muchas veces
-            $('#forma-order').on('submit', function (e) {
+            // Asegurar que los botones estén activos al cerrar el modal (por cualquier vía)
+            $('#confirmarGuardadoModal').on('hidden.bs.modal', function () {
                 if (!confirmarEnvio) {
-                    e.preventDefault(); // Si no viene del modal, bloquea
+                    $btnGuardar.prop('disabled', false).removeClass('disabled');
+                    $btnConfirmarModal.prop('disabled', false);
                 }
+            });
+
+            // Acción de confirmar dentro del modal
+            $btnConfirmarModal.on('click', function () {
+                confirmarEnvio = true;
+
+                // Deshabilitamos ahora sí, ya que el usuario dio el "OK" definitivo
+                $(this).prop('disabled', true);
+                $btnGuardar.prop('disabled', true);
+
+                $('#confirmarGuardadoModal').modal('hide');
+
+                // Enviamos el formulario
+                setTimeout(function() {
+                    $form.trigger("submit");
+                }, 300);
+            });
+
+            $form.on('submit', function (e) {
+                if (!confirmarEnvio || alreadySubmitted) {
+                    e.preventDefault();
+                    return;
+                }
+                alreadySubmitted = true;
+                // Opcional: mostrar un spinner o cambiar texto del botón
+                $btnGuardar.text('Guardando...');
             });
         });
+
      
     </script>
     

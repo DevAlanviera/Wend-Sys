@@ -20,7 +20,7 @@ using WendlandtVentas.Web.Extensions;
 
 namespace WendlandtVentas.Web.Controllers
 {
-    [Authorize(Roles = "Administrator, AdministratorCommercial, Billing, BillingAssistant, Sales")]
+    [Authorize(Roles = "Administrator, AdministratorCommercial, Storekeeper ,Billing, BillingAssistant, Sales")]
     public class ReportController : Controller
     {
         private readonly ILogger<NotificationController> _logger;

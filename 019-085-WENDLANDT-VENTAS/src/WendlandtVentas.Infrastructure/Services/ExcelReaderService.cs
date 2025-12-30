@@ -24,6 +24,7 @@ namespace WendlandtVentas.Infrastructure.Services
         private readonly IAsyncRepository _asyncRepository;
         private readonly UserManager<ApplicationUser> _userManager;
 
+
         public ExcelReaderService(IAsyncRepository asyncRepository,
             UserManager<ApplicationUser> userManager)
         {
@@ -375,157 +376,124 @@ namespace WendlandtVentas.Infrastructure.Services
                 return result.ToString();
             }
 
-           /* public Task<byte[]> FillDataAndReturnPdfAsync(string path, Order order)
+        public async Task<byte[]> FillDataAndReturnPdfAsync(string path, Order order)
+        {
+            var excelFile = order.Type == OrderType.Invoice
+                ? "Facturación Wendlandt.xlsx"
+                : "Remisión Wendlandt.xlsx";
+
+            var templatePath = Path.Combine(path, excelFile);
+
+            using (ExcelEngine excelEngine = new ExcelEngine())
             {
+                IApplication application = excelEngine.Excel;
 
-            var model = new OrderDetailsViewModel
-            {
-                TypeEnum = order.Type, // Enum OrderType (Invoice, Remission, Return, etc.)
-                InvoiceCode = order.InvoiceCode,
-                RemissionCode = order.RemissionCode,
-                SubTotal = order.SubTotal.ToString("C"),
-                IVA = order.IVA.ToString("C"),
-                IEPS = order.IEPS.ToString("C"),
-                Total = order.Total.ToString("C"),
-                RealAmount = order.RealAmount,
-                CreateDate = order.CreatedAt,
-                Client = new ClientViewModel
+                // ✅ CORRECCIÓN: usar templatePath (ruta completa)
+                using (FileStream excelStream = new FileStream(templatePath, FileMode.Open, FileAccess.Read))
                 {
-                    Name = order.Client?.Name,
-                    City = order.Client?.City,
-                    RFC = order.Client?.RFC
-                },
-                Address = new AddressViewModel
-                {
-                    AddressLocation = order.Address?.AddressLocation
-                },
-                CollectionComment = order.CollectionComment,
-                Comment = order.Comment,
-                Weight = order.Weight,
-                Products = order.Products?.Select(p => new ProductViewModel
-                {
-                    Quantity = p.Quantity,
-                    PresentationLiters = p.PresentationLiters,
-                    Price = p.Price,
-                    Total = p.Total
-                }).ToList()
-            };
-
-
-            var excelFile = model.TypeEnum == OrderType.Invoice
-                    ? "Facturación Wendlandt.xlsx"
-                    : "Remisión Wendlandt.xlsx";
-
-                var templatePath = Path.Combine(path, $"wwwroot/resources/{excelFile}");
-
-                using (ExcelEngine excelEngine = new ExcelEngine())
-                using (FileStream excelTemplateStream = new FileStream(templatePath, FileMode.Open, FileAccess.Read))
-                {
-                    IApplication application = excelEngine.Excel;
-                    IWorkbook workbook = application.Workbooks.Open(excelTemplateStream);
+                    IWorkbook workbook = application.Workbooks.Open(excelStream);
                     IWorksheet worksheet = workbook.Worksheets[0];
 
                     // ======= BLOQUE DE LLENADO DE CELDAS =======
-                    if (model.TypeEnum == OrderType.Invoice)
+                    if (order.Type == OrderType.Invoice)
                     {
-                        worksheet.Range["H3"].Text = model.InvoiceCode;
-                        worksheet.Range["R3"].Text = model.InvoiceCode;
-                        worksheet.Range["H5"].Text = model.RemissionCode;
-                        worksheet.Range["R5"].Text = model.RemissionCode;
-                        worksheet.Range["I27"].Text = model.SubTotal;
-                        worksheet.Range["I28"].Text = model.IVA;
-                        worksheet.Range["I29"].Text = model.IEPS;
-                        worksheet.Range["I30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
-                        worksheet.Range["S27"].Text = model.SubTotal;
-                        worksheet.Range["S28"].Text = model.IVA;
-                        worksheet.Range["S29"].Text = model.IEPS;
-                        worksheet.Range["S30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
+                        worksheet.Range["H3"].Text = order.InvoiceCode;
+                        worksheet.Range["R3"].Text = order.InvoiceCode;
+                        worksheet.Range["H5"].Text = order.RemissionCode;
+                        worksheet.Range["R5"].Text = order.RemissionCode;
 
-                        worksheet.Range["H7"].Text = model.CreateDate.Day.ToString();
-                        worksheet.Range["I7"].Text = model.CreateDate.Month.ToString();
-                        worksheet.Range["J7"].Text = model.CreateDate.Year.ToString();
-                        worksheet.Range["B9"].Text += model.Client.Name;
-                        worksheet.Range["B10"].Text += model.Address.AddressLocation;
-                        worksheet.Range["B11"].Text += model.Client.City;
-                        worksheet.Range["H11"].Text += model.Client.RFC;
+                        worksheet.Range["H7"].Text = order.CreatedAt.Day.ToString();
+                        worksheet.Range["I7"].Text = order.CreatedAt.Month.ToString();
+                        worksheet.Range["J7"].Text = order.CreatedAt.Year.ToString();
 
-                        worksheet.Range["D27"].Text += ShortenText(model.CollectionComment);
-                        worksheet.Range["D29"].Text += ShortenText(model.Comment);
-                        worksheet.Range["D31"].Text += $"{model.Weight} Kg.";
+                        worksheet.Range["B9"].Text += order.Client?.Name;
+                        worksheet.Range["B10"].Text += order.Address;
+                        worksheet.Range["B11"].Text += order.Client?.City;
+                        worksheet.Range["H11"].Text += order.Client?.RFC;
 
-                        string commentText = GetClientComments(model);
-                        worksheet.Range["D25:F26"].Text = commentText;
-                        worksheet.Range["N25:P26"].Text = commentText;
+                        worksheet.Range["D27"].Text += ShortenText(order.CollectionComment);
+                        worksheet.Range["D29"].Text += ShortenText(order.Comment);
+                       
+
                         worksheet.Range["D25:F26"].CellStyle.WrapText = true;
                         worksheet.Range["N25:P26"].CellStyle.WrapText = true;
 
-                        worksheet.Range["R7"].Text = model.CreateDate.Day.ToString();
-                        worksheet.Range["S7"].Text = model.CreateDate.Month.ToString();
-                        worksheet.Range["T7"].Text = model.CreateDate.Year.ToString();
-                        worksheet.Range["L9"].Text += model.Client.Name;
-                        worksheet.Range["L10"].Text += model.Address.AddressLocation;
-                        worksheet.Range["L11"].Text += model.Client.City;
-                        worksheet.Range["R11"].Text += model.Client.RFC;
+                        worksheet.Range["R7"].Text = order.CreatedAt.Day.ToString();
+                        worksheet.Range["S7"].Text = order.CreatedAt.Month.ToString();
+                        worksheet.Range["T7"].Text = order.CreatedAt.Year.ToString();
+                        worksheet.Range["L9"].Text += order.Client?.Name;
+                        worksheet.Range["L10"].Text += order.Address;
+                        worksheet.Range["L11"].Text += order.Client?.City;
+                        worksheet.Range["R11"].Text += order.Client?.RFC;
 
-                        worksheet.Range["N27"].Text += ShortenText(model.CollectionComment);
-                        worksheet.Range["N29"].Text += ShortenText(model.Comment);
-                        worksheet.Range["N31"].Text += $"{model.Weight} Kg.";
+                        worksheet.Range["N27"].Text += ShortenText(order.CollectionComment);
+                        worksheet.Range["N29"].Text += ShortenText(order.Comment);
+                        
                     }
                     else
                     {
-                        worksheet.Range["E3"].Text = model.RemissionCode;
-                        worksheet.Range["O3"].Text = model.RemissionCode;
-                        worksheet.Range["I30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
-                        worksheet.Range["S30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
+                        worksheet.Range["E3"].Text = order.RemissionCode;
+                        worksheet.Range["O3"].Text = order.RemissionCode;
 
-                        worksheet.Range["E5"].Text = model.CreateDate.Day.ToString();
-                        worksheet.Range["G5"].Text = model.CreateDate.Month.ToString();
-                        worksheet.Range["I5"].Text = model.CreateDate.Year.ToString();
-                        worksheet.Range["E7"].Text += model.Client.Name;
-                        worksheet.Range["E9"].Text += model.Address.AddressLocation;
-                        worksheet.Range["E12"].Text += model.Client.City;
-                        worksheet.Range["H12"].Text += model.Client.RFC;
+                        worksheet.Range["E5"].Text = order.CreatedAt.Day.ToString();
+                        worksheet.Range["G5"].Text = order.CreatedAt.Month.ToString();
+                        worksheet.Range["I5"].Text = order.CreatedAt.Year.ToString();
+                        worksheet.Range["E7"].Text += order.Client?.Name;
+                        worksheet.Range["E9"].Text += order.Address;
+                        worksheet.Range["E12"].Text += order.Client?.City;
+                        worksheet.Range["H12"].Text += order.Client?.RFC;
 
-                        string commentText = GetClientComments(model);
-                        worksheet.Range["N26:P27"].Text = commentText;
-                        worksheet.Range["D26:F27"].Text = commentText;
                         worksheet.Range["N26:P27"].CellStyle.WrapText = true;
                         worksheet.Range["D26:F27"].CellStyle.WrapText = true;
 
-                        worksheet.Range["D28"].Text += ShortenText(model.CollectionComment);
-                        worksheet.Range["D30"].Text += ShortenText(model.Comment);
-                        worksheet.Range["D32"].Text += $"{model.Weight} Kg.";
+                        worksheet.Range["D28"].Text += ShortenText(order.CollectionComment);
+                        worksheet.Range["D30"].Text += ShortenText(order.Comment);
+                        
 
-                        worksheet.Range["O5"].Text = model.CreateDate.Day.ToString();
-                        worksheet.Range["Q5"].Text = model.CreateDate.Month.ToString();
-                        worksheet.Range["S5"].Text = model.CreateDate.Year.ToString();
-                        worksheet.Range["O7"].Text += model.Client.Name;
-                        worksheet.Range["O9"].Text += model.Address.AddressLocation;
-                        worksheet.Range["O12"].Text += model.Client.City;
-                        worksheet.Range["R12"].Text += model.Client.RFC;
+                        worksheet.Range["O5"].Text = order.CreatedAt.Day.ToString();
+                        worksheet.Range["Q5"].Text = order.CreatedAt.Month.ToString();
+                        worksheet.Range["S5"].Text = order.CreatedAt.Year.ToString();
+                        worksheet.Range["O7"].Text += order.Client?.Name;
+                        worksheet.Range["O9"].Text += order.Address;
+                        worksheet.Range["O12"].Text += order.Client?.City;
+                        worksheet.Range["R12"].Text += order.Client?.RFC;
 
-                        worksheet.Range["N28"].Text += ShortenText(model.CollectionComment);
-                        worksheet.Range["N30"].Text += ShortenText(model.Comment);
-                        worksheet.Range["N32"].Text += $"{model.Weight} Kg.";
+                        worksheet.Range["N28"].Text += ShortenText(order.CollectionComment);
+                        worksheet.Range["N30"].Text += ShortenText(order.Comment);
+                        
                     }
 
-                    int i = model.TypeEnum == OrderType.Remission ? 15 : 14;
-                    foreach (var product in model.Products)
+                    int i = order.Type == OrderType.Remission ? 15 : 14;
+
+                    foreach (var product in order.OrderProducts.Where(p => !p.IsDeleted))
                     {
+                        var presentation = product.ProductPresentation;
+
+                        // Si EF no cargó las referencias, las buscamos temporalmente:
+                        if (presentation?.Product == null || presentation?.Presentation == null)
+                        {
+                            presentation = await _asyncRepository.GetByIdAsync<ProductPresentation>(product.ProductPresentationId);
+                        }
+
+                        var productName = presentation?.NameExtended() ?? "Sin nombre";
+
                         if (i < 30)
                         {
                             worksheet.Range[$"B{i}"].Text = product.Quantity.ToString();
-                            worksheet.Range[$"C{i}"].Text = product.PresentationLiters;
-                            worksheet.Range[$"G{i}"].Text = product.Price.ToString("C");
-                            worksheet.Range[$"I{i}"].Text = product.Total.ToString("C");
+                            worksheet.Range[$"C{i}"].Text = productName;
+                            worksheet.Range[$"G{i}"].Text = product.Price.ToString("C2");
+                            worksheet.Range[$"I{i}"].Text = (product.Price * product.Quantity).ToString("C2");
 
                             worksheet.Range[$"L{i}"].Text = product.Quantity.ToString();
-                            worksheet.Range[$"M{i}"].Text = product.PresentationLiters;
-                            worksheet.Range[$"Q{i}"].Text = product.Price.ToString("C");
-                            worksheet.Range[$"S{i}"].Text = product.Total.ToString("C");
+                            worksheet.Range[$"M{i}"].Text = productName;
+                            worksheet.Range[$"Q{i}"].Text = product.Price.ToString("C2");
+                            worksheet.Range[$"S{i}"].Text = (product.Price * product.Quantity).ToString("C2");
                         }
+
                         i++;
                     }
+
+
 
                     // ======= GENERAR PDF EN MEMORIA =======
                     using (MemoryStream pdfStream = new MemoryStream())
@@ -533,25 +501,33 @@ namespace WendlandtVentas.Infrastructure.Services
                         XlsIORenderer renderer = new XlsIORenderer();
                         PdfDocument pdfDocument = renderer.ConvertToPDF(workbook);
                         pdfDocument.Save(pdfStream);
-                    return Task.FromResult(pdfStream.ToArray());
-                }
-                }
-            }*/
 
-           /* private string ShortenText(string text)
-            {
-                return string.IsNullOrEmpty(text)
-                    ? string.Empty
-                    : text.Length > 50 ? $"{text.Substring(0, 50)}..." : text;
+                        workbook.Close();
+                        excelEngine.Dispose();
+
+                        return await Task.FromResult(pdfStream.ToArray());
+                    }
+                }
             }
-
-            private string GetClientComments(OrderDetailsViewModel model)
-            {
-                var commentsList = model.Client.Comments.ToList();
-                if (!commentsList.Any()) return "No hay comentarios disponibles";
-
-                string commentText = string.Join(" ", commentsList.Select(c => c.Comments));
-                return InsertLineBreaks(commentText, 25);
-            }*/
         }
+
+
+
+
+        private string ShortenText(string text)
+         {
+             return string.IsNullOrEmpty(text)
+                 ? string.Empty
+                 : text.Length > 50 ? $"{text.Substring(0, 50)}..." : text;
+         }
+
+         private string GetClientComments(OrderDetailsViewModel model)
+         {
+             var commentsList = model.Client.Comments.ToList();
+             if (!commentsList.Any()) return "No hay comentarios disponibles";
+
+             string commentText = string.Join(" ", commentsList.Select(c => c.Comments));
+             return InsertLineBreaks(commentText, 25);
+         }
     }
+}

@@ -39,7 +39,6 @@ namespace WendlandtVentas.Core.Services
         private readonly ILogger<OrderService> _logger;
         private readonly IEmailSender _emailSender;
         private readonly IExcelReadService _excelReaderService;
-
         private readonly IBitacoraService _bitacoraService;
 
         public OrderService(UserManager<ApplicationUser> userManager,
@@ -72,7 +71,12 @@ namespace WendlandtVentas.Core.Services
                 ? dates.DeliveryDay.AddDays(client.CreditDays + 1)
                 : DateTime.UtcNow.ToLocalTime().AddDays(client.CreditDays + 1);
 
-            var productPresentations = (await _repository.ListAllAsync<ProductPresentation>()).Where(c => model.ProductPresentationIds.Any(m => m == c.Id));
+            var productPresentations = await _repository.GetQueryableExisting<ProductPresentation>()
+            .Include(pp => pp.Product)
+            .Include(pp => pp.Presentation)
+            .Where(c => model.ProductPresentationIds.Any(m => m == c.Id))
+            .ToListAsync();
+
 
             var orderProducts = new List<OrderProduct>();
             var orderPromotions = new List<OrderPromotion>();
@@ -137,10 +141,7 @@ namespace WendlandtVentas.Core.Services
                 user.Id, model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
                 orderProducts, orderPromotions, model.Address, model.AddressName,
                 dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(),
-                model.PayType, model.CurrencyType)
-            {
-                ProntoPago = model.ProntoPago
-            };
+                model.PayType, model.CurrencyType);
 
             
 
@@ -169,41 +170,39 @@ namespace WendlandtVentas.Core.Services
                 await _notificationService.AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
                 var bitacora = new Bitacora(order.Id, user.Name, "Crear pedido");
                 await _bitacoraService.AddAsync(bitacora);
-
+                
                 _cacheService.InvalidateOrderCache();
-
-                // Enviar correo de estado de cuenta después de guardar el pedido
-                /*if (!model.ProntoPago)
+               // string mensaje = (client.Channel == Entities.Enums.Channel.Distributor)
+                // ? "Confirmado: Es un Distribuidor"
+                // : $"Cuidado: El canal actual es {client.Channel}";
+               // Console.WriteLine(mensaje  + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+                if (client.Channel == Entities.Enums.Channel.Distributor)
                 {
-                    var enviado = await EnviarEstadoCuentaAsync(order.Id, clienteEmail);
-                    if (!enviado)
+                    // Console.WriteLine("SI ES DISTRIBUIDORRR" + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+                    try
                     {
-                        _logger.LogWarning("No se pudo enviar el estado de cuenta del pedido {OrderId}", order.Id);
+                        // 1. Generar PDF del pedido usando ExcelReaderService
+                        var pdfBytes = await _excelReaderService.FillDataAndReturnPdfAsync("wwwroot/resources", order);
+
+                       
+                        // 2.3 Enviar correo al cliente con el PDF adjunto
+                        var enviado = await EnviarEstadoCuentaAsync(order.Id, clienteEmail, pdfBytes);
+
+                        if (!enviado)
+                            _logger.LogWarning("No se pudo enviar el estado de cuenta del pedido {OrderId}", order.Id);
                     }
-                }*/
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error al generar PDF o enviar correo para el pedido {OrderId}", order.Id);
+                    }
+                
+               }
+               // else
+               // {
+                //    Console.WriteLine("no es distribuidorrrr: " + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+               // }
 
-                /*try
-                {
-
-                    // 1. Generar PDF del pedido usando ExcelReaderService
-                    var pdfBytes = await _excelReaderService.FillDataAndReturnPdfAsync("wwwroot/resources", order);
-
-
-                    // 2.3 Enviar correo al cliente con el PDF adjunto
-                    var enviado = await EnviarEstadoCuentaAsync(order.Id, clienteEmail, pdfBytes);
-
-                    if (!enviado)
-                        _logger.LogWarning("No se pudo enviar el estado de cuenta del pedido {OrderId}", order.Id);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error al generar PDF o enviar correo para el pedido {OrderId}", order.Id);
-                }*/
-
-
-
-
-                return new Response(true, "Pedido guardado");
+                    return new Response(true, "Pedido guardado");
 
                 
             }
@@ -355,8 +354,6 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, "Error al actualizar el total.");
             }
         }
-
-
         //Se necesita desarrollar para cuando esta desactivado el valor del realamount se haga 0.0
 
         //public IQueryable<Order> FilterValues(FilterViewModel filter)
@@ -668,20 +665,23 @@ namespace WendlandtVentas.Core.Services
 
         public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmail, byte[] pdfAdjunto = null)
         {
-            // 1️⃣ Obtener la orden y validar
+            //Obtener la orden y validar
             var order = await _repository.GetByIdAsync<Order>(orderId);
             if (order == null)
                 return false;
 
             var nombreCliente = order.Client.Name;
 
-            // 2️⃣ Generar asunto y mensaje HTML
+            //Generar asunto y mensaje HTML
             var asunto = $"¡Pedido #{order.Id} realizado con éxito! - Cervecería Wendlandt de México";
             var mensaje = GenerarMensajeHtmlEstadoCuenta(nombreCliente, order.ClientId);
+            //Console.WriteLine("ENVIANDO CORREOOO");
 
-            // 3️⃣ Enviar correo
+           // Console.WriteLine("\n \n \n \n \n \n \n \n \n \n \n" + "Enviando a Email destino: " + clienteEmail + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+
+            //Enviar correo
             return await _emailSender.SendEmailAsync(
-                       email:"alan.cordova@wendlandt.com.mx", //clienteEmail,
+                       email: clienteEmail, //clienteEmail,
                         subject: asunto,
                         message: mensaje,
                         file: null,
@@ -714,37 +714,55 @@ namespace WendlandtVentas.Core.Services
         }
 
 
-        public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmaill)
+        public async Task<bool> EnviarEstadoCuentaAsync(int orderId, string clienteEmailManual = null)
         {
+            // Es vital cargar el Cliente y sus Contactos para que no sean null
+            // Nota: Asegúrate que tu repositorio soporte Include o usa una especificación
             var order = await _repository.GetByIdAsync<Order>(orderId);
 
-            if (order == null)
+            if (order == null || order.Client == null)
                 return false;
-            //Cambiar variable para enviar el correo al del cliente a clienteEmaill
-            var clienteEmail = "alan.cordova@wendlandt.com.mx";
+
+            // Lógica de prioridad para el Email:
+            // 1. El email que viene por parámetro (si existe)
+            // 2. El email del primer contacto del cliente
+            // 3. Email de respaldo (hardcoded)
+            string emailDestino = clienteEmailManual
+                ?? order.Client.Contacts?.FirstOrDefault()?.Email
+                ?? "alan.cordova@wendlandt.com.mx";
+
+            Console.WriteLine("ENVIANDO CORREOOO");
+
+            Console.WriteLine("\n \n \n \n \n \n \n \n \n \n \n" + "Enviando a Email destino: " + order.Client.Contacts?.FirstOrDefault()?.Email + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+
             var nombreCliente = order.Client.Name;
-
             var asunto = "¡Pedido realizado con éxito! - Cervecería Wendlandt de México";
+
+            // Construcción del mensaje con el enlace dinámico al portal de clientes
             var mensaje = $@"
-            <p>Hola {nombreCliente},</p>
-            <p>¡Tu pedido ha sido registrado correctamente! 🎉</p>
-            <p>Adjunto a este correo encontrarás un <strong>PDF con el detalle de tu pedido</strong>, incluyendo la lista de productos que solicitaste.</p>
+            <div style='font-family: sans-serif; color: #333;'>
+                <p>Hola <strong>{nombreCliente}</strong>,</p>
+                <p>¡Tu pedido ha sido registrado correctamente! 🎉</p>
+                <p>Adjunto a este correo encontrarás un <strong>PDF con el detalle de tu pedido</strong>, incluyendo la lista de productos que solicitaste.</p>
 
-            <p>También puedes consultar tus facturas y el estado de tu cuenta haciendo clic en el siguiente enlace:</p>
+                <p>También puedes consultar tus facturas y el estado de tu cuenta haciendo clic en el siguiente enlace:</p>
 
-            <a href='https://sistemawendlandt.com/ClientStateAccount/{order.ClientId}' 
-               style='display:inline-block;padding:12px 24px;background-color:#d6f5f5;
-                      color:#005f5f;text-decoration:none;border-radius:12px;font-weight:500;'>
-                Revisar estado de cuenta
-            </a>
+                <div style='margin: 20px 0;'>
+                    <a href='https://sistemawendlandt.com/ClientStateAccount/{order.ClientId}' 
+                       style='display:inline-block;padding:12px 24px;background-color:#d6f5f5;
+                              color:#005f5f;text-decoration:none;border-radius:12px;font-weight:bold;'>
+                        Revisar estado de cuenta
+                    </a>
+                </div>
 
-            <p>Gracias por confiar en Cervecería Wendlandt de México. ¡Esperamos que disfrutes tu pedido! 🍺</p>
+                <p>Gracias por confiar en Cervecería Wendlandt de México. ¡Esperamos que disfrutes tu pedido! 🍺</p>
 
-            <p>Salud,<br/>
-            El equipo de Wendlandt</p>";
-
+                <p>Salud,<br/>
+                <strong>El equipo de Wendlandt</strong></p>
+            </div>";
+            Console.WriteLine("\n \n \n \n \n \n \n \n \n \n \n" + "Enviando a Email destino: " + emailDestino + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
             return await _emailSender.SendEmailAsync(
-                clienteEmail,
+                "alan.cordova@wendlandt.com.mx",
                 asunto,
                 mensaje,
                 perfil: "Emailpagos"

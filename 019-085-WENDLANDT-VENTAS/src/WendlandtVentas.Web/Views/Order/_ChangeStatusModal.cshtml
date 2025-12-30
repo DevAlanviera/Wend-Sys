@@ -2,7 +2,7 @@
 @using WendlandtVentas.Core.Entities.Enums
 
 <div class="modal-dialog" role="document">
-    <form asp-action="@ViewData["Action"]" asp-antiforgery="true" class="modal-content forma-ajax--modal">
+    <form asp-action="@ViewData["Action"]" id="formActualizarTotal" asp-antiforgery="true" class="modal-content forma-ajax--modal">
         <div class="modal-header">
             <h4 class="modal-title" id="addModal-label">@ViewData["ModalTitle"]</h4>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -57,9 +57,6 @@
                     @Html.DropDownListFor(m => m.Status, Model.StatusList, "Seleccionar estado", new { @class = "form-control status-select", @style = "width:100%" })
                     <span asp-validation-for="Status" class="text-danger"></span>
                 </div>
-
-
-                
                 <div class="col mb-3" id="invoicecode" @(Model.Status == OrderStatus.OnRoute && Model.Type == OrderType.Invoice ? string.Empty : "hidden")>
                     <label asp-for="InvoiceCode"></label> <b class="text-danger">*</b>
                     <input asp-for="InvoiceCode" class="form-control" />
@@ -82,11 +79,12 @@
             </div>
 
             <!--Agregamos este checkbox, COMENTADO HASTA QUE ESTE EN PRODUCCION-->
-            @*<div class="form-group" id="precioEspecialGroup" @(Model.Status == OrderStatus.OnRoute ? string.Empty : "hidden")>
+           <div class="form-group" id="precioEspecialGroup" @((Model.Status == OrderStatus.PartialPayment || Model.Status == OrderStatus.Paid)
+                 ? string.Empty : "hidden")>
                 <label>
-                    <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Precio Especial?
+                    <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Pronto Pago?
                 </label>
-            </div>*@
+            </div>
 
             <div class="form-group" id="initialAmount" hidden>
                 <label asp-for="InitialAmount"></label>
@@ -105,44 +103,66 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
         </div>
     </form>
 </div>
 
 <script>
 
+           function togglePrecioEspecialVisibility() {
+        const statusText = $("#Status option:selected").text();
+
+        // Mostrar cuando el texto del Status sea Pago parcial o Pagado
+        if (statusText === "Pago parcial" || statusText === "Pagado") {
+            $("#precioEspecialGroup").removeAttr("hidden");
+        } else {
+            $("#precioEspecialGroup").attr("hidden", "");
+            $("#PrecioEspecial").prop("checked", false);
+        }
+    }
+
     function toggleRealAmountVisibility() {
-                const isOnRoute = $("#Status").find('option:selected').text() == "En ruta";
-                const isPrecioEspecialChecked = $("#PrecioEspecial").is(":checked");
+        const statusText = $("#Status option:selected").text();
+        const precioEspecialChecked = $("#PrecioEspecial").is(":checked");
 
-                if (isOnRoute && isPrecioEspecialChecked) {
-                    $('#realAmountGroup').removeAttr('hidden');
-                } else {
-                    $('#realAmountGroup').attr('hidden', '');
-                    $('#RealAmount').val(''); // Limpiar el campo al ocultarlo
-                }
-            }
+       if ((statusText === "Pagado") && precioEspecialChecked) {
+            $("#realAmountGroup").removeAttr("hidden");
+        } else {
+            $("#realAmountGroup").attr("hidden", "");
+            $("#RealAmount").val("");
+        }
+    }
 
-    $(function () {
-        // Inicialización
-        if ($("#Status").find('option:selected').text() == "Pago parcial") {
-            $('#initialAmount').removeAttr('hidden');
+           $(function () {
+
+        // --- Inicialización ---
+        togglePrecioEspecialVisibility();
+        toggleRealAmountVisibility();
+
+        // Mostrar initialAmount si el valor inicial es "Pago parcial"
+        if ($("#Status").find("option:selected").text() === "Pago parcial") {
+            $("#initialAmount").removeAttr("hidden");
         }
 
-        toggleRealAmountVisibility(); // Aplicar visibilidad inicial
+        // --- Event Listeners ---
+        $("#Status").change(function () {
+            togglePrecioEspecialVisibility();
+            toggleRealAmountVisibility();
+        });
 
+        $("#PrecioEspecial").change(function () {
+            toggleRealAmountVisibility();
+        });
 
-
-        if ($("#Status").find('option:selected').text() == "Pago parcial")
-            $('#initialAmount').removeAttr('hidden');
-
+        // --- Datepicker ---
         $(".date-picker").datepicker({
             autoclose: true,
-            format: 'dd/mm/yyyy',
-            theme: 'bootstrap4'
+            format: "dd/mm/yyyy",
+            theme: "bootstrap4"
         });
     });
+
 
     // Evento change para PrecioEspecial
     $("#PrecioEspecial").change(function () {
@@ -161,14 +181,6 @@
             $('#initialAmount').removeAttr('hidden');
         else
             $('#initialAmount').attr('hidden', '');
-
-        if ($(this).find('option:selected').text() == "En ruta") 
-            $('#precioEspecialGroup').removeAttr('hidden');
-        else  
-        $('#precioEspecialGroup').attr('hidden', '');
-            
-            
-
         if ($(this).find('option:selected').text() == "Entregado")
             $('#deliveryDay').removeAttr('hidden');
         else
@@ -176,44 +188,48 @@
 
         toggleRealAmountVisibility();
 
-        // Evento click para el botón Guardar
-        $("#btnGuardar").click(async function (e) {
-            e.preventDefault(); // Prevenir el comportamiento por defecto del formulario
+             $("#formActualizarTotal").on("submit", async function (e) {
+        e.preventDefault(); // Evita el submit normal
 
-            const precioEspecial = $("#PrecioEspecial").is(":checked");
-            const estado = $("#Status option:selected").text();
-            const orderId = $("#OrderId").val();
+        const precioEspecial = $("#PrecioEspecial").is(":checked");
+        const estado = $("#Status option:selected").text();
+        const orderId = $("#OrderId").val();
 
-            let realAmount = 0.0;
-            if (precioEspecial && estado === "En ruta") {
-                const inputVal = parseFloat($("#RealAmount").val());
-                if (!isNaN(inputVal)) {
-                    realAmount = inputVal;
-                }
-            }
-
-            try {
-                const response = await fetch('/Order/ActualizarTotal', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        Id: orderId,
-                        PrecioEspecial: precioEspecial,
-                        RealAmount: realAmount
-                    })
-                });
-
-                const result = await response.text();
-                // Manejo del resultado (puedes agregar notificaciones aquí)
-                console.log(result);
-
-                // Cerrar el modal después de guardar si es necesario
-                $('.modal').modal('hide');
-
-            } catch (error) {
-                console.error('Error al guardar:', error);
-            }
+        console.log("Datos enviados:", {
+            orderId,
+            precioEspecial,
+            estado
         });
+
+        let realAmount = 0.0;
+        if (precioEspecial && (estado === "Pagado" || estado === "Pago parcial")) {
+            const inputVal = parseFloat($("#RealAmount").val());
+            if (!isNaN(inputVal)) {
+                realAmount = inputVal;
+            }
+        }
+
+        try {
+            const response = await fetch('/Order/ActualizarTotal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    Id: parseInt(orderId),
+                    PrecioEspecial: precioEspecial,
+                    RealAmount: realAmount
+                })
+            });
+
+            const result = await response.text();
+            console.log(result);
+
+            $('.modal').modal('hide'); // Cierra el modal
+
+        } catch (error) {
+            console.error('Error al guardar:', error);
+        }
+    });
+
 
 
 

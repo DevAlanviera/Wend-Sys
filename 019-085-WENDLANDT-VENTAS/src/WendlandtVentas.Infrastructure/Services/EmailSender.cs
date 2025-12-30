@@ -39,7 +39,7 @@ public class EmailSender : IEmailSender
             EnableSsl = settings.UseSsl
         };
 
-        var mail = new MailMessage
+        using var mail = new MailMessage
         {
             From = new MailAddress(settings.From, _brandSettings.Name),
             Subject = subject,
@@ -49,23 +49,43 @@ public class EmailSender : IEmailSender
 
         mail.To.Add(email);
 
-        // Adjuntar archivo desde ruta en disco
+        // Adjuntar archivo físico (si aplica)
         if (!string.IsNullOrWhiteSpace(file) && File.Exists(file))
         {
             mail.Attachments.Add(new Attachment(file));
         }
 
-        // Adjuntar archivo desde memoria
+        // Adjuntar PDF desde memoria
+        Attachment attachment = null;
+        MemoryStream ms = null;
+
         if (attachmentBytes != null && !string.IsNullOrWhiteSpace(attachmentName))
         {
-            using var ms = new MemoryStream(attachmentBytes);
-            mail.Attachments.Add(new Attachment(ms, attachmentName, "application/pdf"));
-            // Nota: MemoryStream no se cierra hasta que se envíe el correo
+            ms = new MemoryStream(attachmentBytes);
+            ms.Position = 0; // <-- muy importante, por si el stream no está al inicio
+            attachment = new Attachment(ms, attachmentName, "application/pdf");
+            mail.Attachments.Add(attachment);
         }
 
-        await client.SendMailAsync(mail);
-        return true;
+        try
+        {
+            await client.SendMailAsync(mail);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error enviando correo: {ex}");
+            return false;
+        }
+        finally
+        {
+            // Ahora sí, liberar todo manualmente y en orden
+            attachment?.Dispose();
+            ms?.Dispose();
+        }
     }
+
+
 
 }
 

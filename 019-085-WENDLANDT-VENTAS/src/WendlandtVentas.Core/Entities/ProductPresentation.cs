@@ -46,6 +46,9 @@ namespace WendlandtVentas.Core.Entities
             Weight = weight;
         }
 
+       // public string NameExtended() =>
+    //$"{Product?.Name ?? "Sin producto"} - {Product?.Distinction.Humanize() ?? ""} ({Presentation?.Name ?? "Sin presentación"} {Presentation?.Liters.ToString() ?? ""} lts.)";
+
         public string NameExtended() => $"{Product?.Name} - {Product.Distinction.Humanize()} ({Presentation?.Name} {Presentation?.Liters} lts.)";
     }
 }

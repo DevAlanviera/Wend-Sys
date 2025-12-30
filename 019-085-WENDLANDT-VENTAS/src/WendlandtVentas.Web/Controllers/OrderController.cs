@@ -116,8 +116,6 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> Index(FilterViewModel filter)
         {
             // Invalida el caché antes de obtener los datos frescos
-            
-
             // Obtiene los datos desde el repositorio (sin caché)
             var orderTypes = Enum.GetValues(typeof(OrderType))
                                  .Cast<OrderType>()
@@ -851,9 +849,11 @@ namespace WendlandtVentas.Web.Controllers
             {
                 status = status.Where(c => c != OrderStatus.Paid && c != OrderStatus.Cancelled);
             }
-            else if (User.IsInRole(Role.AdministratorAssistant.ToString()))
+            else if (User.IsInRole(Role.AdministratorAssistant.ToString()) ||
+             User.IsInRole(Role.Administrator.ToString()))
             {
-                status = status.Where(c => c.Equals(OrderStatus.Paid));
+                // Administradores ven TODOS los estados, no filtramos nada
+                // status = status.Where(c => c.Equals(OrderStatus.Paid));  // ❌ Eliminado
             }
             else if (User.IsInRole(Role.Storekeeper.ToString()) || User.IsInRole(Role.Distributor.ToString()))
             {
@@ -947,7 +947,7 @@ namespace WendlandtVentas.Web.Controllers
                     //noreplywendlandt@gmail.com
                     //Noreply1234!
                     await _emailSender.SendEmailAsync(
-                        "cobranza@wendlandt.com.mx", // 🔁 Cambia esto por el correo real que debe recibir la notificación
+                        "cobranza@wendlandt.com.mx", // Cambia esto por el correo real que debe recibir la notificación
                         $"Solicitud de cancelación del pedido #{order.Id}",
                         emailBody
                     );
@@ -1009,7 +1009,7 @@ namespace WendlandtVentas.Web.Controllers
                         User = User.Identity.Name
                     };
                     //COMENTADO DE MOMENTO PARA QUE NO INTENTE ENVIAR DATOSA TESORERIA
-                    var apiResult = await _treasuryApi.AddIncomeAsync(income);
+                   /*var apiResult = await _treasuryApi.AddIncomeAsync(income);
                     if (apiResult.IsSuccess)
                     {
                         // se espera que el valor regresado sea el nuevo estado de la orden
@@ -1035,6 +1035,7 @@ namespace WendlandtVentas.Web.Controllers
                         return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Cambio de estado no guardado. No se pudo enviar el pago a Tesorería"));
                     }
                     _cacheService.InvalidateOrderCache();
+                   */
                 }
 
                 // Notificaciones y bitácora

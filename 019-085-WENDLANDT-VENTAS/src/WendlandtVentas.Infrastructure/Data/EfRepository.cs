@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Monobits.SharedKernel;
 using Monobits.SharedKernel.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -86,7 +87,12 @@ namespace WendlandtVentas.Infrastructure.Data
 
         public async Task UpdateAsync<T>(T entity) where T : BaseEntity, IAggregateRoot
         {
-            _dbContext.Entry(entity).State = EntityState.Modified;
+            var existing = await _dbContext.Set<T>().FindAsync(entity.Id);
+
+            if (existing == null)
+                throw new Exception("Entidad no encontrada para actualizar");
+
+            _dbContext.Entry(existing).CurrentValues.SetValues(entity);
             await _dbContext.SaveChangesAsync();
         }
 
