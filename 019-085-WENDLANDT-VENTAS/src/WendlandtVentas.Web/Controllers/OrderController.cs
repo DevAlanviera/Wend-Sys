@@ -918,6 +918,11 @@ namespace WendlandtVentas.Web.Controllers
             if (model.Status == OrderStatus.OnRoute && model.PrecioEspecial && model.RealAmount <= 0)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Debe ingresar un monto real válido cuando activa precio especial"));
 
+            if (model.PrecioEspecial && (model.RealAmount == null || model.RealAmount <= 0))
+            {
+                return BadRequest("El monto real es requerido para Pronto Pago.");
+            }
+
             try
             {
                 var email = User.Identity.Name;
@@ -990,6 +995,7 @@ namespace WendlandtVentas.Web.Controllers
                     order.ToggleInventoryDiscount();
                     await _repository.UpdateAsync(order);
                 }
+
 
                 // Manejo de pagos
                 if (model.Status == OrderStatus.Paid || model.Status == OrderStatus.PartialPayment)

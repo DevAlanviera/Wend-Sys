@@ -71,7 +71,7 @@
                 <div class="col mb-3" id="realAmountGroup"
                 @(Model.Status == OrderStatus.OnRoute && Model.PrecioEspecial ? "" : "hidden")>
                     <label asp-for="RealAmount"></label> <b class="text-danger">*</b>
-                    <input asp-for="RealAmount" class="form-control" type="text" min="0" step="0.01" />
+                    <input asp-for="RealAmount" class="form-control" type="number" step="any" min="0" id="RealAmount" />
                     <span asp-validation-for="RealAmount" class="text-danger"></span>
                 </div>
 
@@ -187,27 +187,36 @@
             $('#deliveryDay').attr('hidden', '');
 
         toggleRealAmountVisibility();
-
-             $("#formActualizarTotal").on("submit", async function (e) {
-        e.preventDefault(); // Evita el submit normal
+            $("#formActualizarTotal").on("submit", async function (e) {
+        e.preventDefault(); // Detiene el envío tradicional inmediatamente
 
         const precioEspecial = $("#PrecioEspecial").is(":checked");
-        const estado = $("#Status option:selected").text();
+        const estado = $("#Status option:selected").text().trim();
         const orderId = $("#OrderId").val();
+        const realAmountInput = $("#RealAmount");
+        const errorDiv = $(".modal-errores");
 
-        console.log("Datos enviados:", {
-            orderId,
-            precioEspecial,
-            estado
-        });
+        let rawValue = realAmountInput.val().trim();
+        let realAmount = 0.00;
 
-        let realAmount = 0.0;
+        // --- LÓGICA DE VALIDACIÓN ---
         if (precioEspecial && (estado === "Pagado" || estado === "Pago parcial")) {
-            const inputVal = parseFloat($("#RealAmount").val());
-            if (!isNaN(inputVal)) {
-                realAmount = inputVal;
+
+            // Validamos si es vacío, no es número o es menor/igual a cero
+            if (rawValue === "" || isNaN(rawValue) || parseFloat(rawValue) <= 0) {
+                realAmountInput.addClass("is-invalid");
+                errorDiv.text("El monto real es obligatorio y debe ser mayor a 0 cuando se activa Pronto Pago.");
+                errorDiv.show(); // Asegúrate de que el div sea visible
+                return false; // Detiene TODO y evita que el código baje al fetch
             }
         }
+
+        // Si llegó aquí, los datos son válidos
+        realAmountInput.removeClass("is-invalid");
+        errorDiv.text("").hide();
+        realAmount = parseFloat(rawValue).toFixed(2);
+
+        console.log("Validación pasada. Enviando:", realAmount);
 
         try {
             const response = await fetch('/Order/ActualizarTotal', {
@@ -216,17 +225,23 @@
                 body: JSON.stringify({
                     Id: parseInt(orderId),
                     PrecioEspecial: precioEspecial,
-                    RealAmount: realAmount
+                    RealAmount: parseFloat(realAmount)
                 })
             });
 
-            const result = await response.text();
-            console.log(result);
-
-            $('.modal').modal('hide'); // Cierra el modal
+            if (response.ok) {
+                console.log("Guardado exitosamente");
+                $('.modal').modal('hide');
+                // Opcional: recargar la tabla o la página
+                // location.reload();
+            } else {
+                const errorText = await response.text();
+                errorDiv.text("Error en el servidor: " + errorText).show();
+            }
 
         } catch (error) {
             console.error('Error al guardar:', error);
+            errorDiv.text("Error de red o conexión.").show();
         }
     });
 
