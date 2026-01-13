@@ -731,9 +731,9 @@ namespace WendlandtVentas.Core.Services
                 ?? order.Client.Contacts?.FirstOrDefault()?.Email
                 ?? "alan.cordova@wendlandt.com.mx";
 
-            Console.WriteLine("ENVIANDO CORREOOO");
+           // Console.WriteLine("ENVIANDO CORREOOO");
 
-            Console.WriteLine("\n \n \n \n \n \n \n \n \n \n \n" + "Enviando a Email destino: " + order.Client.Contacts?.FirstOrDefault()?.Email + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+            //Console.WriteLine("\n \n \n \n \n \n \n \n \n \n \n" + "Enviando a Email destino: " + order.Client.Contacts?.FirstOrDefault()?.Email + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
 
             var nombreCliente = order.Client.Name;
             var asunto = "¡Pedido realizado con éxito! - Cervecería Wendlandt de México";

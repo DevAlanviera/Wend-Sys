@@ -1015,7 +1015,7 @@ namespace WendlandtVentas.Web.Controllers
                         User = User.Identity.Name
                     };
                     //COMENTADO DE MOMENTO PARA QUE NO INTENTE ENVIAR DATOSA TESORERIA
-                   /*var apiResult = await _treasuryApi.AddIncomeAsync(income);
+                   var apiResult = await _treasuryApi.AddIncomeAsync(income);
                     if (apiResult.IsSuccess)
                     {
                         // se espera que el valor regresado sea el nuevo estado de la orden
@@ -1041,7 +1041,7 @@ namespace WendlandtVentas.Web.Controllers
                         return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Cambio de estado no guardado. No se pudo enviar el pago a Tesorería"));
                     }
                     _cacheService.InvalidateOrderCache();
-                   */
+                   
                 }
 
                 // Notificaciones y bitácora
