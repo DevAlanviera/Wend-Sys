@@ -98,5 +98,8 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         //Checkbox para pronto pago
         public bool ProntoPago { get; set; }
 
+        public int OrderClassification { get; set; } // Valor por defecto será 1
+        public int? OrderClassificationCode { get; set; } // El nuevo contador
+
     }
 }

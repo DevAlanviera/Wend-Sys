@@ -27,6 +27,7 @@ using WendlandtVentas.Core.Specifications.OrderExtendedSpecifications;
 using WendlandtVentas.Core.Specifications.ProductPresentationSpecifications;
 using WendlandtVentas.Core.Specifications.PromotionSpecifications;
 
+
 namespace WendlandtVentas.Core.Services
 {
     public class OrderService : IOrderService
@@ -135,6 +136,8 @@ namespace WendlandtVentas.Core.Services
                 }
             }
 
+            int siguienteFolio = await GenerarSiguienteFolio(model.OrderClassification);
+
             var order = new Order(
                 model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
                 dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
@@ -143,7 +146,8 @@ namespace WendlandtVentas.Core.Services
                 dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(),
                 model.PayType, model.CurrencyType);
 
-            
+            order.OrderClassification = model.OrderClassification;
+            order.OrderClassificationCode = siguienteFolio;
 
             try
             {
@@ -213,6 +217,20 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, e.Message);
             }
         }
+
+        private async Task<int> GenerarSiguienteFolio(int classificationId)
+        {
+            // 1. Obtenemos el IQueryable (sin await porque no devuelve Task)
+            IQueryable<Order> query = _repository.GetQueryableExisting<Order>();
+
+            // 2. Filtramos y calculamos el máximo de forma asíncrona
+            var ultimoFolio = await query
+                .Where(o => o.OrderClassification == classificationId)
+                .MaxAsync(o => (int?)o.OrderClassificationCode) ?? 0;
+
+            return ultimoFolio + 1;
+        }
+
 
         public async Task<Response> UpdateOrderAsync(OrderViewModel model, string currrentUserEmail)
         {
@@ -354,6 +372,10 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, "Error al actualizar el total.");
             }
         }
+
+
+
+
         //Se necesita desarrollar para cuando esta desactivado el valor del realamount se haga 0.0
 
         //public IQueryable<Order> FilterValues(FilterViewModel filter)
@@ -452,8 +474,10 @@ namespace WendlandtVentas.Core.Services
 
         public async Task<List<Order>> FilterValues(FilterViewModel filter)
         {
-            var orders = _repository.GetQueryable(new OrderExtendedSpecification()).Where(c => !c.IsDeleted);
-            //var orders = (await _repository.ListExistingAsync(new OrderExtendedSpecification())).AsEnumerable();
+            // 1. Iniciamos la consulta y aplicamos el filtro de clasificación de inmediato
+            var orders = _repository.GetQueryable(new OrderExtendedSpecification())
+                           .Where(c => !c.IsDeleted && c.OrderClassification == filter.OrderClassification);
+
             var predicate = PredicateBuilder.New<Order>(true);
 
             if (!string.IsNullOrEmpty(filter.OrderType))

@@ -2,6 +2,9 @@
 @inject UserManager<ApplicationUser> UserManager
 @{
     var currentPath = Context.Request.Path.ToString().ToLower();
+    var queryClassId = Context.Request.Query["classificationId"].ToString();
+    // Verificamos si estamos en el controlador de órdenes
+    bool isOrderController = ViewContext.RouteData.Values["controller"]?.ToString().ToLower() == "order";
 
     var system = currentPath.Equals("/product") || currentPath.Equals("/users") || currentPath.Equals("/promotion") || currentPath.Equals("/logbook") || currentPath.Equals("/client");
     var currentUser = await UserManager.GetUserAsync(User);
@@ -63,15 +66,28 @@
         }
         else
         {
-            <li class="c-sidebar-nav-item @(currentPath.Equals("/order") ? "active" : "")">
-                <a class="c-sidebar-nav-link" asp-controller="Order" asp-action="Index">
+            <li class="c-sidebar-nav-dropdown @(isOrderController ? "c-show" : "")">
+                <a class="c-sidebar-nav-dropdown-toggle" href="#">
                     <i class="c-sidebar-nav-icon far fa-book"></i> Pedidos
                 </a>
-            </li>
-            <li class="c-sidebar-nav-item @(currentPath.Equals("/returns") ? "active" : "")">
-                <a class="c-sidebar-nav-link" asp-controller="Returns" asp-action="Index">
-                    <i class="c-sidebar-nav-icon far fa-book"></i> Devoluciones
-                </a>
+                <ul class="c-sidebar-nav-dropdown-items">
+                    <li class="c-sidebar-nav-item">
+                        @* Cerveza: Activo si no hay ID o si el ID es 1 *@
+                        <a class="c-sidebar-nav-link @(isOrderController && (string.IsNullOrEmpty(queryClassId) || queryClassId == "1") ? "c-active" : "")"
+                           asp-controller="Order" asp-action="Index">
+                            <span class="c-sidebar-nav-icon"></span> Cerveza
+                        </a>
+                    </li>
+                    <li class="c-sidebar-nav-item">
+                        @* Wellen: Activo solo si el ID es exactamente 2 *@
+                        <a class="c-sidebar-nav-link @(isOrderController && queryClassId == "2" ? "c-active" : "")"
+                           asp-controller="Order"
+                           asp-action="Index"
+                           asp-route-classificationId="2">
+                            <span class="c-sidebar-nav-icon"></span> Wellen
+                        </a>
+                    </li>
+                </ul>
             </li>
             if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
             {

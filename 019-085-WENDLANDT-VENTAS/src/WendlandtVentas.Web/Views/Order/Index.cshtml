@@ -5,6 +5,8 @@
 @{
     ViewData["Title"] = "Pedidos";
 
+    var classificationId = Context.Request.Query["classificationId"];
+
     var cols = new List<object> { new { field = "id", direction = "Descending" } };
     var targetUrl = $"{Url.Action("GetData")}{Context.Request.QueryString}";
 }
@@ -19,7 +21,11 @@
     <section class="mt-3">
         <ul class="list-inline">
             <li>
-                <a asp-action="Add" class="btn btn-primary moderno" ><i class="fa fa-plus"></i> Agregar</a>
+                <a asp-action="Add"
+                   asp-route-classificationId="@Context.Request.Query["classificationId"]"
+                   class="btn btn-primary moderno">
+                    <i class="fa fa-plus"></i> Agregar
+                </a>
             </li>
         </ul>
     </section>
@@ -119,10 +125,10 @@
 </div>
 
 <div class="datatable-container">
-    <ejs-grid id="Grid" cssClass="~/css/NewMono.css" class="datatable" locale="es-MX" allowTextWrap="true" allowPaging="true" allowSorting="true"
+    <ejs-grid id="Grid" cssClass="~/css/NewMono.css e-responsive datatable" class="datatable" locale="es-MX" allowTextWrap="true" allowPaging="true" allowSorting="true"
               enableAdaptiveUI="true"
               height="auto"
-              width="100%" cssClass="e-responsive datatable" toolbar="@(new List<string>() { "Search", "Print" })">
+              width="100%" toolbar="@(new List<string>() { "Search", "Print" })">
         <!-- Configuración del DataManager -->
         <e-data-manager url="@targetUrl" adaptor="UrlAdaptor"></e-data-manager>
 

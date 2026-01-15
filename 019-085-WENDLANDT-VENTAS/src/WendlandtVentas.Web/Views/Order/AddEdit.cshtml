@@ -4,10 +4,18 @@
 
 
 <h4 class="mb-3">
-    <a asp-action="Index" asp-controller="Order" title="Regresar" class="btn btn-sm btn-secondary">
+    <a asp-action="Index"
+       asp-controller="Order"
+       asp-route-classificationId="@Model.OrderClassification"
+       title="Regresar"
+       class="btn btn-sm btn-secondary">
         <i class="fa fa-fw fa-arrow-left"></i>
     </a>
     @ViewData["Title"]
+    @if (Model.OrderClassification == 2)
+    {
+        <span class="badge badge-warning" style="color: #FFFFFF">Wellen</span>
+    }
     <br />
 </h4>
 
@@ -16,6 +24,7 @@
     @Html.HiddenFor(c => c.Type)
     @Html.HiddenFor(c => c.Address)
     @Html.HiddenFor(c => c.AddressName)
+    @Html.HiddenFor(c => c.OrderClassification)
 
     @if (Model.Id > 0)
     {
@@ -327,7 +336,10 @@
             $("#addProduct").on("click", function () {
                 const currencyType = $('#CurrencyType').val();
 
-                $.get("@Url.Action("AddProduct", "Order")", { currencyType: currencyType })
+                    // 1. Obtenemos la clasificación del campo oculto
+                const classificationId = $('#OrderClassification').val();
+
+                $.get("@Url.Action("AddProduct", "Order")", { currencyType: currencyType, classificationId: classificationId })
                     .done(function (data) {
                         const $modal = $('#addProductModal');
                         $modal.html(data);
@@ -342,7 +354,8 @@
 
                         // --- Intentar usar datos precargados en sessionStorage ---
                         // Opción A (preload global): clave simple que sugerimos en el preloader
-                        const globalCacheKey = `products_${currencyType}`;
+                        const classificationId = $('#OrderClassification').val();
+                        const globalCacheKey = `products_${currencyType}_class_${classificationId}`;
                         let globalCache = null;
                         try {
                             const raw = sessionStorage.getItem(globalCacheKey);
@@ -374,8 +387,9 @@
                         }
 
                         // Inicializar Select2 con AJAX + transport con caché (granular o global)
-                        var cacheKey = "products_MXN_all_1";
-                        var cachedData = JSON.parse(sessionStorage.getItem(cacheKey) || "null") || { results: [] };
+                        const currentClass = $('#OrderClassification').val();
+                        const dynamicCacheKey = `products_${currencyType}_class_${currentClass}`;
+                        var cachedData = JSON.parse(sessionStorage.getItem(dynamicCacheKey) || "null") || { results: [] };
 
                         $('#addProductModal .select2').select2({
                             theme: 'bootstrap4',

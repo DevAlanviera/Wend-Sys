@@ -155,12 +155,27 @@ namespace WendlandtVentas.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm, FilterViewModel filter)
         {
-            // Clave única para el caché basada en los filtros
-            var cacheKey = $"OrderTableData_{System.Text.Json.JsonSerializer.Serialize(filter)}";
+
+            // 1. Detectar la clasificación (si es null o 0, forzar a 1)
+            int classificationId = 1;
+            if (Request.Query.ContainsKey("classificationId"))
+            {
+                int.TryParse(Request.Query["classificationId"], out classificationId);
+            }
+
+            // 2. IMPORTANTE: Forzar el valor dentro del objeto filter 
+            // Esto garantiza que FilterValues reciba un 1 o un 2, nunca un 0.
+            filter.OrderClassification = classificationId;
+
+            // 3. La llave de caché ahora será única por pestaña
+            var cacheKey = $"OrderTableData_Class_{classificationId}_{System.Text.Json.JsonSerializer.Serialize(filter)}";
 
             // Intentar obtener datos del caché
             if (!_memoryCache.TryGetValue(cacheKey, out List<OrderTableModel> cachedData))
             {
+
+                filter.OrderClassification = classificationId;
+
                 // Si no está en caché, recuperar datos desde la fuente
                 var users = _userManager.Users.ToDictionary(c => c.Id, c => c.Name); // Sin consulta async
                 var filteredOrders = (await _orderService.FilterValues(filter)).ToList();
@@ -256,7 +271,7 @@ namespace WendlandtVentas.Web.Controllers
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
-        public async Task<IActionResult> Add()
+        public async Task<IActionResult> Add(int classificationId = 1)
         {
             ViewData["Action"] = nameof(Add);
             ViewData["Title"] = "Agregar pedido";
@@ -270,6 +285,7 @@ namespace WendlandtVentas.Web.Controllers
 
             var model = new OrderViewModel
             {
+                OrderClassification = classificationId,
                 IsInvoice = OrderType.Invoice,
                 Clients = new SelectList(clients.Select(x => new { Value = x.Id, Text = $"{x.Name}" + (x.Classification.HasValue ? $" - {x.Classification.Humanize()}" : string.Empty) }), "Value", "Text"),
                 Addresses = new SelectList(addresses.Select(x => new { Value = x.Id, Text = x.AddressLocation }), "Value", "Text"),
@@ -279,6 +295,9 @@ namespace WendlandtVentas.Web.Controllers
                 CurrencyTypes = new SelectList(currencyTypes.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 ReturnRemisionNumberOptions = new SelectList(remissionsForReturn, "Value", "Text")
             };
+
+            // Esto sirve para que en la vista sepamos si poner un título diferente
+            ViewBag.ClassificationId = classificationId;
 
             return View("AddEdit", model);
         }
@@ -350,27 +369,43 @@ namespace WendlandtVentas.Web.Controllers
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
         [HttpGet]
-        public async Task<IActionResult> AddProduct([FromQuery] CurrencyType currencyType)
+        public async Task<IActionResult> AddProduct([FromQuery] CurrencyType currencyType, [FromQuery] int classificationId)
         {
             try
             {
                 ViewData["Action"] = nameof(AddProduct);
                 ViewData["ModalTitle"] = "Agregar producto";
 
-                string cacheKey = currencyType == CurrencyType.MXN ? "ProductsInStock_MXN" : "ProductsInStock_USD";
-     
+                // Incluimos la clasificación en la llave de caché
+                string cacheKey = $"ProductsInStock_{currencyType}_{classificationId}";
 
                 var productsInStock = await _cacheService.GetOrSetAsync(
-                cacheKey,
-                async () =>
-                {
-                    var allProducts = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
-                    return currencyType == CurrencyType.MXN
-                        ? allProducts.Where(c => c.Price >= 0).ToList()
-                        : allProducts.Where(c => c.PriceUsd >= 0).ToList();
-                },
-                absoluteExpiration: null // <- aquí defines que no haya expiración
-            );
+                    cacheKey,
+                    async () =>
+                    {
+                        var allProducts = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
+
+                        // Filtrar por moneda
+                        var filtered = currencyType == CurrencyType.MXN
+                            ? allProducts.Where(c => c.Price >= 0)
+                            : allProducts.Where(c => c.PriceUsd >= 0);
+
+                        // FILTRO USANDO EL ENUM DISTINCTION
+                        if (classificationId == 2)
+                        {
+                            // Solo productos de la marca Wellen
+                            filtered = filtered.Where(c => c.Product.Distinction == Distinction.Wellen);
+                        }
+                        else
+                        {
+                            // Pedidos normales: Todo lo que NO sea Wellen
+                            filtered = filtered.Where(c => c.Product.Distinction != Distinction.Wellen);
+                        }
+
+                        return filtered.ToList();
+                    },
+                    absoluteExpiration: null
+                );
 
                 var model = new OrderAddProductViewModel
                 {
@@ -386,17 +421,19 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
-       [ResponseCache(Duration = 300)] // Cache HTTP por 5 minutos
+        [ResponseCache(Duration = 300)]
         [HttpGet]
         public async Task<IActionResult> SearchProductsAjax(
      [FromQuery] CurrencyType currencyType,
+     [FromQuery] int classificationId, // Agregado
      [FromQuery] string term,
      [FromQuery] int page = 1,
      [FromQuery] int pageSize = 20)
         {
             try
             {
-                string cacheKey = $"ProductsSearch_{currencyType}_{term?.ToLower() ?? "all"}_{page}_{pageSize}";
+                // Incluir classificationId en la llave para evitar resultados cruzados en el buscador
+                string cacheKey = $"ProductsSearch_{currencyType}_{classificationId}_{term?.ToLower() ?? "all"}_{page}_{pageSize}";
 
                 var result = await _cacheService.GetOrSetAsync(cacheKey, async () => {
                     var allProducts = await _repository.ListExistingAsync(new ProductPresentationExtendedSpecification());
@@ -405,6 +442,12 @@ namespace WendlandtVentas.Web.Controllers
                         ? allProducts.Where(c => c.Price >= 0)
                         : allProducts.Where(c => c.PriceUsd >= 0);
 
+                    // APLICAR FILTRO DE DISTINCIÓN IGUAL QUE EN ADDPRODUCT
+                    if (classificationId == 2)
+                        filtered = filtered.Where(c => c.Product.Distinction == Distinction.Wellen);
+                    else
+                        filtered = filtered.Where(c => c.Product.Distinction != Distinction.Wellen);
+
                     if (!string.IsNullOrWhiteSpace(term))
                     {
                         term = term.ToLower();
@@ -412,12 +455,10 @@ namespace WendlandtVentas.Web.Controllers
                     }
 
                     var total = filtered.Count();
-
                     var products = filtered
                         .Skip((page - 1) * pageSize)
                         .Take(pageSize)
-                        .Select(x => new
-                        {
+                        .Select(x => new {
                             id = $"{x.Id}-{x.PresentationId}",
                             text = x.NameExtended(),
                             price = currencyType == CurrencyType.MXN ? x.Price : x.PriceUsd
@@ -429,7 +470,7 @@ namespace WendlandtVentas.Web.Controllers
                         results = products,
                         pagination = new { more = (page * pageSize) < total }
                     };
-                }, TimeSpan.FromMinutes(5)); // Cache por 5 minutos
+                }, TimeSpan.FromMinutes(5));
 
                 return Json(result);
             }

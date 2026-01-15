@@ -46,6 +46,9 @@ namespace WendlandtVentas.Core.Entities
         //EL nuevo monto en caso de que sea precio especial
         public decimal? RealAmount { get; set; }
 
+        public int OrderClassification { get; set; } // Valor por defecto será 1
+        public int? OrderClassificationCode { get; set; } // El nuevo contador
+
         public decimal BaseAmount
         {
             //Fórmula anterior (SubTotal / 1.265M) * 0.8M;
@@ -161,9 +164,14 @@ namespace WendlandtVentas.Core.Entities
 
         public void GenerateRemisionCode()
         {
-            var digits = Id.ToString();
+            // Si es de la nueva clasificación (2), usamos el contador independiente
+            // Si no, usamos el Id tradicional para no romper lo anterior
+            var baseNumber = OrderClassification == 2 && OrderClassificationCode.HasValue
+                             ? OrderClassificationCode.Value.ToString()
+                             : Id.ToString();
 
-            var idLenght = digits.Length;
+            var idLenght = baseNumber.Length;
+            var digits = baseNumber;
 
             if (idLenght < 6)
             {
@@ -173,6 +181,7 @@ namespace WendlandtVentas.Core.Entities
                 }
             }
 
+            // Mantiene el formato: Año + 6 dígitos
             RemissionCode = $"{DateTime.Now.Year}{digits}";
         }
 
