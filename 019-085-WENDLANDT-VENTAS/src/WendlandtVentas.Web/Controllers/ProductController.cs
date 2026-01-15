@@ -48,22 +48,37 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm)
+        public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm, [FromQuery] int classificationId = 1)
         {
-            // Clave única para identificar los datos en el caché
-            string cacheKey = "ProductTableData";
+            // Si por alguna razón llega 0, forzamos a 1
+            if (classificationId == 0) classificationId = 1;
 
-            // Intenta obtener los datos del caché
-            if (!_memoryCache.TryGetValue(cacheKey, out IEnumerable<ProductTableModel> cachedData))
+            // NUEVO: Llave de caché dinámica
+            string cacheKey = $"ProductTableData_Class_{classificationId}";
+
+            if (!_memoryCache.TryGetValue(cacheKey, out List<ProductTableModel> cachedData))
             {
-                // Si no están en el caché, consulta desde la base de datos
-                var dataSource = (await _repository.ListExistingAsync(new ProductExtendedSpecification()))
-                    .Select(c =>
+                // Traemos todos los productos con sus presentaciones
+                var allProducts = await _repository.ListExistingAsync(new ProductExtendedSpecification());
+
+                // NUEVO: Aplicar el filtro según la pestaña
+                IEnumerable<Product> filteredProducts;
+                if (classificationId == 2)
+                {
+                    filteredProducts = allProducts.Where(p => p.Distinction == Distinction.Wellen);
+                }
+                else
+                {
+                    filteredProducts = allProducts.Where(p => p.Distinction != Distinction.Wellen);
+                }
+
+                // MODIFICADO: Tu lógica de mapeo ejecutada sobre 'filteredProducts'
+                var dataSource = filteredProducts.Select(c =>
+                {
+                    var presentations = c.ProductPresentations.Where(p => !p.IsDeleted);
+                    return new ProductTableModel
                     {
-                        var presentations = c.ProductPresentations.Where(c => !c.IsDeleted);
-                        return new ProductTableModel
-                        {
-                            Id = c.Id,
+                        Id = c.Id,
                             Name = c.Name,
                             Distinction = c.Distinction.Humanize(),
                             Season = c.Season,
@@ -105,10 +120,10 @@ namespace WendlandtVentas.Web.Controllers
                         };
                     }).ToList();
 
-                
 
-                _memoryCache.Set(cacheKey, dataSource);
 
+                // --- MODIFICADO: Guardamos en el caché específico ---
+                _memoryCache.Set(cacheKey, dataSource, TimeSpan.FromMinutes(30)); // Es bueno poner un tiempo de expiración
                 cachedData = dataSource;
             }
 
