@@ -101,5 +101,13 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public int OrderClassification { get; set; } // Valor por defecto será 1
         public int? OrderClassificationCode { get; set; } // El nuevo contador
 
+        // Ejemplo de categorías (puedes usar Enums existentes si los tienes)
+        public enum OrderBrand
+        {
+            Cerveza = 1,
+            Wellen = 2
+        }
+
     }
+   
 }

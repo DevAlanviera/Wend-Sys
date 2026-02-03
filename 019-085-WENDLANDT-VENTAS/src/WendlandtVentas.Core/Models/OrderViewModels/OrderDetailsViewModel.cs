@@ -84,7 +84,8 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         // Vemos si tiene precio especial
         public bool PrecioEspecial { get; set; }
 
-
+        public int OrderClassification { get; set; }
+        public int? OrderClassificationCode { get; set; }
 
 
     }

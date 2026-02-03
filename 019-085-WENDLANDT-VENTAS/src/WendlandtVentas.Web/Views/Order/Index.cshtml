@@ -136,11 +136,11 @@
         <e-grid-pagesettings pageSize="50" pageSizes="@(new[] {"50", "100", "200"})"></e-grid-pagesettings>
 
         <!-- Configuración de búsqueda -->
-        <e-grid-searchsettings fields="@(new[] {"Id", "CreateDate", "Type", "RemissionCode", "InvoiceCode", "Total", "Client", "User", "Status", "Comment","Address"})"></e-grid-searchsettings>
+        <e-grid-searchsettings fields="@(new[] { "Id", "OrderClassificationCode", "CreateDate", "Type", "RemissionCode", "InvoiceCode", "Total", "Client", "User", "Status", "Comment", "Address" })"></e-grid-searchsettings>
 
         <!-- Columnas de la tabla -->
         <e-grid-columns>
-            <e-grid-column field="id" headerText="ID" width="50"></e-grid-column>
+            <e-grid-column field="id" headerText="Id" width="80" template="#idTemplate"></e-grid-column>
             <e-grid-column field="client" headerText="Cliente" width="200"></e-grid-column>
             <e-grid-column field="address" headerText="Dirección" width="150"></e-grid-column>
             <e-grid-column field="total" headerText="Total" width="150" textAlign="Right" template="#totalTemplate"></e-grid-column>
@@ -150,6 +150,7 @@
             <e-grid-column headerText="" width="200" template="#actionButtons" textAlign="Left"></e-grid-column>
         </e-grid-columns>
     </ejs-grid>
+
 </div>
 
 @section Modals{
@@ -160,6 +161,15 @@
     <div class="modal" id="addCollectionCommentModal" tabindex="-1" role="dialog" aria-labelledby="addCollectionCommentModal-label" data-url="@Url.Action("AddCollectionComment")"></div>
 }
 @section Scripts{
+    <script id="idTemplate" type="text/x-template">
+        ${if(orderClassification == 2)}
+            @* Para Wellen, mostramos el folio de su secuencia propia *@
+            <span >${orderClassificationCode}</span>
+        ${else}
+            @* Para Cerveza, mantenemos el ID global histórico *@
+            <span>${id}</span>
+        ${/if}
+    </script>
     <script id="actionButtons" type="text/x-template">
         <div>
             <a href="#detailsModal" data-id="${id}" title="Ver información completa" class="tip btn btn-sm btn-modal-action"><i class="fa fa-fw fa-info-circle"></i></a>

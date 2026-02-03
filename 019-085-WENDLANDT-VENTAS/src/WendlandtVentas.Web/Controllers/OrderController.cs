@@ -1,14 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using DocumentFormat.OpenXml.Drawing.Charts;
+﻿using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
@@ -20,7 +10,18 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Monobits.SharedKernel.Interfaces;
 using Newtonsoft.Json;
+using OpenXmlPowerTools;
 using Syncfusion.EJ2.Base;
+using System;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Interfaces;
@@ -189,6 +190,8 @@ namespace WendlandtVentas.Web.Controllers
                     Model = new OrderTableModel
                     {
                         Id = c.Id,
+                        OrderClassification = (int)c.OrderClassification,
+                        OrderClassificationCode = c.OrderClassificationCode,
                         Type = c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize(),
                         InvoiceCode = c.InvoiceCode ?? string.Empty,
                         RemissionCode = c.RemissionCode,
@@ -203,7 +206,7 @@ namespace WendlandtVentas.Web.Controllers
                         StatusEnum = c.OrderStatus,
                         Comment = c.Comment,
                         Address = c.Address ?? string.Empty,
-                        CanEdit = c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString())
+                        CanEdit = c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString()),
                     }
                 })
                 .OrderBy(x => x.Order.OrderStatus != OrderStatus.InProcess) // Solo "En proceso" al inicio
@@ -231,7 +234,7 @@ namespace WendlandtVentas.Web.Controllers
    
 
         [HttpGet]
-        public async Task<IActionResult> ValidateClientOrders(int clientId)
+        public async Task<IActionResult> ValidateClientOrders(int clientId, int classificationId)
         {
             if (clientId <= 0)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "ClienteId no recibido."));
@@ -246,7 +249,9 @@ namespace WendlandtVentas.Web.Controllers
                 {
                     "StatusList",
                     $"{OrderStatus.OnRoute},{OrderStatus.InProcess}"
-                }
+                },
+                // 2. Agregamos el filtro de clasificación
+                { "OrderClassification", $"{classificationId}" }
             };
             var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
 
@@ -341,7 +346,9 @@ namespace WendlandtVentas.Web.Controllers
                 {
                     "StatusList",
                     $"{OrderStatus.OnRoute},{OrderStatus.InProcess}"
-                }
+                },
+                // Agregamos la clasificación para que solo busque pendientes de la MISMA línea
+                { "OrderClassification", $"{model.OrderClassification}" }
             };
             var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
 
@@ -940,6 +947,12 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeStatus(OrderStatusViewModel model)
         {
+
+            if (!model.PrecioEspecial)
+            {
+                ModelState.Remove("RealAmount");
+            }
+
             if (!ModelState.IsValid)
                 return Json(AjaxFunctions.GenerateJsonError(string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
@@ -999,16 +1012,13 @@ namespace WendlandtVentas.Web.Controllers
                     );
                 }
 
-                // Manejo de RealAmount para estado "En ruta"
-                if (model.Status == OrderStatus.OnRoute && model.PrecioEspecial)
+                // --- MODIFICADO: Validación lógica unificada ---
+                if (model.PrecioEspecial)
                 {
-                    order.PrecioEspecial = true;
-                    order.RealAmount = (decimal)model.RealAmount;
-                }
-                else
-                {
-                    order.PrecioEspecial = false;
-                    order.RealAmount = null;
+                    if (model.RealAmount == null || model.RealAmount <= 0)
+                    {
+                        return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "El monto real es requerido cuando se activa precio especial."));
+                    }
                 }
 
                 // Manejo de fecha de entrega
@@ -1037,13 +1047,11 @@ namespace WendlandtVentas.Web.Controllers
                     await _repository.UpdateAsync(order);
                 }
 
-
-                // Manejo de pagos
                 if (model.Status == OrderStatus.Paid || model.Status == OrderStatus.PartialPayment)
                 {
-                    double amountToSend = order.RealAmount.HasValue && order.RealAmount.Value > 0
-                        ? Math.Min(model.InitialAmount, (double)order.RealAmount.Value)
-                        : orderTotal;
+                    double montoReferenciaOrden = (model.PrecioEspecial && order.RealAmount.HasValue)
+                    ? (double)order.RealAmount.Value
+                    : (order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total);
 
                     var income = new OrdersIncomeDto
                     {
@@ -1051,12 +1059,11 @@ namespace WendlandtVentas.Web.Controllers
                         OrderType = order.Type,
                         CurrencyType = order.CurrencyType,
                         RemissionCode = order.RemissionCode,
-                        Amount = amountToSend,
-                        InitialAmount = model.InitialAmount,
+                        Amount = montoReferenciaOrden,
+                        InitialAmount = (double)model.InitialAmount,
                         User = User.Identity.Name
                     };
-                    //COMENTADO DE MOMENTO PARA QUE NO INTENTE ENVIAR DATOSA TESORERIA
-                   var apiResult = await _treasuryApi.AddIncomeAsync(income);
+                    var apiResult = await _treasuryApi.AddIncomeAsync(income);
                     if (apiResult.IsSuccess)
                     {
                         // se espera que el valor regresado sea el nuevo estado de la orden
@@ -1081,8 +1088,6 @@ namespace WendlandtVentas.Web.Controllers
 
                         return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Cambio de estado no guardado. No se pudo enviar el pago a Tesorería"));
                     }
-                    _cacheService.InvalidateOrderCache();
-                   
                 }
 
                 // Notificaciones y bitácora
@@ -1109,13 +1114,24 @@ namespace WendlandtVentas.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> ActualizarTotal([FromBody] ActualizarTotalViewModel model)
         {
+            // Si model llega null aquí, es porque el JSON de JS no coincide con la clase
+            if (model == null) return BadRequest("No se recibieron datos.");
+
+            // MODIFICADO: Forzamos la limpieza si el booleano es falso
+            if (!model.PrecioEspecial)
+            {
+                ModelState.Remove(nameof(model.RealAmount));
+                model.RealAmount = null; // Limpiamos manualmente por seguridad
+            }
+
+
             if (!ModelState.IsValid)
                 return BadRequest("Datos inválidos");
 
             // Actualizar en la base de datos principal
             var result = await _orderService.ActualizarTotalAsync(
                 model.Id,
-                model.RealAmount,
+                model.RealAmount ?? 0,
                 model.PrecioEspecial,
                 User.Identity.Name
             );
@@ -1173,6 +1189,8 @@ namespace WendlandtVentas.Web.Controllers
             var model = new OrderDetailsViewModel
             {
                 Id = order.Id,
+                OrderClassification = (int)order.OrderClassification,
+                OrderClassificationCode = order.OrderClassificationCode,
                 TypeEnum = order.Type,
                 RemissionCode = order.RemissionCode,
                 InvoiceCode = order.InvoiceCode,

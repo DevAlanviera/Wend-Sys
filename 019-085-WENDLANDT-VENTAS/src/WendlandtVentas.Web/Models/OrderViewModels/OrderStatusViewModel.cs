@@ -16,7 +16,7 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
         public SelectList StatusList { get; set; }
 
         [Display(Name = "Monto")]
-        public double InitialAmount { get; set; }
+        public double? InitialAmount { get; set; }
 
         [Display(Name = "Comentarios")]
         public string Comments { get; set; }

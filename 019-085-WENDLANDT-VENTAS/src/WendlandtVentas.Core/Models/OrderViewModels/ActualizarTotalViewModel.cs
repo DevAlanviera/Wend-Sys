@@ -8,6 +8,6 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
     {
         public int Id { get; set; } // ID de la orden
         public bool PrecioEspecial { get; set; } // Checkbox
-        public decimal RealAmount { get; set; } // Nuevo total si aplica
+        public decimal? RealAmount { get; set; } // Nuevo total si aplica
     }
 }

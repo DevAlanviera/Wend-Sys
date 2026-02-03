@@ -89,6 +89,11 @@
                     </li>
                 </ul>
             </li>
+            <li class="c-sidebar-nav-item @(currentPath.Equals("/returns") ? "active" : "")">
+                <a class="c-sidebar-nav-link" asp-controller="Returns" asp-action="Index">
+                    <i class="c-sidebar-nav-icon far fa-book"></i> Devoluciones
+                </a>
+            </li>
             if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
             {
                 <li class="c-sidebar-nav-item @(currentPath.Equals("/inventory") ? "active" : "")">

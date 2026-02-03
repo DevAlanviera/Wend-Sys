@@ -3,6 +3,12 @@
 @{
     ViewData["Title"] = "Inventario";
     var targetUrl = $"{Url.Action("GetData")}?{nameof(Model.ProductId)}={Model.ProductId}&{nameof(Model.PresentationId)}={Model.PresentationId}";
+
+    // Verificamos el rol directamente en C#
+    bool isAdmin = User.IsInRole("Administrator");
+
+    // Decidimos qué ID de template usar
+    string actionTemplate = isAdmin ? "#adminActionButtons" : "#userActionButtons";
 }
 <h4>
     @ViewData["Title"]
@@ -50,7 +56,7 @@
             <e-grid-column field="presentation" headerText="Presentación" width="200"></e-grid-column>
             <e-grid-column field="liters" headerText="Litros" format="N2" width="100" textAlign="Right" headerTextAlign="Left"></e-grid-column>
             <e-grid-column headerText="En existencia" width="200" template="#movements" textAlign="Center"></e-grid-column>
-            <e-grid-column width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+            <e-grid-column width="130" template="@actionTemplate" textAlign="Right"></e-grid-column>
         </e-grid-columns>
     </ejs-grid>
 </div>
@@ -65,13 +71,21 @@
 }
 
 @section Scripts{
-    <script id="actionButtons" type="text/x-template">
+    <script id="adminActionButtons" type="text/x-template">
         <div>
             <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
             <a href="#outModal" data-id="${id}" title="Agregar salida" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-out text-danger"></i></a>
             <a href="#adjustmentModal" data-id="${id}" title="Realizar ajuste" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-pen"></i></a>
         </div>
     </script>
+
+    @* Versión para Usuarios normales (Solo entrada) *@
+    <script id="userActionButtons" type="text/x-template">
+        <div>
+            <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
+        </div>
+    </script>
+
     <script id="movements" type="text/x-template">
         <div>
             <a href="/Movement?productPresentationId=${id}" title="Ver movimientos" class="tip btn btn-light" style="width:70px">${stock}</a>

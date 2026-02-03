@@ -709,7 +709,7 @@
             const clientId = $(this).val();
             monoloading("show");
 
-            $.get("@Url.Action("ValidateClientOrders", "Order")", { clientId: clientId }, function (responseText) {
+            $.get("@Url.Action("ValidateClientOrders", "Order")", { clientId: clientId, classificationId: parseInt("@Model.OrderClassification") || 0 }, function (responseText) {
                 var json = responseText;
                 var $form = $('#forma-order');
                 $form.find('button[type="submit"]').prop("disabled", false);
@@ -759,6 +759,7 @@
         //Agregar elementos a la tabla productos
         $('#addProductModal').on('submit', '#form-addProduct', function (e) {
             e.preventDefault();
+            monoloading("show");
             monoloading("show");
             var error = "Ha ocurrido un error inesperado.";
             const $form = $(this);

@@ -36,7 +36,17 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>@Model.Id</td>
+                            <td>@if (Model.OrderClassification == 2)
+                            {
+                                @* Si es Wellen, mostramos su secuencia propia con prefijo *@
+                                @Model.OrderClassificationCode
+                            }
+                            else
+                            {
+                                @* Si es Cerveza, mantenemos el ID original *@
+                                @Model.Id
+                            }
+                            </td>
                             <td><text class="text-info"><b>@Model.Type</b></text></td>
                             <td>@Model.CreateDate.ToString("dd/MM/yyyy")</td>
                             <td>@Model.User</td>

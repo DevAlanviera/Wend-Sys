@@ -79,12 +79,12 @@
             </div>
 
             <!--Agregamos este checkbox, COMENTADO HASTA QUE ESTE EN PRODUCCION-->
-           <div class="form-group" id="precioEspecialGroup" @((Model.Status == OrderStatus.PartialPayment || Model.Status == OrderStatus.Paid)
+           @*<div class="form-group" id="precioEspecialGroup" @((Model.Status == OrderStatus.PartialPayment || Model.Status == OrderStatus.Paid)
                  ? string.Empty : "hidden")>
                 <label>
                     <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Pronto Pago?
                 </label>
-            </div>
+            </div>*@
 
             <div class="form-group" id="initialAmount" hidden>
                 <label asp-for="InitialAmount"></label>
@@ -164,13 +164,6 @@
     });
 
 
-    // Evento change para PrecioEspecial
-    $("#PrecioEspecial").change(function () {
-        toggleRealAmountVisibility();
-    });
-
-
-
     $("#Status").on('change', function () {
         if ($(this).find('option:selected').text() == "En ruta" && $('#Type').val() == 'Invoice')
             $('#invoicecode').removeAttr('hidden');
@@ -187,66 +180,32 @@
             $('#deliveryDay').attr('hidden', '');
 
         toggleRealAmountVisibility();
-            $("#formActualizarTotal").on("submit", async function (e) {
-        e.preventDefault(); // Detiene el envío tradicional inmediatamente
+        });
 
-        const precioEspecial = $("#PrecioEspecial").is(":checked");
+        $("#formActualizarTotal").on("submit", async function (e) {
         const estado = $("#Status option:selected").text().trim();
-        const orderId = $("#OrderId").val();
-        const realAmountInput = $("#RealAmount");
-        const errorDiv = $(".modal-errores");
+        const precioEspecial = $("#PrecioEspecial").is(":checked");
 
-        let rawValue = realAmountInput.val().trim();
-        let realAmount = 0.00;
+        if (estado === "Pagado" && precioEspecial) {
+            e.preventDefault(); // Detenemos para hacer el fetch previo
 
-        // --- LÓGICA DE VALIDACIÓN ---
-        if (precioEspecial && (estado === "Pagado" || estado === "Pago parcial")) {
-
-            // Validamos si es vacío, no es número o es menor/igual a cero
-            if (rawValue === "" || isNaN(rawValue) || parseFloat(rawValue) <= 0) {
-                realAmountInput.addClass("is-invalid");
-                errorDiv.text("El monto real es obligatorio y debe ser mayor a 0 cuando se activa Pronto Pago.");
-                errorDiv.show(); // Asegúrate de que el div sea visible
-                return false; // Detiene TODO y evita que el código baje al fetch
-            }
-        }
-
-        // Si llegó aquí, los datos son válidos
-        realAmountInput.removeClass("is-invalid");
-        errorDiv.text("").hide();
-        realAmount = parseFloat(rawValue).toFixed(2);
-
-        console.log("Validación pasada. Enviando:", realAmount);
-
-        try {
-            const response = await fetch('/Order/ActualizarTotal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const response = await fetch("/Order/ActualizarTotal", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    Id: parseInt(orderId),
-                    PrecioEspecial: precioEspecial,
-                    RealAmount: parseFloat(realAmount)
+                    Id: parseInt($("#OrderId").val()),
+                    PrecioEspecial: true,
+                    RealAmount: parseFloat($("#RealAmount").val())
                 })
             });
 
             if (response.ok) {
-                console.log("Guardado exitosamente");
-                $('.modal').modal('hide');
-                // Opcional: recargar la tabla o la página
-                // location.reload();
+                // Una vez guardado el precio especial, enviamos el form de verdad
+                this.submit();
             } else {
-                const errorText = await response.text();
-                errorDiv.text("Error en el servidor: " + errorText).show();
+                $(".modal-errores").text("Error al guardar precio especial").show();
             }
-
-        } catch (error) {
-            console.error('Error al guardar:', error);
-            errorDiv.text("Error de red o conexión.").show();
         }
-    });
-
-
-
-
+        // Si no es precio especial, no hacemos nada y el form se envía solo al target oculto
     });
 </script>

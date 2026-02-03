@@ -32,11 +32,9 @@ namespace WendlandtVentas.Core.Services
 
         public void ClearProductCache()
         {
-            string cacheKey = "ProductTableData";
-
             // Borrar el caché para los productos
-            _memoryCache.Remove(cacheKey);
-
+            _memoryCache.Remove("ProductTableData");
+            InvalidateCacheByPrefix("ProductsInStock_");
             // También podemos borrar el cache por prefijo si tienes otros cachés con prefijos similares
             InvalidateCacheByPrefix("ProductTableData_");
 

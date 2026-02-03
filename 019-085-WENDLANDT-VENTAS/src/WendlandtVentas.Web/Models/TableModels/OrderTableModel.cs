@@ -30,5 +30,9 @@ namespace WendlandtVentas.Web.Models.TableModels
 
         //Se agrega esta propiedad para obtener el monto real
         public decimal? RealAmount { get; set; }
+
+        // Agrega estas dos:
+        public int OrderClassification { get; set; }
+        public int? OrderClassificationCode { get; set; }
     }
 }

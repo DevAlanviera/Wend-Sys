@@ -176,13 +176,13 @@ namespace WendlandtVentas.Core.Services
                 await _bitacoraService.AddAsync(bitacora);
                 
                 _cacheService.InvalidateOrderCache();
-               // string mensaje = (client.Channel == Entities.Enums.Channel.Distributor)
+                // string mensaje = (client.Channel == Entities.Enums.Channel.Distributor)
                 // ? "Confirmado: Es un Distribuidor"
                 // : $"Cuidado: El canal actual es {client.Channel}";
-               // Console.WriteLine(mensaje  + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+                // 
                 if (client.Channel == Entities.Enums.Channel.Distributor)
                 {
-                    // Console.WriteLine("SI ES DISTRIBUIDORRR" + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+                   
                     try
                     {
                         // 1. Generar PDF del pedido usando ExcelReaderService
@@ -200,13 +200,9 @@ namespace WendlandtVentas.Core.Services
                         _logger.LogError(ex, "Error al generar PDF o enviar correo para el pedido {OrderId}", order.Id);
                     }
                 
-               }
-               // else
-               // {
-                //    Console.WriteLine("no es distribuidorrrr: " + "\n \n \n \n \n \n \n \n \n \n \n" + "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
-               // }
+              }
 
-                    return new Response(true, "Pedido guardado");
+                return new Response(true, "Pedido guardado");
 
                 
             }

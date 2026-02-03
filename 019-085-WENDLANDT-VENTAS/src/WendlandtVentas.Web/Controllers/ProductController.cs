@@ -300,6 +300,10 @@ namespace WendlandtVentas.Web.Controllers
                 await _repository.UpdateAsync(product);
                 _cacheService.ClearProductCache();
                 _cacheService.RemoveProductsCache();
+
+                // 2. NUEVO: Eliminar específicamente la llave que usan los Pedidos
+                // Asegúrate de usar el mismo nombre de string que usas al leerla
+                _memoryCache.Remove("Products_For_Orders");
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Producto eliminado"));
             }
             catch (Exception e)
