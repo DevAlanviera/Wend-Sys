@@ -13,12 +13,24 @@
                 Campos marcados con asterisco son requeridos.
             </p>
 
-            <div class="form-group">
-                <label asp-for="Quantity"></label> <b class="text-danger">*</b>
-                <input asp-for="Quantity" class="form-control" />
-                <span asp-validation-for="Quantity" class="text-danger"></span>
+            <div class="form-row">
+                    <label asp-for="Quantity"></label> <b class="text-danger">*</b>
+                    <input asp-for="Quantity" class="form-control" />
+                    <span asp-validation-for="Quantity" class="text-danger"></span>
+            
+
+                @*@<div class="form-group col-md-6">
+                    <label asp-for="BatchNumber"></label> <b class="text-danger">*</b>
+                    <input asp-for="BatchNumber" class="form-control" placeholder="Ej. L-2024-001" />
+                    <span asp-validation-for="BatchNumber" class="text-danger"></span>
+                </div>@**@
             </div>
 
+            @*@<div class="form-group">
+                <label asp-for="ExpiryDate"></label> <b class="text-danger">*</b>
+                <input asp-for="ExpiryDate" type="text" class="form-control date-picker-lotes" autocomplete="off" />
+                <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+            </div>@**@
             <div class="form-group">
                 <label asp-for="Comment"></label>
                 <textarea asp-for="Comment" class="form-control" rows="10" cols="50"></textarea>
@@ -33,3 +45,14 @@
         </div>
     </form>
 </div>
+<script>
+    $(function () {
+        // Inicializamos el selector de fecha para los lotes
+        $(".date-picker-lotes").datepicker({
+            autoclose: true,
+            format: 'dd/mm/yyyy',
+            theme: 'bootstrap4',
+            startDate: new Date() // Generalmente la caducidad es a futuro
+        });
+    });
+</script>

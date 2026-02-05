@@ -79,7 +79,7 @@
             </div>
 
             <!--Agregamos este checkbox, COMENTADO HASTA QUE ESTE EN PRODUCCION-->
-           @*<div class="form-group" id="precioEspecialGroup" @((Model.Status == OrderStatus.PartialPayment || Model.Status == OrderStatus.Paid)
+           @*<div class="form-group" id="precioEspecialGroup" @((Model.Status == OrderStatus.Paid)
                  ? string.Empty : "hidden")>
                 <label>
                     <input asp-for="PrecioEspecial" id="PrecioEspecial" /> ¿Pronto Pago?
