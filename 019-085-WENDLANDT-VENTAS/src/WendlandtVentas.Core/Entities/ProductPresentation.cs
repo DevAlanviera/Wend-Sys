@@ -17,6 +17,9 @@ namespace WendlandtVentas.Core.Entities
         public decimal Weight { get; private set; }
         public ICollection<Movement> Movements { get; set; } = new List<Movement>();
 
+        // Agrega esta línea para habilitar la relación
+        public virtual ICollection<Batch> Batches { get; set; } = new HashSet<Batch>();
+
         public ProductPresentation() { }
 
         public ProductPresentation(int productId, int presentationId, decimal price, decimal priceUsd, decimal weight)

@@ -39,7 +39,7 @@
     </form>
 </section>
 <div class="datatable-container">
-    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowGrouping="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+    <ejs-grid id="Grid" class="datatable" detailTemplate="#batchDetailTemplate" locale="es-MX" allowGrouping="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
         <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
         <e-grid-aggregates>
             <e-grid-aggregate>
@@ -89,6 +89,37 @@
     <script id="movements" type="text/x-template">
         <div>
             <a href="/Movement?productPresentationId=${id}" title="Ver movimientos" class="tip btn btn-light" style="width:70px">${stock}</a>
+        </div>
+    </script>
+    <script id="batchDetailTemplate" type="text/x-template">
+        <div class="p-3 bg-light border-rounded">
+            <h6 class="mb-2"><i class="fa fa-boxes mr-2"></i>Desglose de Lotes Disponibles</h6>
+            <table class="table table-sm table-bordered bg-white">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Lote</th>
+                        <th>Existencia</th>
+                        <th>Caducidad</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${for(batch of batches)}
+                        <tr>
+                            <td>
+                                ${batch.batchNumber}
+                            </td>
+                            <td>${batch.currentQuantity}</td>
+                            <td>${batch.expiryDateFormatted}</td>
+                            <td>
+                                <span class="badge ${batch.statusColor}">
+                                    ${batch.statusText}
+                                </span>
+                            </td>
+                        </tr>
+                    ${/for}
+                </tbody>
+            </table>
         </div>
     </script>
 }

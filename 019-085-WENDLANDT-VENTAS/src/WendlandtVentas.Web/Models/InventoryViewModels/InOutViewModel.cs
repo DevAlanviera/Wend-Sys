@@ -15,13 +15,13 @@ namespace WendlandtVentas.Web.Models.InventoryViewModels
 
         public bool IsAdjustment { get; set; }
 
-       // [Display(Name = "Número de Lote")]
-        //[Required(ErrorMessage = "El número de lote es requerido")]
-        //public string BatchNumber { get; set; }
+        [Display(Name = "Número de Lote")]
+        [Required(ErrorMessage = "El número de lote es requerido")]
+        public string BatchNumber { get; set; }
 
-        //[Display(Name = "Fecha de Caducidad")]
-        //[Required(ErrorMessage = "La fecha de caducidad es requerida")]
-        //public DateTime? ExpiryDate { get; set; }
+        [Display(Name = "Fecha de Caducidad")]
+        [Required(ErrorMessage = "La fecha de caducidad es requerida")]
+        public DateTime? ExpiryDate { get; set; }
 
 
     }

@@ -1049,20 +1049,17 @@ namespace WendlandtVentas.Web.Controllers
 
                 if (model.Status == OrderStatus.Paid || model.Status == OrderStatus.PartialPayment)
                 {
-                    double montoReferenciaOrden = (model.PrecioEspecial && order.RealAmount.HasValue)
-                    ? (double)order.RealAmount.Value
-                    : (order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total);
-
                     var income = new OrdersIncomeDto
                     {
                         OrderId = order.Id,
                         OrderType = order.Type,
                         CurrencyType = order.CurrencyType,
                         RemissionCode = order.RemissionCode,
-                        Amount = montoReferenciaOrden,
-                        InitialAmount = (double)model.InitialAmount,
+                        Amount = order.Type == OrderType.Export ? (double)order.SubTotal : (double)order.Total,
+                        InitialAmount = model.InitialAmount,
                         User = User.Identity.Name
                     };
+
                     var apiResult = await _treasuryApi.AddIncomeAsync(income);
                     if (apiResult.IsSuccess)
                     {

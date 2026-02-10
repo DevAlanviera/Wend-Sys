@@ -57,6 +57,9 @@ namespace WendlandtVentas.Infrastructure.Data
         // DbSet para la tabla PreciosEspeciales
         public DbSet<PrecioEspecial> PreciosEspeciales { get; set; }
 
+        //Db set para los batches
+        public DbSet<Batch> Batches { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
 

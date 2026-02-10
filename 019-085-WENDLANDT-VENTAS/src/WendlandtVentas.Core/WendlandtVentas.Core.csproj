@@ -9,7 +9,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ardalis.GuardClauses" Version="1.3.3" />
+    <PackageReference Include="Ardalis.GuardClauses" Version="1.5.0" />
+    <PackageReference Include="Ardalis.Specification" Version="4.1.0" />
     <PackageReference Include="ClosedXML" Version="0.95.3" />
     <PackageReference Include="Humanizer.Core" Version="2.8.26" />
     <PackageReference Include="LinqKit.Microsoft.EntityFrameworkCore" Version="3.0.0" />
@@ -22,6 +23,10 @@
 
   <ItemGroup>
 	<ProjectReference Include="..\Monobits.SharedKernel\Monobits.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Specifications\BatchSpecifications\" />
   </ItemGroup>
 
 </Project>
