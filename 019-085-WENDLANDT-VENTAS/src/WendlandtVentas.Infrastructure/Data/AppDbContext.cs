@@ -118,6 +118,7 @@ namespace WendlandtVentas.Infrastructure.Data
                 .HasDefaultValue(15);
         }
 
+
         private void ConfigureExecution(EntityTypeBuilder<ClientPromotion> builder)
         {
             builder.HasKey(cp => new { cp.ClientId, cp.PromotionId });

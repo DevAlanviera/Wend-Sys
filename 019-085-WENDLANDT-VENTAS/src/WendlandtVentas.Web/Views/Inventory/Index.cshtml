@@ -39,7 +39,7 @@
     </form>
 </section>
 <div class="datatable-container">
-    <ejs-grid id="Grid" class="datatable" detailTemplate="#batchDetailTemplate" locale="es-MX" allowGrouping="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+    <ejs-grid id="Grid" class="datatable" dataBound="onDataBound" detailTemplate="#batchDetailTemplate" locale="es-MX" allowGrouping="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
         <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
         <e-grid-aggregates>
             <e-grid-aggregate>
@@ -121,6 +121,19 @@
                 </tbody>
             </table>
         </div>
+    </script>
+    <script>
+        function onDataBound(args) {
+            // Obtenemos los datos que acaban de cargar en el Grid
+            var gridData = this.getCurrentViewRecords();
+
+            console.log("--- Datos del Inventario ---");
+            gridData.forEach(function(row) {
+                console.log("Producto: " + row.Name);
+                // Imprimimos el objeto de lotes para este producto
+                console.log("Batches:", row.Batches);
+            });
+        }
     </script>
 }
 

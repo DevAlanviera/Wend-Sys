@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace WendlandtVentas.Web.Models.InventoryViewModels
@@ -16,12 +18,16 @@ namespace WendlandtVentas.Web.Models.InventoryViewModels
         public bool IsAdjustment { get; set; }
 
         [Display(Name = "Número de Lote")]
-        [Required(ErrorMessage = "El número de lote es requerido")]
+       // [Required(ErrorMessage = "El número de lote es requerido")]
         public string BatchNumber { get; set; }
 
         [Display(Name = "Fecha de Caducidad")]
-        [Required(ErrorMessage = "La fecha de caducidad es requerida")]
+        //[Required(ErrorMessage = "La fecha de caducidad es requerida")]
         public DateTime? ExpiryDate { get; set; }
+
+        //Ajustes realizados para corregir lotes
+        public int? BatchId { get; set; } // ID del lote seleccionado
+        public IEnumerable<SelectListItem> AvailableBatches { get; set; } // Lista para el Dropdown
 
 
     }

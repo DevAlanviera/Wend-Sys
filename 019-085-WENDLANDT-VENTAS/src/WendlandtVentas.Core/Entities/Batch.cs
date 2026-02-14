@@ -15,7 +15,7 @@ namespace WendlandtVentas.Core.Entities
         // Cantidades para control de saldo por lote
         public int InitialQuantity { get; set; }
         public int CurrentQuantity { get; set; }
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } = true;
 
         // Propiedad de navegación
         public virtual ProductPresentation ProductPresentation { get; set; }

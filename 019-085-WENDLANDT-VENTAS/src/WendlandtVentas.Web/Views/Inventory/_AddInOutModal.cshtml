@@ -9,31 +9,58 @@
         </div>
         <div class="modal-body">
             @Html.HiddenFor(t => t.ProductPresentationId)
-            <p class="text-muted">
+            <p class="text-muted small">
                 Campos marcados con asterisco son requeridos.
             </p>
 
-            <div class="form-row">
-                    <label asp-for="Quantity"></label> <b class="text-danger">*</b>
-                    <input asp-for="Quantity" class="form-control" />
-                    <span asp-validation-for="Quantity" class="text-danger"></span>
-            
-
-                <div class="form-group col-md-6">
-                    <label asp-for="BatchNumber"></label> <b class="text-danger">*</b>
-                    <input asp-for="BatchNumber" class="form-control" placeholder="Ej. L-2024-001" />
+            @* --- SECCIÓN DE LOTE (Diferenciada) --- *@
+            @if (Model.IsAdjustment || (string)ViewData["Action"] == "Out")
+            {
+                <div class="form-group">
+                    <label>Seleccionar Lote</label> <b class="text-danger">*</b>
+                    @* Usamos el operador null-coalescing ?? para asegurar una lista vacía si viene nulo *@
+                    @Html.DropDownListFor(m => m.BatchId,
+                    Model.AvailableBatches ?? new List<SelectListItem>(),
+                                "Seleccione un lote disponible",
+                                new { @class = "form-control", id = "batchSelector" })
+                <span asp-validation-for="BatchId" class="text-danger"></span>
+            </div>
+            <input type="hidden" name="BatchNumber" value="N/A" />
+                        }
+            else
+            {
+                <div class="form-group">
+                    <label asp-for="BatchNumber">Número de Lote</label> <b class="text-danger">*</b>
+                    <input asp-for="BatchNumber" class="form-control" id="inputBatchNumber" placeholder="Ej. L-2024-001" />
                     <span asp-validation-for="BatchNumber" class="text-danger"></span>
                 </div>
+            }
+
+            @* --- SECCIÓN DE CANTIDAD Y FECHA --- *@
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label asp-for="Quantity">Cantidad</label> <b class="text-danger">*</b>
+                    <input asp-for="Quantity" class="form-control" id="inputQuantity" />
+                    <span asp-validation-for="Quantity" class="text-danger"></span>
+                </div>
+
+                @* SOLO MOSTRAR FECHA SI NO ES SALIDA *@
+                @if ((string)ViewData["Action"] != "Out")
+                {
+                    <div class="form-group col-md-6">
+                        <label asp-for="ExpiryDate">Fecha de Caducidad</label> <b class="text-danger">*</b>
+                        <input asp-for="ExpiryDate" type="text" class="form-control date-picker-lotes" id="inputExpiry" autocomplete="off" />
+                        <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                    </div>
+                }
+
+                
             </div>
 
+            @* --- COMENTARIOS --- *@
             <div class="form-group">
-                <label asp-for="ExpiryDate"></label> <b class="text-danger">*</b>
-                <input asp-for="ExpiryDate" type="text" class="form-control date-picker-lotes" autocomplete="off" />
-                <span asp-validation-for="ExpiryDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Comment"></label>
-                <textarea asp-for="Comment" class="form-control" rows="10" cols="50"></textarea>
+                <label asp-for="Comment">Comentario / Motivo</label>
+                <textarea asp-for="Comment" class="form-control" rows="3"></textarea>
                 <span asp-validation-for="Comment" class="text-danger"></span>
             </div>
 
@@ -47,12 +74,41 @@
 </div>
 <script>
     $(function () {
-        // Inicializamos el selector de fecha para los lotes
+        // Inicializar selector de fecha
         $(".date-picker-lotes").datepicker({
             autoclose: true,
             format: 'dd/mm/yyyy',
-            theme: 'bootstrap4',
-            startDate: new Date() // Generalmente la caducidad es a futuro
+            theme: 'bootstrap4'
         });
+
+        // Lógica de autocompletado solo para Ajuste o Salida
+           $('#batchSelector').on('change', function() {
+        var batchId = $(this).val();
+        if (batchId) {
+            $.get('/Inventory/GetBatchDetails/' + batchId, function(data) {
+                // ELIMINA ESTA LÍNEA -> $('#inputQuantity').val(data.currentQuantity);
+
+                @if (Model.IsAdjustment)
+                {
+                        <text>$('#inputQuantity').val(data.currentQuantity);</text>
+                    // Carga valor para editar
+                }
+                else
+                {
+                        <text>$('#inputQuantity').val('');</text>
+                        // Deja vacío para que el usuario escriba cuánto sale
+                }
+
+                    if(data.expiryDate) {
+        // Tomamos solo la parte de la fecha YYYY-MM-DD
+        var datePart = data.expiryDate.split('T')[0];
+        var parts = datePart.split('-');
+        // Creamos la fecha usando año, mes (0-11) y día
+        var date = new Date(parts[0], parts[1] - 1, parts[2]);
+        $('#inputExpiry').datepicker('setDate', date);
+    }
+            });
+        }
+    });
     });
 </script>

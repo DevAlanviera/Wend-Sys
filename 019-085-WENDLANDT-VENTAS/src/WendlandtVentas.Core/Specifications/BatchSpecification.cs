@@ -11,22 +11,27 @@ namespace WendlandtVentas.Core.Specifications
 {
     public class BatchSpecification : BaseSpecification<Batch>
     {
-        // El error CS7036 se quita pasando el filtro al constructor base
-        public BatchSpecification(int productPresentationId, string batchNumber)
-            : base(b => b.ProductPresentationId == productPresentationId &&
+        // Para Salidas (Out): Solo lotes activos y con stock
+        public BatchSpecification(int presentationId)
+            : base(b => b.ProductPresentationId == presentationId && b.IsActive && !b.IsDeleted && b.CurrentQuantity > 0)
+        {
+            ApplyOrderBy(b => b.ExpiryDate); // FIFO
+        }
+
+        // Para Ajustes: Lotes activos aunque tengan cantidad 0
+        public BatchSpecification(int presentationId, bool includeEmpty)
+            : base(b => b.ProductPresentationId == presentationId && b.IsActive && !b.IsDeleted)
+        {
+            ApplyOrderBy(b => b.BatchNumber);
+        }
+
+        // Para buscar un lote específico por su número (Usado en el método In)
+        public BatchSpecification(int presentationId, string batchNumber)
+            : base(b => b.ProductPresentationId == presentationId &&
                         b.BatchNumber == batchNumber &&
                         !b.IsDeleted)
         {
-            // Aquí puedes agregar Includes si tu Kernel lo permite, por ejemplo:
-            // AddInclude(b => b.ProductPresentation);
-        }
-
-        // Sobrecarga para obtener todos los lotes de una presentación
-        public BatchSpecification(int productPresentationId)
-            : base(b => b.ProductPresentationId == productPresentationId &&
-                        !b.IsDeleted &&
-                        b.CurrentQuantity > 0)
-        {
+            // No filtramos por IsActive aquí por si queremos reactivar un lote viejo
         }
     }
 }
