@@ -3,9 +3,24 @@
 @model FilterViewModel
 
 @{
-    ViewData["Title"] = "Pedidos";
+    // 1. Capturamos el ID de la clasificación
+    var classificationId = Context.Request.Query["classificationId"].ToString();
 
-    var classificationId = Context.Request.Query["classificationId"];
+    // 2. Lógica dinámica para el título
+    string pageTitle = "Pedidos"; // Valor por defecto (Cerveza)
+    string Subtitle = "Creación y listado de todos los pedidos de nuestros clientes.";
+
+    if (classificationId == "2")
+    {
+        pageTitle = "Pedidos Wellen";
+    }
+    else if (classificationId == "3")
+    {
+        pageTitle = "Cotizaciones";
+        Subtitle = "Creación y listado de cotizaciones para nuestros prospectos.";
+    }
+
+    ViewData["Title"] = pageTitle;
 
     var cols = new List<object> { new { field = "id", direction = "Descending" } };
     var targetUrl = $"{Url.Action("GetData")}{Context.Request.QueryString}";
@@ -13,7 +28,7 @@
 <h4>
     @ViewData["Title"]
     <br />
-    <small class="text-muted">Creación y listado de todos los pedidos de nuestros clientes.</small>
+    <small class="text-muted">@Subtitle</small>
 </h4>
 @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper")
 || User.IsInRole("Billing") || User.IsInRole("BillingAssistant") || User.IsInRole("Sales") || User.IsInRole("CashIncomes") || User.IsInRole("Distributor"))
@@ -22,9 +37,9 @@
         <ul class="list-inline">
             <li>
                 <a asp-action="Add"
-                   asp-route-classificationId="@Context.Request.Query["classificationId"]"
+                   asp-route-classificationId="@classificationId"
                    class="btn btn-primary moderno">
-                    <i class="fa fa-plus"></i> Agregar
+                    <i class="fa fa-plus"></i> @(classificationId == "3" ? "Nueva Cotización" : "Nuevo Pedido")
                 </a>
             </li>
         </ul>
@@ -173,6 +188,7 @@
     <script id="actionButtons" type="text/x-template">
         <div>
             <a href="#detailsModal" data-id="${id}" title="Ver información completa" class="tip btn btn-sm btn-modal-action"><i class="fa fa-fw fa-info-circle"></i></a>
+
         @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorAssistant") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
         {
                     <a href="#addCollectionCommentModal" data-id="${id}" title="Agregar comentario" class="tip btn btn-sm btn-modal-action ml-2"><i class="fa fa-fw fa-comment"></i></a>

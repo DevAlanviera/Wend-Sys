@@ -1,7 +1,23 @@
 ﻿﻿﻿@using WendlandtVentas.Core.Entities.Enums
 @using WendlandtVentas.Core.Models.OrderViewModels
 @model OrderViewModel
+@{
+    // 1. Capturamos el ID de la clasificación
+    var classificationId = Context.Request.Query["classificationId"].ToString();
 
+    string tipo = "Pedido";
+    if (classificationId == "3")
+    {
+        tipo = "cotización";
+    }
+    else
+    {
+        tipo = "pedido";
+        
+    }
+
+
+}
 
 <h4 class="mb-3">
     <a asp-action="Index"
@@ -35,47 +51,58 @@
         <div class="col-12 col-lg-9">
             <div class="card card-body">
                 <div class="row">
-                    @if (Model.IsInvoice != OrderType.Export && Model.IsInvoice != OrderType.Return)
+                    @if (ViewBag.ClassificationId != 3)
                     {
-                        <div class="col-12 col-sm-5 col-md-4 col-lg-3 col-xl-2 mb-3 mb-sm-0 mr-sm-5 mr-lg-auto">
-                            <div class="form-group">
-                                <label asp-for="IsInvoice" class="pb-1"></label>
-                                <br />
-                                <div class="form-check">
-                                    <label class="form-check-label">
-                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
-                                    </label>
-                                </div>
-                                @if (Model.Id == 0)
-                                {
-                                    <div id="export-check" class="form-check">
+                        @if (Model.IsInvoice != OrderType.Export && Model.IsInvoice != OrderType.Return)
+                        {
+                            <div class="col-12 col-sm-5 col-md-4 col-lg-3 col-xl-2 mb-3 mb-sm-0 mr-sm-5 mr-lg-auto">
+                                <div class="form-group">
+                                    <label asp-for="IsInvoice" class="pb-1"></label>
+                                    <br />
+                                    <div class="form-check">
                                         <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
+                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
                                         </label>
                                     </div>
-                                }
-                                <div class="form-check">
-                                    <label class="form-check-label">
-                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
-                                    </label>
-                                </div>
-                                @if (Model.Id == 0)
-                                {
-                                    <div id="return-check" class="form-check">
+                                    @if (Model.Id == 0)
+                                    {
+                                        <div id="export-check" class="form-check">
+                                            <label class="form-check-label">
+                                                <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
+                                            </label>
+                                        </div>
+                                    }
+                                    <div class="form-check">
                                         <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
+                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
                                         </label>
                                     </div>
-                                }
-                                <!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
-                            @*<div class="form-check mt-2">
-                            <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
-                            <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
-                            </div>*@
+                                    @if (Model.Id == 0)
+                                    {
+                                        <div id="return-check" class="form-check">
+                                            <label class="form-check-label">
+                                                <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
+                                            </label>
+                                        </div>
+                                    }
+                                    <!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
+                                @*<div class="form-check mt-2">
+                                <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
+                                <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
+                                </div>*@
+                                </div>
                             </div>
-                        </div>
+                        }
                     }
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3 mb-3 mb-sm-0" id="invoice" @(Model.IsInvoice == OrderType.Invoice ? string.Empty : "hidden")>
+                    else
+                    {
+                        @* Si es cotización, nos aseguramos de que el valor enviado sea Remisión por defecto o uno neutral *@
+                        <input type="hidden" name="IsInvoice" value="@OrderType.Remission" />
+                    }
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3 mb-3 mb-sm-0"
+                         id="invoice"
+                         @(Model.IsInvoice == OrderType.Invoice && ViewBag.ClassificationId != 3 ? string.Empty : "hidden")>
+
                         <div class="form-group">
                             <label asp-for="InvoiceCode"></label>
                             <input asp-for="InvoiceCode" class="form-control" readonly />
@@ -99,54 +126,60 @@
                                 <span asp-validation-for="AddressId" class="text-danger"></span>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12 col-lg col-xl">
-                            <div class="form-group">
-                                <label asp-for="DeliverySpecification"></label>
-                                <input asp-for="DeliverySpecification" class="form-control" />
-                                <span asp-validation-for="DeliverySpecification" class="text-danger"></span>
+                        </div>
+                        @if (ViewBag.ClassificationId != 3)
+                        {
+                            <div class="row">
+                                <div class="col-12 col-lg col-xl">
+                                    <div class="form-group">
+                                        <label asp-for="DeliverySpecification"></label>
+                                        <input asp-for="DeliverySpecification" class="form-control" />
+                                        <span asp-validation-for="DeliverySpecification" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="row">
+                            @if(ViewBag.ClassificationId != 3){
+                                <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
+                                    <div class="form-group">
+                                        <label asp-for="PaymentPromiseDate"></label>
+                                        <input asp-for="PaymentPromiseDate" class="form-control date-picker" autocomplete="off" />
+                                        <span asp-validation-for="PaymentPromiseDate" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
+                                    <div class="form-group">
+                                        <label asp-for="PaymentDate"></label>
+                                        <input asp-for="PaymentDate" class="form-control date-picker" autocomplete="off" />
+                                        <span asp-validation-for="PaymentDate" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+                                    <div class="form-group">
+                                        <label asp-for="DeliveryDay"></label>
+                                        <input asp-for="DeliveryDay" class="form-control date-picker" autocomplete="off" />
+                                        <span asp-validation-for="DeliveryDay" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-6 col-sm-6 col-md-6 col-lg-3 col-xl-3">
+                                <div class="form-group">
+                                    <label asp-for="PayType"></label>
+                                    @Html.DropDownListFor(m => m.PayType, Model.PayTypes, new { @class = "form-control select2", @style = "width:100%;" })
+                                    <span asp-validation-for="PayType" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-6 col-lg-3 col-xl-3">
+                                <div class="form-group">
+                                    <label asp-for="CurrencyType"></label>
+                                    @Html.DropDownListFor(m => m.CurrencyTypes, Model.CurrencyTypes, new { @class = "form-control select2", @style = "width:100%;" })
+                                    <input asp-for="CurrencyType" value="@Model.CurrencyType" class="form-control" type="hidden" />
+                                    <span asp-validation-for="CurrencyType" class="text-danger"></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
-                            <div class="form-group">
-                                <label asp-for="PaymentPromiseDate"></label>
-                                <input asp-for="PaymentPromiseDate" class="form-control date-picker" autocomplete="off" />
-                                <span asp-validation-for="PaymentPromiseDate" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
-                            <div class="form-group">
-                                <label asp-for="PaymentDate"></label>
-                                <input asp-for="PaymentDate" class="form-control date-picker" autocomplete="off" />
-                                <span asp-validation-for="PaymentDate" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2">
-                            <div class="form-group">
-                                <label asp-for="DeliveryDay"></label>
-                                <input asp-for="DeliveryDay" class="form-control date-picker" autocomplete="off" />
-                                <span asp-validation-for="DeliveryDay" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-sm-6 col-md-6 col-lg-3 col-xl-3">
-                            <div class="form-group">
-                                <label asp-for="PayType"></label>
-                                @Html.DropDownListFor(m => m.PayType, Model.PayTypes, new { @class = "form-control select2", @style = "width:100%;" })
-                                <span asp-validation-for="PayType" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-6 col-lg-3 col-xl-3">
-                            <div class="form-group">
-                                <label asp-for="CurrencyType"></label>
-                                @Html.DropDownListFor(m => m.CurrencyTypes, Model.CurrencyTypes, new { @class = "form-control select2", @style = "width:100%;" })
-                                <input asp-for="CurrencyType" value="@Model.CurrencyType" class="form-control" type="hidden" />
-                                <span asp-validation-for="CurrencyType" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
+                    
                     <div class="row">
                         <div class="col-12 col-lg-12 col-xl-12">
                             <div class="form-group">
@@ -325,7 +358,7 @@
 </form>
 
 @section Modals {
-    <div class="modal" id="addProductModal" tabindex="false" role="dialog" aria-labelledby="addProductModal-label"></div>
+    <div class="modal" id="addProductModal" @*tabindex="false"*@ role="dialog" aria-labelledby="addProductModal-label"></div>
     <div class="modal modal-focus-first" id="addPromotionsModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddPromotions")"></div>
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
 }
