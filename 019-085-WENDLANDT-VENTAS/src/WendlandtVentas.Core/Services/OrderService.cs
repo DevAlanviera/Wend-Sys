@@ -84,7 +84,7 @@ namespace WendlandtVentas.Core.Services
             var orderPromotionsItems = new List<PromotionItemModel>();
 
             // Validación final de RFC (redundante por seguridad)
-            if (model.IsInvoice == OrderType.Invoice)
+            if (model.IsInvoice == OrderType.Invoice && model.OrderClassification != 3)
             {
                
                 if (client == null || string.IsNullOrEmpty(client.RFC))
@@ -138,8 +138,10 @@ namespace WendlandtVentas.Core.Services
 
             int siguienteFolio = await GenerarSiguienteFolio(model.OrderClassification);
 
+            var initialStatus = model.OrderClassification == 3 ? OrderStatus.New : OrderStatus.New;
+
             var order = new Order(
-                model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
+                model.InvoiceCode, model.IsInvoice, initialStatus, model.Paid,
                 dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
                 user.Id, model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
                 orderProducts, orderPromotions, model.Address, model.AddressName,
@@ -154,7 +156,12 @@ namespace WendlandtVentas.Core.Services
                 await _repository.AddAsync(order);
 
                 var orderTypeName = "Pedido";
-                if (model.IsInvoice == OrderType.Return)
+                if (model.OrderClassification == 3)
+                {
+                    orderTypeName = "Cotización";
+                    // Aquí NO generamos remisión fiscal si no quieres que gaste folios aún
+                }
+                else if (model.IsInvoice == OrderType.Return)
                 {
                     orderTypeName = "Devolución";
                     order.UpdateReturnInformation(model.ReturnRemisionNumber, model.ReturnReason);
@@ -166,13 +173,15 @@ namespace WendlandtVentas.Core.Services
 
                 await _repository.UpdateAsync(order);
 
-                var clientName = client != null ? client.Name : string.Empty;
-                var roles = new List<Role>() { Role.Administrator, Role.Storekeeper, Role.Billing, Role.BillingAssistant };
-                var title = $"{orderTypeName} {order.Id}";
-                var message = $"{orderTypeName} nuevo: #{order.Id} - {clientName} - {order.Total:C2}";
-
-                await _notificationService.AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
-                var bitacora = new Bitacora(order.Id, user.Name, "Crear pedido");
+                if (model.OrderClassification != 3)
+                {
+                    var clientName = client != null ? client.Name : string.Empty;
+                    var roles = new List<Role>() { Role.Administrator, Role.Storekeeper, Role.Billing, Role.BillingAssistant };
+                    var title = $"{orderTypeName} {order.Id}";
+                    var message = $"{orderTypeName} nuevo: #{order.Id} - {clientName} - {order.Total:C2}";
+                    await _notificationService.AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
+                }
+                var bitacora = new Bitacora(order.Id, user.Name, $"Crear {orderTypeName.ToLower()}");
                 await _bitacoraService.AddAsync(bitacora);
                 
                 _cacheService.InvalidateOrderCache();
@@ -180,7 +189,7 @@ namespace WendlandtVentas.Core.Services
                 // ? "Confirmado: Es un Distribuidor"
                 // : $"Cuidado: El canal actual es {client.Channel}";
                 // 
-                if (client.Channel == Entities.Enums.Channel.Distributor)
+                if (client.Channel == Entities.Enums.Channel.Distributor && model.OrderClassification != 3)
                 {
                    
                     try
@@ -243,14 +252,14 @@ namespace WendlandtVentas.Core.Services
                 var orderPromotions = new List<OrderPromotion>();
                 var orderPromotionsItems = new List<PromotionItemModel>();
 
-                if (model.IsInvoice == OrderType.Invoice)
+                if (model.IsInvoice == OrderType.Invoice && order.OrderClassification != 3)
                 {
 
                     if (client == null || string.IsNullOrEmpty(client.RFC))
                         return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
                 }
 
-                if (order.InventoryDiscount)
+                if (order.InventoryDiscount && order.OrderClassification != 3)
                 {
                     await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
                 }
@@ -299,7 +308,7 @@ namespace WendlandtVentas.Core.Services
 
                 // Asignar los nuevos valores al pedido
                 order.ProntoPago = model.ProntoPago;
-                order.Edit(model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
+                order.Edit(model.InvoiceCode, model.IsInvoice, order.OrderStatus, model.Paid,
                     dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
                     model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
                     orderProducts, orderPromotions, model.Address, model.AddressName,
@@ -313,7 +322,7 @@ namespace WendlandtVentas.Core.Services
                 // Actualizar la fecha de LastModified antes de guardar la orden
                 await _repository.UpdateAsync(order);
 
-                if (order.InventoryDiscount)
+                if (order.InventoryDiscount && order.OrderClassification != 3)
                 {
                     await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
                 }

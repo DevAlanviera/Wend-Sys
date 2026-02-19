@@ -5,7 +5,7 @@
     // 1. Capturamos el ID de la clasificación
     var classificationId = Context.Request.Query["classificationId"].ToString();
 
-    string tipo = "Pedido";
+    string tipo;
     if (classificationId == "3")
     {
         tipo = "cotización";
@@ -59,32 +59,35 @@
                                 <div class="form-group">
                                     <label asp-for="IsInvoice" class="pb-1"></label>
                                     <br />
-                                    <div class="form-check">
-                                        <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
-                                        </label>
-                                    </div>
-                                    @if (Model.Id == 0)
+                                    @if(ViewBag.ClassificationId != 3)
                                     {
-                                        <div id="export-check" class="form-check">
+                                        <div class="form-check">
                                             <label class="form-check-label">
-                                                <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
+                                                <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
                                             </label>
                                         </div>
-                                    }
-                                    <div class="form-check">
-                                        <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
-                                        </label>
-                                    </div>
-                                    @if (Model.Id == 0)
-                                    {
-                                        <div id="return-check" class="form-check">
+                                        @if (Model.Id == 0)
+                                        {
+                                            <div id="export-check" class="form-check">
+                                                <label class="form-check-label">
+                                                    <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
+                                                </label>
+                                            </div>
+                                        }
+                                        }
+                                        <div class="form-check">
                                             <label class="form-check-label">
-                                                <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
+                                                <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
                                             </label>
                                         </div>
-                                    }
+                                        @if (Model.Id == 0)
+                                        {
+                                            <div id="return-check" class="form-check">
+                                                <label class="form-check-label">
+                                                    <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
+                                                </label>
+                                            </div>
+                                        }
                                     <!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
                                 @*<div class="form-check mt-2">
                                 <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
@@ -360,7 +363,11 @@
 @section Modals {
     <div class="modal" id="addProductModal" @*tabindex="false"*@ role="dialog" aria-labelledby="addProductModal-label"></div>
     <div class="modal modal-focus-first" id="addPromotionsModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddPromotions")"></div>
+    @* Solo renderizamos el modal si NO es una cotización *@
+    @if (ViewBag.ClassificationId != 3)
+    {
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
+    }
 }
 @section Scripts {
     <script>
@@ -386,8 +393,6 @@
                         const $select = $modal.find('.select2');
 
                         // --- Intentar usar datos precargados en sessionStorage ---
-                        // Opción A (preload global): clave simple que sugerimos en el preloader
-                        const classificationId = $('#OrderClassification').val();
                         const globalCacheKey = `products_${currencyType}_class_${classificationId}`;
                         let globalCache = null;
                         try {
@@ -471,19 +476,21 @@
                 CalculateTotals();
             });
 
-            function toggleRequiredFields() {
-                const selected = $('input[name="OrderType"]:checked').val();
+                    function toggleRequiredFields() {
+            const selected = $('input[name="OrderType"]:checked').val();
+            const classificationId = $('#OrderClassification').val(); // <--- Leer clasificación
 
-                if (selected === "Devolucion") {
-                    $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
-                        .prop('required', false)
-                        .closest('.form-group').hide();
-                } else {
-                    $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
-                        .prop('required', true)
-                        .closest('.form-group').show();
-                }
+            // Si es Devolución O es Cotización (3), relajamos la obligatoriedad
+            if (selected === "Devolucion" || classificationId === "3") {
+                $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
+                    .prop('required', false)
+                    .closest('.form-group').show(); // Los mostramos pero no son obligatorios
+            } else {
+                $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
+                    .prop('required', true)
+                    .closest('.form-group').show();
             }
+        }
 
             // Detectar cambios
             $(document).on('change', 'input[name="OrderType"]', toggleRequiredFields);
@@ -529,9 +536,17 @@
                 return;
             }
 
-            // Verificamos el RFC solo para facturación con cliente seleccionado
+                    const isQuote = $('#OrderClassification').val() == 3;
+        console.log( $('#OrderClassification').val());
+        if (!isQuote) {
+            // Si NO es cotización, aplicamos la validación estricta de RFC
             const hasValidRFC = await checkClientRFCAsync();
             $saveButton.prop('disabled', !hasValidRFC);
+        } else {
+            // Si ES cotización, el RFC no importa, el botón debe estar habilitado
+            $saveButton.prop('disabled', false);
+        }
+           
         }
 
         // Evento para cambios en el cliente
@@ -582,6 +597,9 @@
             const $btnConfirmarModal = $('#confirmarEnvio');
             const $form = $('#forma-order');
 
+            // Traemos la clasificación desde el servidor a JS
+            const classificationId = '@ViewBag.ClassificationId';
+
             $btnGuardar.on('click.confirmacion', function (e) {
                 e.preventDefault();
 
@@ -589,12 +607,21 @@
                 // Solo verificamos si ya se envió para no hacer nada
                 if (alreadySubmitted) return;
 
-                // Obtener tipo de orden para el texto del modal
-                let $radioSeleccionado = $('input[name="IsInvoice"]:checked');
+                // --- LÓGICA DINÁMICA PARA EL TEXTO ---
                 let textoTipo = "Pedido";
+                let labelOrden = "El pedido";
+
+                if (classificationId === "3") {
+                    // Si es cotización, forzamos los textos
+                    textoTipo = "Cotización";
+                    labelOrden = "La cotización";
+                }else {
+                // Lógica original para Pedidos (Cerveza/Wellen)
+                let $radioSeleccionado = $('input[name="IsInvoice"]:checked');
                 if ($radioSeleccionado.length) {
                     textoTipo = $radioSeleccionado.closest('.form-check')
                                                  .find('.form-check-label').text().trim();
+                    }
                 }
 
                 $('.tipo-orden-texto').text(textoTipo);

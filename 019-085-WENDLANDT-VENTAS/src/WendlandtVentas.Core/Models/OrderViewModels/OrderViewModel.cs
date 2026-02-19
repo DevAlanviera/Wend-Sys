@@ -105,7 +105,8 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public enum OrderBrand
         {
             Cerveza = 1,
-            Wellen = 2
+            Wellen = 2,
+            Cotizacion = 3
         }
 
     }

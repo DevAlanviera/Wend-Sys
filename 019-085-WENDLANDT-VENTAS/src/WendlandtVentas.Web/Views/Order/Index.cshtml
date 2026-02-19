@@ -177,7 +177,7 @@
 }
 @section Scripts{
     <script id="idTemplate" type="text/x-template">
-        ${if(orderClassification == 2)}
+        ${if(orderClassification == 2 || orderClassification == 3 )}
             @* Para Wellen, mostramos el folio de su secuencia propia *@
             <span >${orderClassificationCode}</span>
         ${else}
@@ -189,13 +189,19 @@
         <div>
             <a href="#detailsModal" data-id="${id}" title="Ver información completa" class="tip btn btn-sm btn-modal-action"><i class="fa fa-fw fa-info-circle"></i></a>
 
-        @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorAssistant") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
+    @* --- BLOQUE CONDICIONAL: Solo si NO es Cotización (ID 3) --- *@
+    @if (classificationId != "3")
         {
-                    <a href="#addCollectionCommentModal" data-id="${id}" title="Agregar comentario" class="tip btn btn-sm btn-modal-action ml-2"><i class="fa fa-fw fa-comment"></i></a>
+            @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorAssistant") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))
+            {
+                <a href="#addCollectionCommentModal" data-id="${id}" title="Agregar comentario" class="tip btn btn-sm btn-modal-action ml-2"><i class="fa fa-fw fa-comment"></i></a>
+            }
+            <text>
+            ${ if (status != "Pagado")}
+                    <a href="#changeStatusModal" data-id="${id}" title="Cambiar estado" class="tip btn btn-sm btn-modal-action ml-2"><i class="fa fa-fw fa-sync-alt"></i></a>
+                ${/if}
+            </text>
         }
-            ${if(status != "Pagado")}
-            <a href="#changeStatusModal" data-id="${id}" title="Cambiar estado" class="tip btn btn-sm btn-modal-action ml-2"><i class="fa fa-fw fa-sync-alt"></i></a>
-            ${/if}
         @if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Sales") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant") || User.IsInRole("Storekeeper"))
         {
             <text>

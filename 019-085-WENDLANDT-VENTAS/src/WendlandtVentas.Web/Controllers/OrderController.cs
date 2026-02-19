@@ -647,8 +647,14 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetBalances(int clientId)
+        public async Task<IActionResult> GetBalances(int clientId, int classificationId = 1)
         {
+            // Si es clasificación 3 (Cotización), no permitimos ver balances.
+            if (classificationId == 3)
+            {
+                return Content(""); // O puedes retornar un Json de error si prefieres
+            }
+
             ViewData["ModalTitle"] = "Balance de facturas";
             var client = await _repository.GetByIdAsync<Client>(clientId);
             var model = new BalanceViewModel
@@ -729,11 +735,13 @@ namespace WendlandtVentas.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            ViewData["Action"] = nameof(Edit);
-            ViewData["Title"] = "Editar pedido";
+            
 
             // Ejecutar las consultas de manera secuencial para evitar conflictos con DbContext
             var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
+            ViewData["Action"] = nameof(Edit);
+            ViewData["Title"] = order.OrderClassification == 3 ? "Editar Cotización" : "Editar pedido";
+
             var remissionsForReturn = await _orderService.GetInvoiceRemissionNumbersAsync(); // No usa DbContext
             var clients = await _repository.ListAllExistingAsync<Client>();
             var addresses = await _repository.ListAsync(new AddressesByClientIdSpecification(order.ClientId));
@@ -788,6 +796,7 @@ namespace WendlandtVentas.Web.Controllers
                 ReturnRemisionNumberOptions = new SelectList(remissionsForReturn, "Value", "Text"),
                 InvoiceCode = order.InvoiceCode,
                 Paid = order.Paid,
+                OrderClassification = (int)order.OrderClassification,
                 PaymentPromiseDate = order.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
                 PaymentDate = order.PaymentDate.ToLocalTime().FormatDateShortMx(),
                 DeliveryDay = order.DeliveryDate.ToLocalTime().FormatDateShortMx(),
@@ -828,10 +837,13 @@ namespace WendlandtVentas.Web.Controllers
                 Addresses = new SelectList(filteredAddresses, "Id", "AddressLocation"),
                 PayTypes = new SelectList(Enum.GetValues(typeof(PayType)).Cast<PayType>().Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CurrencyTypes = new SelectList(new[] { order.CurrencyType }.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
-                CanEditProducts = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
+                CanEditProducts = order.OrderClassification == 3 || order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
                 Comment = order.Comment,
                 ProntoPago = order.ProntoPago
             };
+
+            // También asegúrate de pasarlo al ViewBag para los @if de Razor
+            ViewBag.ClassificationId = (int)order.OrderClassification;
 
             return View("AddEdit", model);
         }
@@ -842,8 +854,14 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> Edit(OrderViewModel model)
         {
 
+            // --- NUEVO: Bypass de validación para Cotizaciones ---
+            if (model.OrderClassification == 3)
+            {
+                ModelState.Remove("DeliveryDay");
+                ModelState.Remove("PaymentDate");
+                ModelState.Remove("PaymentPromiseDate");
+            }
 
-            
             if (!ModelState.IsValid)
                 return Json(AjaxFunctions.GenerateJsonError(string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
@@ -852,7 +870,7 @@ namespace WendlandtVentas.Web.Controllers
 
 
             // Validación de RFC antes de actualizar
-            if (model.IsInvoice == OrderType.Invoice)
+            if (model.IsInvoice == OrderType.Invoice && model.OrderClassification != 3)
             {
                 var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
                 if (rfcValidation != null)
@@ -863,11 +881,11 @@ namespace WendlandtVentas.Web.Controllers
 
             if (response.IsSuccess)
             {
-                
+                string accion = model.OrderClassification == 3 ? "Editar cotización" : "Editar pedido";
                 var user = await _userManager.FindByNameAsync(User.Identity.Name); // Asegúrate de que _userManager esté inyectado en tu controlador
-                var bitacora = new Bitacora(model.Id, user.Name, "Editar pedido");
+                var bitacora = new Bitacora(model.Id, user.Name, accion);
                
-   
+                    
 
                 await _bitacoraService.AddAsync(bitacora);
 
@@ -1172,6 +1190,11 @@ namespace WendlandtVentas.Web.Controllers
         {
             ViewData["ModalTitle"] = "Detalles del pedido";
             var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
+
+            // CAMBIO 1: Título dinámico del Modal
+            ViewData["ModalTitle"] = order.OrderClassification == 3
+                ? "Detalles de la Cotización"
+                : "Detalles del pedido";
             var user = await _userManager.FindByIdAsync(order.UserId);
             var weight = await CalcOrderWeight(id);
 
@@ -1311,6 +1334,8 @@ namespace WendlandtVentas.Web.Controllers
                 Id = order.Id,
                 TypeEnum = order.Type,
                 RemissionCode = order.RemissionCode,
+                OrderClassificationCode = order.OrderClassificationCode,
+                OrderClassification = order.OrderClassification,
                 InvoiceCode = order.InvoiceCode,
                 IsPaid = order.Paid,
                 CreateDate = order.CreatedAt.ToLocalTime(),
@@ -1390,6 +1415,8 @@ namespace WendlandtVentas.Web.Controllers
             };
             try
             {
+
+
                 var archivo_generado = await _excelReadService.FillData(currentPath, model);
 
                 FileStream fileStream = new FileStream(archivo_generado, FileMode.Open, FileAccess.ReadWrite);

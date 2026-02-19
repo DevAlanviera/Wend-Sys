@@ -89,24 +89,12 @@ namespace WendlandtVentas.Infrastructure.Services
 
             public async Task<string> FillData(string path, OrderDetailsViewModel model)
             {
-                var excelFile = "";
-                if (model.TypeEnum == OrderType.Invoice)
-                    excelFile = "Facturación Wendlandt.xlsx";
-                else
-                    excelFile = "Remisión Wendlandt.xlsx";
-
-                /*if (model.TypeEnum == OrderType.Invoice)
-                {
-                    excelFile = model.ProntoPago
-                        ? "Facturación Wendlandt - Pronto Pago.xlsx"  // Si tiene pronto pago
-                        : "Facturación Wendlandt.xlsx";   // Si no tiene pronto pago
-                }
-                else
-                {
-                    excelFile = model.ProntoPago
-                        ? "Remisión Wendlandt - Pronto Pago.xlsx"  // Si tiene pronto pago
-                        : "Remisión Wendlandt.xlsx";    // Si no tiene pronto pago
-                }*/
+            // 1. Selección de Plantilla
+            var excelFile = model.OrderClassification switch
+            {
+                3 => "Cotizacion.xlsx",
+                _ => model.TypeEnum == OrderType.Invoice ? "Facturación Wendlandt.xlsx" : "Remisión Wendlandt.xlsx"
+            };
 
 
 
@@ -129,13 +117,15 @@ namespace WendlandtVentas.Infrastructure.Services
 
                     if (model.TypeEnum == OrderType.Invoice)
                     {
-                        worksheet.Range["H3"].Text = model.InvoiceCode;
-                        worksheet.Range["R3"].Text = model.InvoiceCode;
+                    worksheet.Range["H3"].Text =  model.InvoiceCode;
+                    worksheet.Range["R3"].Text =  model.InvoiceCode;
 
-                        worksheet.Range["H5"].Text = model.RemissionCode;
-                        worksheet.Range["R5"].Text = model.RemissionCode;
+                    // Para la fila 5, si es cotización podríamos dejarlo vacío o repetir el folio, 
+                    // aquí la ternaria decide según la clasificación
+                    worksheet.Range["H5"].Text =  model.RemissionCode;
+                    worksheet.Range["R5"].Text =  model.RemissionCode;
 
-                        worksheet.Range["I27"].Text = model.SubTotal;
+                    worksheet.Range["I27"].Text = model.SubTotal;
                         worksheet.Range["I28"].Text = model.IVA;
                         worksheet.Range["I29"].Text = model.IEPS;
                         worksheet.Range["I30"].Text = model.Total;
@@ -214,9 +204,16 @@ namespace WendlandtVentas.Infrastructure.Services
                     }
                     else
                     {
-                        worksheet.Range["E3"].Text = model.RemissionCode;
-                        worksheet.Range["O3"].Text = model.RemissionCode;
-                        worksheet.Range["I30"].Text = model.RealAmount.HasValue
+
+                    // Para la fila 5, si es cotización podríamos dejarlo vacío o repetir el folio, 
+                    // aquí la ternaria decide según la clasificación
+                    string folioVisual = model.OrderClassification == 3
+                     ? model.OrderClassificationCode?.ToString()
+                     : model.RemissionCode;
+
+                    worksheet.Range["E3"].Text = folioVisual;
+                    worksheet.Range["O3"].Text = folioVisual; // Corregido de "03" a "O3"
+                    worksheet.Range["I30"].Text = model.RealAmount.HasValue
                             ? model.RealAmount.Value.ToString("C2")
                             : (model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal);
                         worksheet.Range["S30"].Text = model.RealAmount.HasValue
@@ -294,8 +291,8 @@ namespace WendlandtVentas.Infrastructure.Services
                         worksheet.Range["N32"].Text += $"{model.Weight} Kg.";
                     }
 
-                    int i = model.TypeEnum == OrderType.Remission ? 15 : 14;
-                    foreach (var product in model.Products)
+                int i = (model.TypeEnum == OrderType.Remission || model.OrderClassification == 3) ? 15 : 14;
+                foreach (var product in model.Products)
                     {
                         if (i < 30)
                         {

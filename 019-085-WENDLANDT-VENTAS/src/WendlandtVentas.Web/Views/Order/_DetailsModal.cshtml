@@ -27,30 +27,44 @@
                             {
                                 <th>Pronto Pago</th>
                             }
-                            <th>Remisión</th>
-                            @if (Model.TypeEnum == OrderType.Invoice)
+                            @if (Model.OrderClassification != 3)
                             {
-                                <th>Factura</th>
+                                <th>Remisión</th>
+                                @if (Model.TypeEnum == OrderType.Invoice)
+                                {
+                                    <th>Factura</th>
+                                }
                             }
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>@if (Model.OrderClassification == 2)
-                            {
-                                @* Si es Wellen, mostramos su secuencia propia con prefijo *@
-                                @Model.OrderClassificationCode
-                            }
-                            else
-                            {
-                                @* Si es Cerveza, mantenemos el ID original *@
-                                @Model.Id
-                            }
+                            <td>
+                                @if (Model.OrderClassification == 2 || Model.OrderClassification == 3)
+                                {
+                                    @Model.OrderClassificationCode
+                                }
+                                else
+                                {
+                                    @Model.Id
+                                }
                             </td>
-                            <td><text class="text-info"><b>@Model.Type</b></text></td>
+                            <td>
+                                @if (Model.OrderClassification == 3)
+                                {
+                                    @* Texto literal solicitado *@
+                                    <span>Cotización</span>
+                                }
+                                else
+                                {
+                                    @Model.Type
+                                }
+                            </td>
                             <td>@Model.CreateDate.ToString("dd/MM/yyyy")</td>
                             <td>@Model.User</td>
-                            @if (Model.ProntoPago)
+                            @if (Model.OrderClassification != 3)
+                            {
+                                @if (Model.ProntoPago)
                             {
                                 <td>Sí</td>
                             }
@@ -59,6 +73,8 @@
                             {
                                 <td>@Model.InvoiceCode</td>
                             }
+                            }
+                            
                         </tr>
                     </tbody>
                 </table>
