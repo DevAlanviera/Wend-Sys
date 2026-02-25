@@ -153,6 +153,26 @@ namespace WendlandtVentas.Core.Services
             {
                 await _repository.AddAsync(order);
 
+                // 1. Preparamos los productos de la orden normal
+                if (order.OrderClassification != 3) // Ignoramos cotizaciones
+                {
+                    // Preparamos la lista plana de productos (incluyendo promociones si aplica)
+                    var productsToProcess = order.OrderProducts
+                        .Select(op => new ProductPresentationQuantity { Id = op.ProductPresentationId, Quantity = op.Quantity })
+                        .ToList();
+
+                    // Ejecutamos el descuento por lotes
+                    // Asegúrate de que el método en el InventoryService se llame exactamente así
+                    var inventarioResponse = await _inventoryService.OrderDiscount(productsToProcess, currrentUserEmail, order.Id);
+
+                    if (!inventarioResponse.IsSuccess)
+                    {
+                        // Opcional: Si el inventario falla, podrías decidir si cancelar la orden o solo loguear el error
+                        _logger.LogError($"Error de inventario en pedido {order.Id}: {inventarioResponse.Message}");
+                    }
+                }
+                // --- FIN LÓGICA DE INVENTARIO ---
+
                 var orderTypeName = "Pedido";
                 if (model.IsInvoice == OrderType.Return)
                 {
@@ -165,6 +185,8 @@ namespace WendlandtVentas.Core.Services
                 }
 
                 await _repository.UpdateAsync(order);
+
+               
 
                 var clientName = client != null ? client.Name : string.Empty;
                 var roles = new List<Role>() { Role.Administrator, Role.Storekeeper, Role.Billing, Role.BillingAssistant };

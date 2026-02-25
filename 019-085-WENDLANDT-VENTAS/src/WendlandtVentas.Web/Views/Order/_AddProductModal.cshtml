@@ -58,6 +58,69 @@
     </form>
 </div>
 
+<script>
+    $(document).ready(function () {
+        // Variable para controlar el límite de stock en tiempo real
+        let stockDisponible = 0;
+
+        // 1. Al cambiar el producto, consultamos Stock y Precio
+        $(document).on("change", "#ProductPresentationId", function () {
+            var combinedValue = $(this).val();
+            if (!combinedValue) {
+                $(".modal-errors").text("");
+                stockDisponible = 0;
+                return;
+            }
+
+            // Separamos el ID del valor compuesto (ej: "105-12")
+            var productId = combinedValue.split("-")[0];
+            var currencyType = $("#CurrencyType").val();
+
+            // Consulta de Stock Real (Lotes Activos)
+            $.get("/Order/GetProductStock", { id: productId })
+            .done(function (response) {
+                // Accedemos a la propiedad 'stock' del objeto JSON que enviamos desde C#
+                stockDisponible = response.stock;
+
+                if (stockDisponible <= 0) {
+                    $(".modal-errors").html('<div class="alert alert-danger py-1">⚠️ Sin existencias disponibles en lotes.</div>');
+                } 
+            })
+            .fail(function(error) {
+                console.error("Error al obtener stock:", error);
+            });
+
+            // Consulta de Precio
+            $.get("/Order/GetProductPrice", { currencyType: currencyType, id: productId })
+                .done(function (price) {
+                    $("#Price").val(price);
+                });
+        });
+
+        // 2. Validación antes de enviar el formulario
+        $("#form-addProduct").on("submit", function (e) {
+            var cantidadSolicitada = parseInt($("#Quantity").val());
+
+            if (isNaN(cantidadSolicitada) || cantidadSolicitada <= 0) {
+                e.preventDefault();
+                $(".modal-errors").html('<div class="alert alert-warning py-1">Por favor, ingresa una cantidad válida.</div>');
+                return false;
+            }
+
+            if (cantidadSolicitada > stockDisponible) {
+                e.preventDefault(); // Detiene el envío
+                $(".modal-errors").html(
+                    '<div class="alert alert-warning py-1">' +
+                    '<strong>Stock insuficiente:</strong> No puedes agregar ' + cantidadSolicitada +
+                    '. El máximo disponible es ' + stockDisponible + '.' +
+                    '</div>'
+                );
+                return false;
+            }
+        });
+    });
+</script>
+
 <!--<script>
     $(document).on("change", "#ProductPresentationId", function () {
         var value = $(this).val();
