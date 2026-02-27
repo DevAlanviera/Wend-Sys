@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using WendlandtVentas.Core.Models;
 using WendlandtVentas.Core.Models.ProductPresentationViewModels;
 using WendlandtVentas.Core.Specifications.ProductPresentationSpecifications;
+using Microsoft.Extensions.Logging;
 
 namespace WendlandtVentas.Core.Services
 {
@@ -19,10 +20,12 @@ namespace WendlandtVentas.Core.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IAsyncRepository _repository;
         private readonly INotificationService _notificationService;
-        public InventoryService(UserManager<ApplicationUser> userManager, IAsyncRepository repository)
+        private readonly ILogger<InventoryService> _logger; // <-- 1. Declarar
+        public InventoryService(UserManager<ApplicationUser> userManager, IAsyncRepository repository, ILogger<InventoryService> logger)
         {
             _userManager = userManager;
             _repository = repository;
+            _logger = logger;
         }
 
         public async Task<Response> OrderDiscount(IEnumerable<ProductPresentationQuantity> productsPresentations, string email, int orderId)
@@ -66,7 +69,7 @@ namespace WendlandtVentas.Core.Services
                             cantidadATomar,
                             Operation.Out,
                             batch.CurrentQuantity,
-                            $"Pedido {orderId} - Lote: {batch.BatchNumber}",
+                            $"Pedido {orderId}",
                             user.Id
                         );
                         movement.BatchId = batch.Id;
@@ -109,48 +112,39 @@ namespace WendlandtVentas.Core.Services
                 var user = await _userManager.FindByNameAsync(email);
                 var movements = new List<Movement>();
 
-                foreach (var productPresentation in productsPresentations)
+                foreach (var item in productsPresentations)
                 {
-                    // 1. Buscamos los movimientos de SALIDA originales de este pedido
-                    // Esto es vital para saber a qué Lotes regresar la cerveza
-                    var originalMovements = await _repository.GetQueryable<Movement>()
-                        .Where(m => m.ProductPresentationId == productPresentation.Id
-                               && m.Operation == Operation.Out
-                               && m.Comment.Contains($"Pedido {orderId}"))
-                        .ToListAsync();
+                    // Buscamos el lote activo más reciente (el que caduca más tarde)
+                    // Esto asegura que la cerveza devuelta se sume a un lote vigente.
+                    var batch = await _repository.GetQueryable<Batch>()
+                        .Where(b => b.ProductPresentationId == item.Id && b.IsActive)
+                        .OrderByDescending(b => b.ExpiryDate)
+                        .FirstOrDefaultAsync();
 
-                    if (!originalMovements.Any()) continue;
-
-                    foreach (var move in originalMovements)
+                    if (batch != null)
                     {
-                        // 2. Buscamos el lote específico
-                        var batch = await _repository.GetByIdAsync<Batch>(move.BatchId.Value);
+                        // 1. Aumentamos el stock del lote seleccionado
+                        batch.CurrentQuantity += (int)item.Quantity;
 
-                        if (batch != null)
-                        {
-                            // 3. Regresamos la cantidad al lote
-                            batch.CurrentQuantity += move.Quantity;
+                        // 2. Registramos el movimiento de entrada para la auditoría
+                        var movement = new Movement(
+                            item.Id,
+                            item.Quantity,
+                            Operation.In, // ENTRADA
+                            batch.CurrentQuantity,
+                            $"Devolución Nueva (Pedido {orderId})",
+                            user.Id
+                        );
+                        movement.BatchId = batch.Id;
+                        movements.Add(movement);
 
-                            // 4. REACTIVACIÓN: Si estaba en 0 (isActive = 0), lo volvemos a activar
-                            if (batch.CurrentQuantity > 0)
-                            {
-                                batch.IsActive = true;
-                            }
-
-                            await _repository.UpdateAsync(batch);
-
-                            // 5. Creamos el movimiento de entrada para la bitácora
-                            var returnMovement = new Movement(
-                                productPresentation.Id,
-                                move.Quantity,
-                                Operation.In,
-                                batch.CurrentQuantity,
-                                $"Devolución Pedido {orderId} - Reingreso Lote {batch.BatchNumber}",
-                                user.Id
-                            );
-                            returnMovement.BatchId = batch.Id;
-                            movements.Add(returnMovement);
-                        }
+                        // 3. Persistimos el cambio en el lote
+                        await _repository.UpdateAsync(batch);
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"No hay lotes activos para el producto ID {item.Id}. No se pudo procesar la devolución de la Orden {orderId}.");
+                        // Opcional: Podrías crear un lote "Genérico" o de "Devoluciones" si esto ocurre.
                     }
                 }
 
@@ -159,11 +153,12 @@ namespace WendlandtVentas.Core.Services
                     await _repository.AddRangeAsync(movements);
                 }
 
-                return new Response(true, "Retorno a inventario y lotes realizado con éxito");
+                return new Response(true, "El inventario ha sido actualizado correctamente.");
             }
             catch (Exception e)
             {
-                return new Response(false, $"Error al retornar: {e.Message}");
+                _logger.LogError(e, "Error al procesar devolución");
+                return new Response(false, "Error crítico al retornar productos al inventario.");
             }
         }
 
@@ -173,6 +168,32 @@ namespace WendlandtVentas.Core.Services
             return await _repository.GetQueryable<Batch>()
                 .Where(b => b.ProductPresentationId == productPresentationId && b.IsActive)
                 .SumAsync(b => b.CurrentQuantity);
+        }
+
+        public async Task ReverseOrderInventory(int orderId)
+        {
+            var movements = await _repository.GetQueryable<Movement>()
+        .Where(m => m.Comment.Contains($"(Orden {orderId})") || m.Comment.Contains($"Pedido {orderId}"))
+        .ToListAsync();
+
+            foreach (var mov in movements)
+            {
+                if (mov.BatchId.HasValue)
+                {
+                    var batch = await _repository.GetByIdAsync<Batch>(mov.BatchId.Value);
+                    if (batch != null)
+                    {
+                        // REVERSA: Si salió, suma. Si entró, resta.
+                        if (mov.Operation == Operation.Out) batch.CurrentQuantity += (int)mov.Quantity;
+                        else batch.CurrentQuantity -= (int)mov.Quantity;
+
+                        await _repository.UpdateAsync(batch);
+                    }
+                }
+
+                // BORRADO INDIVIDUAL: Usamos el método que ya conoce tu repositorio
+                await _repository.DeleteAsync(mov);
+            }
         }
     }
 }

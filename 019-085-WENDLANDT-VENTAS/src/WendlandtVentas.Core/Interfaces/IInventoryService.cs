@@ -10,5 +10,7 @@ namespace WendlandtVentas.Core.Interfaces
         Task<Response> OrderReturn(IEnumerable<ProductPresentationQuantity> productsPresentations, string email, int orderId);
         // Nuevo método para consultar disponibilidad total de lotes activos
         Task<int> GetAvailableStock(int productPresentationId);
+
+        Task ReverseOrderInventory(int orderId);
     }
 }

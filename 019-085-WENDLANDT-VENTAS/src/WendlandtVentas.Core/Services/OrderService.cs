@@ -154,21 +154,33 @@ namespace WendlandtVentas.Core.Services
                 await _repository.AddAsync(order);
 
                 // 1. Preparamos los productos de la orden normal
-                if (order.OrderClassification != 3) // Ignoramos cotizaciones
+                if (order.OrderClassification != 3)
                 {
-                    // Preparamos la lista plana de productos (incluyendo promociones si aplica)
                     var productsToProcess = order.OrderProducts
                         .Select(op => new ProductPresentationQuantity { Id = op.ProductPresentationId, Quantity = op.Quantity })
                         .ToList();
 
-                    // Ejecutamos el descuento por lotes
-                    // Asegúrate de que el método en el InventoryService se llame exactamente así
-                    var inventarioResponse = await _inventoryService.OrderDiscount(productsToProcess, currrentUserEmail, order.Id);
-
-                    if (!inventarioResponse.IsSuccess)
+                    // --- AQUÍ ESTABA EL ERROR: Necesitamos diferenciar ---
+                    if (order.Type == OrderType.Return)
                     {
-                        // Opcional: Si el inventario falla, podrías decidir si cancelar la orden o solo loguear el error
-                        _logger.LogError($"Error de inventario en pedido {order.Id}: {inventarioResponse.Message}");
+                        // Si es Devolución, SUMAMOS al stock (sin validar disponibilidad)
+                        var inventarioResponse = await _inventoryService.OrderReturn(productsToProcess, currrentUserEmail, order.Id);
+
+                        if (!inventarioResponse.IsSuccess)
+                            _logger.LogError($"Error al reintegrar stock (Devolución {order.Id}): {inventarioResponse.Message}");
+                    }
+                    else
+                    {
+                        // Si es Factura/Remisión, RESTAMOS del stock (Validando disponibilidad)
+                        var inventarioResponse = await _inventoryService.OrderDiscount(productsToProcess, currrentUserEmail, order.Id);
+
+                        if (!inventarioResponse.IsSuccess)
+                        {
+                            // Este es el error que viste en consola
+                            _logger.LogError($"Error de inventario (Descuento {order.Id}): {inventarioResponse.Message}");
+                            // IMPORTANTE: Lanzamos excepción para que el CATCH borre la orden si no hay stock
+                            throw new Exception(inventarioResponse.Message);
+                        }
                     }
                 }
                 // --- FIN LÓGICA DE INVENTARIO ---
@@ -259,11 +271,6 @@ namespace WendlandtVentas.Core.Services
                 var client = await _repository.GetByIdAsync<Client>(model.ClientId);
                 var dates = GetParsePaymentDate(model.PaymentDate, model.PaymentPromiseDate, model.DeliveryDay);
                 var dueDate = dates.DeliveryDay > DateTime.MinValue ? dates.DeliveryDay.AddDays(client.CreditDays + 1) : order.CreatedAt.ToLocalTime().AddDays(client.CreditDays + 1);
-                var productPresentations = (await _repository.ListAllAsync<ProductPresentation>()).Where(c => model.ProductPresentationIds.Any(m => m == c.Id));
-                var orderProducts = new List<OrderProduct>();
-                var currentOrderProduct = new OrderProduct();
-                var orderPromotions = new List<OrderPromotion>();
-                var orderPromotionsItems = new List<PromotionItemModel>();
 
                 if (model.IsInvoice == OrderType.Invoice)
                 {
@@ -271,6 +278,18 @@ namespace WendlandtVentas.Core.Services
                     if (client == null || string.IsNullOrEmpty(client.RFC))
                         return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
                 }
+
+                // --- 1. BLOQUE DE REVERSA (SOLO PEDIDOS REALES) ---
+                // Si no es cotización, "limpiamos" los movimientos previos de los lotes
+                if (order.OrderClassification != 3)
+                {
+                    await _inventoryService.ReverseOrderInventory(order.Id);
+                }
+                // --- 2. PREPARACIÓN DE NUEVOS PRODUCTOS ---
+                var productPresentations = (await _repository.ListAllAsync<ProductPresentation>())
+                    .Where(c => model.ProductPresentationIds.Any(m => m == c.Id));
+
+                var orderProducts = new List<OrderProduct>();
 
                 if (order.InventoryDiscount)
                 {
@@ -283,8 +302,10 @@ namespace WendlandtVentas.Core.Services
                     var quantity = model.ProductPresentationQuantities[i];
                     var isPresent = model.ProductIsPresent[i];
                     var price = model.ProductPrices[i];
-                    currentOrderProduct = order.OrderProducts.Where(o => o.ProductPresentation == productPresentation &&
-                                                                         o.Quantity == quantity).SingleOrDefault();
+                    // Buscamos si el producto ya existía en la orden para mantener el objeto o crear uno nuevo
+                    var currentOrderProduct = order.OrderProducts
+                        .FirstOrDefault(o => o.ProductPresentationId == productPresentation.Id && o.Quantity == quantity);
+
                     if (currentOrderProduct != null)
                     {
                         if (currentOrderProduct.Price != price)
@@ -300,8 +321,12 @@ namespace WendlandtVentas.Core.Services
                     }
                 }
 
+                // Lógica de Promociones y Direcciones (Se mantiene igual)
+                var orderPromotions = new List<OrderPromotion>();
+
                 if (model.Promotions != null)
                 {
+                    var orderPromotionsItems = new List<PromotionItemModel>();
                     foreach (var promotion in model.Promotions)
                     {
                         orderPromotionsItems = orderPromotionsItems.Union(JsonConvert.DeserializeObject<List<PromotionItemModel>>(promotion)).ToList();
@@ -335,17 +360,34 @@ namespace WendlandtVentas.Core.Services
                 // Actualizar la fecha de LastModified antes de guardar la orden
                 await _repository.UpdateAsync(order);
 
-                if (order.InventoryDiscount)
+                // --- 4. RE-APLICAR INVENTARIO SEGÚN NUEVOS DATOS ---
+                if (order.OrderClassification != 3)
                 {
-                    await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
+                    var productsToProcess = order.OrderProducts
+                        .Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity })
+                        .ToList();
+
+                    if (order.Type == OrderType.Return)
+                    {
+                        // Es devolución: Reingresamos al stock (suma)
+                        await _inventoryService.OrderReturn(productsToProcess, user.Email, order.Id);
+                    }
+                    else
+                    {
+                        // Es venta: Descontamos por FEFO (resta)
+                        var invRes = await _inventoryService.OrderDiscount(productsToProcess, user.Email, order.Id);
+
+                        // Si al intentar aplicar la nueva cantidad no hay stock suficiente, lanzamos error
+                        if (!invRes.IsSuccess) throw new Exception(invRes.Message);
+                    }
                 }
 
                 _cacheService.InvalidateOrderCache();
-                return new Response(true, "Pedido editado");
+                return new Response(true, "Pedido actualizado e inventario recalculado correctamente.");
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Error al editar orden");
+                _logger.LogError(e, $"Error al editar orden {model.Id}");
                 return new Response(false, e.Message);
             }
         }
