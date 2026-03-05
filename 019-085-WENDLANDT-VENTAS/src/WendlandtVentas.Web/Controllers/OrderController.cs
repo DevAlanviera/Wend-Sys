@@ -1415,12 +1415,24 @@ namespace WendlandtVentas.Web.Controllers
             };
             try
             {
-
-
                 var archivo_generado = await _excelReadService.FillData(currentPath, model);
 
-                FileStream fileStream = new FileStream(archivo_generado, FileMode.Open, FileAccess.ReadWrite);
-                return File(fileStream, "application/octet-stream", $"Pedido{(model.TypeEnum == OrderType.Invoice ? model.InvoiceCode : model.RemissionCode)}.pdf");
+                // Determinamos el nombre del archivo según la clasificación y el tipo
+                string nombreArchivo;
+                if (model.OrderClassification == 3)
+                {
+                    nombreArchivo = $"Cotizacion_{model.OrderClassificationCode}.pdf";
+                }
+                else
+                {
+                    nombreArchivo = (model.TypeEnum == OrderType.Invoice ? "Factura_" + model.InvoiceCode : "Remision_" + model.RemissionCode) + ".pdf";
+                }
+
+                FileStream fileStream = new FileStream(archivo_generado, FileMode.Open, FileAccess.Read);
+
+                // Es mejor usar "application/pdf" en lugar de "application/octet-stream" 
+                // para que el navegador sepa que es un PDF.
+                return File(fileStream, "application/pdf", nombreArchivo);
             }
             catch (Exception err)
             {
