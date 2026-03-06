@@ -194,7 +194,7 @@ namespace WendlandtVentas.Web.Controllers
                 OrderClassification = (int)c.OrderClassification,
                 OrderClassificationCode = c.OrderClassificationCode,
                 // Si es Cotización, podrías querer mostrar un texto diferente en Type
-                Type = classificationId == 3 ? "Cotización" : (c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize()),
+                Type = (c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize()),
                 InvoiceCode = c.InvoiceCode ?? string.Empty,
                 RemissionCode = c.RemissionCode,
                 IsPaid = c.Paid,
@@ -1574,7 +1574,7 @@ namespace WendlandtVentas.Web.Controllers
                         }
                     });
                 });
-
+                
                 var client = await _repository.GetByIdAsync<Client>(checkPromotion.ClientId);
                 var promotions = (await _repository.ListExistingAsync(new PromotionByClientSpecification(client))).SelectMany(d => d.PresentationPromotions);
 
