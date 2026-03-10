@@ -158,7 +158,10 @@
                     <thead>
                         <tr>
                             <th>Día de entrega</th>
-                            <th>Lugar</th>
+                             @if (Model.OrderClassification != 3)
+                            {
+                                <th>Lugar</th>
+                            }
                             <th>Ubicación</th>
                             @if (!string.IsNullOrEmpty(Model.Address.DeliverySpecification))
                             {
@@ -169,7 +172,10 @@
                     <tbody>
                         <tr>
                             <td>@Model.Address.DeliveryDay</td>
+                             @if (Model.OrderClassification != 3)
+                            {
                             <td>@Model.Address.Name</td>
+                            }
                             <td>@Model.Address.AddressLocation</td>
                             @if (!string.IsNullOrEmpty(Model.Address.DeliverySpecification))
                             {

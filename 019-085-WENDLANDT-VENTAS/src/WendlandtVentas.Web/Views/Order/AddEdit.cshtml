@@ -126,11 +126,11 @@
                             <label>Nombre del Prospecto</label> <b class="text-danger">*</b>
                             @* Usamos el campo ClientName o similar de tu Model. 
                                Si no tienes uno, puedes usar ProspectName o mapearlo al ClientId como texto temporal *@
-                            <input type="text" name="ClientName" class="form-control" placeholder="Escriba el nombre del prospecto..." required />
+                            <input type="text" name="ProspectName" id="ProspectName" class="form-control" placeholder="Escriba el nombre del prospecto..." required />
                             <span class="text-danger">Este campo es obligatorio para cotizaciones</span>
             
                             @* Mantenemos un ClientId oculto en 0 para que no truene el modelo al recibirlo en el Controller *@
-                            <input type="hidden" asp-for="ClientId" value="0" />
+                            <input type="hidden" asp-for="ClientId" value="9999" />
                         }
                         else
                         {
@@ -145,11 +145,23 @@
                 <section id="noreturn" class="@(Model.IsInvoice == OrderType.Return ? "d-none" : "")">
                     <div class="row">
                         <div class="col-12 col-lg col-xl">
-                            <div class="form-group">
-                                <label asp-for="AddressId"></label>
+                            @if (ViewBag.ClassificationId == 3)
+                            {
+                                @* ESCENARIO: COTIZACIÓN - Dirección Manual *@
+                                <label>Dirección del Prospecto</label> <b class="text-danger">*</b>
+                                <input type="text" name="ManualAddress" id="Address" class="form-control" placeholder="Escriba la dirección completa..." />
+                                <span id="error-address" class="text-danger" style="display:none;">La dirección es obligatoria</span>
+                
+                                @* Mantenemos un AddressId en 0 para que el modelo sea válido *@
+                                <input type="hidden" name="AddressId" value="0" />
+                            }
+                            else
+                            {
+                                @* ESCENARIO: CLIENTE EXISTENTE - Selector de Direcciones *@
+                                <label asp-for="AddressId"></label> <b class="text-danger">*</b>
                                 @Html.DropDownListFor(m => m.AddressId, Model.Addresses, "Seleccionar dirección", new { @class = "form-control select2", @style = "width:100%;" })
                                 <span asp-validation-for="AddressId" class="text-danger"></span>
-                            </div>
+                            }
                         </div>
                         </div>
                         @if (ViewBag.ClassificationId != 3)
@@ -489,6 +501,7 @@
                         });
                     });
             });
+            
 
             // Tu lógica existente de CurrencyTypes
             $('#CurrencyTypes').attr('disabled', 'disabled');
@@ -881,14 +894,15 @@
                 }
             }else {
                 // Validar el nombre del prospecto manualmente ya que ClientId se ignora
-                var clientName = $('input[name="ClientName"]').val();
-                if (!clientName || clientName.trim() === "") {
+                var ProspectName = $('input[name="ProspectName"]').val();
+                console.log(ProspectName);
+                if (!ProspectName || ProspectName.trim() === "") {
                     isValid = false;
                     error = "Es necesario escribir el nombre del prospecto.";
                     // Agregamos un borde rojo visual para el UX
-                    $('input[name="ClientName"]').addClass('is-invalid');
+                    $('input[name="ProspectName"]').addClass('is-invalid');
                 } else {
-                    $('input[name="ClientName"]').removeClass('is-invalid');
+                    $('input[name="ProspectName"]').removeClass('is-invalid');
                 }
             }
 
@@ -919,6 +933,7 @@
                         } else {
                             $container.append(data);
                         }
+                        CalculateTotals();
                          if (classificationId 
                              != 3) {
                         CheckPromotions();

@@ -11,7 +11,7 @@ namespace WendlandtVentas.Core.Entities
 {
     public class Client : BaseEntity, IAggregateRoot
     {
-        public string Name { get; private set; }
+        public string Name { get; set; }
         public Channel? Channel { get; set; }
         public Classification? Classification { get; set; }
         public int? StateId { get; set; }

@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
@@ -66,11 +67,20 @@ namespace WendlandtVentas.Core.Services
             var rolesUser = await _userManager.GetRolesAsync(user);
             var role = rolesUser != null ? rolesUser.First() : string.Empty;
 
-            var client = await _repository.GetByIdAsync<Client>(model.ClientId);
+            // 1. Determinamos qué ID buscar: si es 3, forzamos el 9999
+            int idABuscar = (model.OrderClassification == 3) ? 9999 : model.ClientId;
+            var client = await _repository.GetByIdAsync<Client>(idABuscar);
+
+            // 3. Parse de fechas normal
             var dates = GetParsePaymentDate(model.PaymentDate, model.PaymentPromiseDate, model.DeliveryDay);
+
+            // 4. Calculamos el vencimiento (dueDate)
+            // Si es clasificación 3, forzamos 0 días de crédito para que no sume de más
+            int diasDeCredito = (model.OrderClassification == 3) ? 0 : client.CreditDays;
+
             var dueDate = dates.DeliveryDay > DateTime.MinValue
-                ? dates.DeliveryDay.AddDays(client.CreditDays + 1)
-                : DateTime.UtcNow.ToLocalTime().AddDays(client.CreditDays + 1);
+                 ? dates.DeliveryDay.AddDays(diasDeCredito + 1)
+                 : DateTime.UtcNow.ToLocalTime().AddDays(diasDeCredito + 1);
 
             var productPresentations = await _repository.GetQueryableExisting<ProductPresentation>()
             .Include(pp => pp.Product)
@@ -126,9 +136,14 @@ namespace WendlandtVentas.Core.Services
                 orderPromotions = await GetOrderProductsValidate(model.ClientId, orderPromotionsItems);
             }
 
-            if (model.AddressId != null)
+            // 1. Declaras el tipo de objeto y lo inicializas en null
+            Address address = null;
+
+            if (model.AddressId != null && model.AddressId > 0)
             {
-                var address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
+                // 2. Asignas el resultado de la base de datos
+                address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
+
                 if (address != null)
                 {
                     model.Address = address.AddressLocation;
@@ -140,11 +155,23 @@ namespace WendlandtVentas.Core.Services
 
             var initialStatus = model.OrderClassification == 3 ? OrderStatus.New : OrderStatus.New;
 
+            string nombreParaMostrar = (model.OrderClassification == 3)
+            ? model.ProspectName  // Asegúrate que este sea el nombre de la propiedad en tu ViewModel
+            : client.Name;
+
+            // Definir dirección (Manual vs Catálogo)
+            // Usamos model.Address que es el 'name' que pusimos en el input de la vista
+            string direccionParaMostrar = (model.OrderClassification == 3)
+            ? model.ManualAddress  // <-- Usamos la nueva propiedad
+            : address?.AddressLocation; // 'address' es la entidad cargada por AddressId
+
+            Console.WriteLine(direccionParaMostrar + "\n \n \n \n \n \n \n \n \n \n");
+
             var order = new Order(
                 model.InvoiceCode, model.IsInvoice, initialStatus, model.Paid,
                 dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
                 user.Id, model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
-                orderProducts, orderPromotions, model.Address, model.AddressName,
+                orderProducts, orderPromotions, direccionParaMostrar, nombreParaMostrar,
                 dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(),
                 model.PayType, model.CurrencyType);
 
@@ -243,8 +270,11 @@ namespace WendlandtVentas.Core.Services
             {
                 var user = await _userManager.FindByEmailAsync(currrentUserEmail);
                 var order = await _repository.GetAsync(new OrderExtendedSpecification(model.Id));
-                var client = await _repository.GetByIdAsync<Client>(model.ClientId);
+
+                int idABuscar = (order.OrderClassification == 3) ? 9999 : model.ClientId;
+                var client = await _repository.GetByIdAsync<Client>(idABuscar);
                 var dates = GetParsePaymentDate(model.PaymentDate, model.PaymentPromiseDate, model.DeliveryDay);
+                int diasDeCredito = (order.OrderClassification == 3) ? 0 : client.CreditDays;
                 var dueDate = dates.DeliveryDay > DateTime.MinValue ? dates.DeliveryDay.AddDays(client.CreditDays + 1) : order.CreatedAt.ToLocalTime().AddDays(client.CreditDays + 1);
                 var productPresentations = (await _repository.ListAllAsync<ProductPresentation>()).Where(c => model.ProductPresentationIds.Any(m => m == c.Id));
                 var orderProducts = new List<OrderProduct>();
@@ -296,22 +326,34 @@ namespace WendlandtVentas.Core.Services
                     orderPromotions = await GetOrderProductsValidate(model.ClientId, orderPromotionsItems);
                 }
 
-                if (model.AddressId != null)
+                Address address = null;
+                if (model.AddressId != null && model.AddressId > 0)
                 {
-                    var address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
+                    address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
                     if (address != null)
                     {
                         model.Address = address.AddressLocation;
                         model.AddressName = address.Name;
                     }
                 }
+                // NOTA: Si es Clasificación 3, model.Address ya trae el texto manual 
+                // gracias al cambio que hicimos en el HTML (name="ManualAddress" o name="Address")
+
+                // 4. Determinar Nombre y Dirección Final para el método Edit
+                string nombreParaGuardar = (order.OrderClassification == 3)
+                    ? model.ProspectName
+                    : client.Name;
+
+                string direccionParaGuardar = (order.OrderClassification == 3)
+                    ? model.Address
+                    : address?.AddressLocation;
 
                 // Asignar los nuevos valores al pedido
                 order.ProntoPago = model.ProntoPago;
                 order.Edit(model.InvoiceCode, model.IsInvoice, order.OrderStatus, model.Paid,
                     dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
-                    model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
-                    orderProducts, orderPromotions, model.Address, model.AddressName,
+                    idABuscar, model.Comment, model.Delivery, model.DeliverySpecification,
+                    orderProducts, orderPromotions, direccionParaGuardar, nombreParaGuardar,
                     dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(), model.PayType, model.CurrencyType);
 
                 if (model.IsInvoice == OrderType.Return)

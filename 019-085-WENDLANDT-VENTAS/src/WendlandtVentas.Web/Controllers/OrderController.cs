@@ -204,7 +204,9 @@ namespace WendlandtVentas.Web.Controllers
                 Total = c.RealAmount.HasValue && c.RealAmount.Value != 0
                 ? c.RealAmount.Value.FormatCurrency()
                 : (c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency()),
-                Client = c.Client.Name,
+                Client = (c.OrderClassification == 3 || c.ClientId == 9999)
+                 ? (!string.IsNullOrEmpty(c.AddressName) ? c.AddressName : c.Client.Name)
+                 : c.Client.Name,
                 StatusEnum = c.OrderStatus,
                 Comment = c.Comment,
                 Address = c.Address ?? string.Empty,
@@ -781,9 +783,9 @@ namespace WendlandtVentas.Web.Controllers
             var filteredAddresses = addresses?.Where(c => !c.IsDeleted).ToList() ?? new List<Address>();
 
             // Buscar la dirección asociada al pedido
-            var address = order.Address != null
-                ? filteredAddresses.FirstOrDefault(c => c.AddressLocation == order.Address && c.ClientId == order.ClientId && c.Name == order.AddressName)
-                : null;
+            var address = (order.OrderClassification != 3 && order.Address != null)
+             ? filteredAddresses.FirstOrDefault(c => c.AddressLocation == order.Address && c.ClientId == order.ClientId)
+             : null;
 
             // Construir el modelo de vista
             var model = new OrderViewModel
@@ -792,6 +794,7 @@ namespace WendlandtVentas.Web.Controllers
                 IsInvoice = order.Type,
                 RemissionCode = order.RemissionCode,
                 ReturnReason = order.CollectionComment,
+
                 ReturnRemisionNumber = order.RemissionCode,
                 ReturnRemisionNumberOptions = new SelectList(remissionsForReturn, "Value", "Text"),
                 InvoiceCode = order.InvoiceCode,
@@ -800,7 +803,9 @@ namespace WendlandtVentas.Web.Controllers
                 PaymentPromiseDate = order.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
                 PaymentDate = order.PaymentDate.ToLocalTime().FormatDateShortMx(),
                 DeliveryDay = order.DeliveryDate.ToLocalTime().FormatDateShortMx(),
-                ClientId = order.ClientId,
+                ClientId = order.OrderClassification == 3 ? 9999 : order.ClientId,
+                ProspectName = order.OrderClassification == 3 ? order.AddressName : string.Empty,
+                Address = order.OrderClassification == 3 ? order.Address : string.Empty,
                 AddressId = address?.Id ?? 0,
                 PayType = order.PayType ?? PayType.Cash,
                 CurrencyType = order.CurrencyType,
@@ -1239,7 +1244,9 @@ namespace WendlandtVentas.Web.Controllers
                     Id = order.ClientId,
                     Channel = order.Client.Channel == null ? "-" : order.Client.Channel.Humanize(),
                     PayType = order.PayType.HasValue ? order.PayType.Humanize() : "-",
-                    Name = order.Client.Name,
+                    Name = (order.OrderClassification == 3 || order.ClientId == 9999)
+                   ? (!string.IsNullOrEmpty(order.AddressName) ? order.AddressName : order.Client.Name)
+                   : order.Client.Name,
                     Classification = order.Client.Classification == null ? "-" : order.Client.Classification.Humanize(),
                     State = order.Client.State == null ? "-" : order.Client.State.Name,
                     Comments = (order.Client.Comment != null && order.Client.Comment.Any())
