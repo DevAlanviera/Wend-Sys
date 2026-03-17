@@ -58,6 +58,106 @@
     </form>
 </div>
 
+<script>
+    $(document).ready(function () {
+        let stockDisponible = 0;
+
+    function esTipoDevolucion() {
+        // Obtenemos el valor del radio button seleccionado
+        var tipoSeleccionado = $("input[name='IsInvoice']:checked").val();
+
+        // Comparamos contra el NOMBRE del Enum como string
+        // Usamos ToString() para que Razor pinte "Return" en lugar de un número
+        var valorReturnEsperado = "@WendlandtVentas.Core.Entities.Enums.OrderType.Return.ToString()";
+
+        var esDev = (tipoSeleccionado === valorReturnEsperado);
+
+        console.log("Tipo Seleccionado:", tipoSeleccionado, "| Esperado:", valorReturnEsperado, "| Resultado:", esDev);
+
+        return esDev;
+    }
+
+           $(document).on("change", "#ProductPresentationId", function () {
+        var combinedValue = $(this).val();
+        var classificationId = $('#OrderClassification').val(); // <--- Obtenemos la clasificación
+
+        if (!combinedValue) {
+            $(".modal-errors").empty();
+            stockDisponible = 0;
+            return;
+        }
+
+        var productId = combinedValue.split("-")[0];
+        var currencyType = $("#CurrencyType").val();
+        var $btnSave = $('#form-addProduct button[type="submit"]'); // Referencia al botón guardar
+
+        // 1. Obtener Stock
+        $.get("/Order/GetProductStock", { id: productId })
+        .done(function (response) {
+            stockDisponible = response.stock;
+            var errorHtml = "";
+
+            if (esTipoDevolucion()) {
+                errorHtml = '<div class="alert alert-info py-1">Modo Devolución: Stock actual <b>' + stockDisponible + '</b> (se sumará el reingreso).</div>';
+                $btnSave.prop('disabled', false);
+            }
+            else if (classificationId == 3) {
+                // ESCENARIO COTIZACIÓN: Solo informativo
+                var colorClass = stockDisponible <= 0 ? "alert-warning" : "alert-info";
+                var icon = stockDisponible <= 0 ? "⚠️ " : "ℹ️ ";
+                errorHtml = '<div class="alert ' + colorClass + ' py-1">' + icon + 'Stock disponible (Referencial): <b>' + stockDisponible + '</b></div>';
+                $btnSave.prop('disabled', false); // Nunca bloqueamos en cotización
+            }
+            else {
+                // ESCENARIO PEDIDO NORMAL: Restrictivo
+                if (stockDisponible <= 0) {
+                    errorHtml = '<div class="alert alert-danger py-1">⚠️ Sin existencias disponibles. No se puede generar pedido.</div>';
+                    $btnSave.prop('disabled', true); // Bloqueamos el botón
+                } else {
+                    errorHtml = '<div class="alert alert-info py-1">Stock disponible: <b>' + stockDisponible + '</b></div>';
+                    $btnSave.prop('disabled', false);
+                }
+            }
+
+            $(".modal-errors").html(errorHtml);
+        });
+
+        // 2. Obtener Precio (Ya lo tenías bien)
+        $.get("/Order/GetProductPrice", { currencyType: currencyType, id: productId })
+        .done(function (price) {
+            $("#Price").val(price);
+        });
+    });
+
+        $("#form-addProduct").on("submit", function (e) {
+            var cantidadSolicitada = parseInt($("#Quantity").val());
+
+            if (isNaN(cantidadSolicitada) || cantidadSolicitada <= 0) {
+                e.preventDefault();
+                $(".modal-errors").html('<div class="alert alert-warning py-1">Ingresa una cantidad válida.</div>');
+                return false;
+            }
+
+            // CORRECCIÓN: Si es devolución, permitimos cualquier cantidad (porque es reingreso)
+            if (esTipoDevolucion()) {
+                return true;
+            }
+
+            // Si es venta, validamos contra el stock
+            if (cantidadSolicitada > stockDisponible) {
+                e.preventDefault();
+                $(".modal-errors").html(
+                    '<div class="alert alert-warning py-1">' +
+                    '<strong>Stock insuficiente:</strong> No puedes vender ' + cantidadSolicitada +
+                    '. El máximo disponible es ' + stockDisponible + '.' +
+                    '</div>'
+                );
+                return false;
+            }
+        });
+    });
+</script>
+
 <!--<script>
     $(document).on("change", "#ProductPresentationId", function () {
         var value = $(this).val();

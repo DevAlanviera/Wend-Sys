@@ -166,6 +166,7 @@ namespace WendlandtVentas.Core.Services
 
                 await _repository.UpdateAsync(order);
 
+
                 var clientName = client != null ? client.Name : string.Empty;
                 var roles = new List<Role>() { Role.Administrator, Role.Storekeeper, Role.Billing, Role.BillingAssistant };
                 var title = $"{orderTypeName} {order.Id}";

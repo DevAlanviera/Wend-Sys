@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Monobits.SharedKernel.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -79,5 +80,19 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, "No se pudo realizar el retorno a inventario");
             }
         }
+
+        // En tu InventoryService
+        public async Task<int> GetAvailableStock(int productPresentationId)
+        {
+            // Buscamos el último movimiento registrado para esta presentación que no esté borrado
+            var lastMovement = await _repository.GetQueryable<Movement>()
+                .Where(m => m.ProductPresentationId == productPresentationId && !m.IsDeleted)
+                .OrderByDescending(m => m.Id) // El ID más alto es el más reciente
+                .Select(m => new { m.QuantityCurrent }) // Solo traemos la columna necesaria
+                .FirstOrDefaultAsync();
+
+            return lastMovement?.QuantityCurrent ?? 0;
+        }
+
     }
 }

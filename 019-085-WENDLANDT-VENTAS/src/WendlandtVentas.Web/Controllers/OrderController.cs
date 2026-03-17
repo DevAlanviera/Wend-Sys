@@ -537,6 +537,15 @@ namespace WendlandtVentas.Web.Controllers
             return price;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetProductStock(int id)
+        {
+            // Usamos el servicio de inventario para sumar el stock de los lotes activos
+            // Asegúrate de inyectar IInventoryService en el constructor del controlador
+            var stock = await _inventoryService.GetAvailableStock(id);
+            return Json(new { stock = stock });
+        }
+
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Storekeeper, Distributor, Billing, BillingAssistant")]
 
         [HttpPost]
