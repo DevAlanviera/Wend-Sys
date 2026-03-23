@@ -61,23 +61,17 @@
 <script>
     $(document).ready(function () {
         let stockDisponible = 0;
-
-    function esTipoDevolucion() {
+        function esTipoDevolucion() {
         // Obtenemos el valor del radio button seleccionado
         var tipoSeleccionado = $("input[name='IsInvoice']:checked").val();
-
         // Comparamos contra el NOMBRE del Enum como string
         // Usamos ToString() para que Razor pinte "Return" en lugar de un número
         var valorReturnEsperado = "@WendlandtVentas.Core.Entities.Enums.OrderType.Return.ToString()";
-
         var esDev = (tipoSeleccionado === valorReturnEsperado);
-
-        console.log("Tipo Seleccionado:", tipoSeleccionado, "| Esperado:", valorReturnEsperado, "| Resultado:", esDev);
-
         return esDev;
-    }
+        }
 
-           $(document).on("change", "#ProductPresentationId", function () {
+        $(document).on("change", "#ProductPresentationId", function () {
         var combinedValue = $(this).val();
         var classificationId = $('#OrderClassification').val(); // <--- Obtenemos la clasificación
 
@@ -103,9 +97,9 @@
             }
             else if (classificationId == 3) {
                 // ESCENARIO COTIZACIÓN: Solo informativo
-                var colorClass = stockDisponible <= 0 ? "alert-warning" : "alert-info";
-                var icon = stockDisponible <= 0 ? "⚠️ " : "ℹ️ ";
-                errorHtml = '<div class="alert ' + colorClass + ' py-1">' + icon + 'Stock disponible (Referencial): <b>' + stockDisponible + '</b></div>';
+                //var colorClass = stockDisponible <= 0 ? "alert-warning" : "alert-info";
+                //var icon = stockDisponible <= 0 ? "⚠️ " : "ℹ️ ";
+                //errorHtml = '<div class="alert ' + colorClass + ' py-1">' + icon + 'Stock disponible (Referencial): <b>' + stockDisponible + '</b></div>';
                 $btnSave.prop('disabled', false); // Nunca bloqueamos en cotización
             }
             else {
@@ -122,15 +116,16 @@
             $(".modal-errors").html(errorHtml);
         });
 
-        // 2. Obtener Precio (Ya lo tenías bien)
+       
         $.get("/Order/GetProductPrice", { currencyType: currencyType, id: productId })
         .done(function (price) {
-            $("#Price").val(price);
+                $("#Price").val(price);
+            });
         });
-    });
 
         $("#form-addProduct").on("submit", function (e) {
             var cantidadSolicitada = parseInt($("#Quantity").val());
+            var classificationId = $('#OrderClassification').val(); // <--- Obtenemos la clasificación
 
             if (isNaN(cantidadSolicitada) || cantidadSolicitada <= 0) {
                 e.preventDefault();
@@ -139,7 +134,7 @@
             }
 
             // CORRECCIÓN: Si es devolución, permitimos cualquier cantidad (porque es reingreso)
-            if (esTipoDevolucion()) {
+            if (esTipoDevolucion() || classificationId == 3) {
                 return true;
             }
 
