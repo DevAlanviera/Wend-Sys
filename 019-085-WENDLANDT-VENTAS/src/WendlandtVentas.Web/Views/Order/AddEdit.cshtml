@@ -53,60 +53,53 @@
                 <div class="row">
                     @if (Model.IsInvoice != OrderType.Export && Model.IsInvoice != OrderType.Return)
                     {
-                        <div class="col-12 col-sm-5 col-md-4 col-lg-3 col-xl-2 mb-3 mb-sm-0 mr-sm-5 mr-lg-auto">
-                            <div class="form-group">
-                                <label asp-for="IsInvoice" class="pb-1"></label>
-                                <br />
+                      
 
                                 @if (ViewBag.ClassificationId == 3)
                                 {
-                                    @* ESCENARIO: COTIZACIÓN (Solo permitimos Remisión y Facturación) *@
-                                    <div class="form-check">
-                                        <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
-                                        </label>
-                                    </div>
+                                    @* ESCENARIO: COTIZACIÓN (Totalmente oculto) *@
+                                    <input type="hidden" name="IsInvoice" id="IsInvoice" value="@((int)OrderType.Remission)" />
                                 }
                                 else
                                 {
-                                    @* ESCENARIO: PEDIDO NORMAL (Cualquier otro ClassificationId) *@
-                                    <div class="form-check">
-                                        <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
-                                        </label>
-                                    </div>
+                                    <div class="col-12 col-sm-5 col-md-4 col-lg-3 col-xl-2 mb-3 mb-sm-0 mr-sm-5 mr-lg-auto">
+                                        <div class="form-group">
+                                            <label asp-for="IsInvoice" class="pb-1"></label>
+                                            <br />
+                
+                                            @* ESCENARIO: PEDIDO NORMAL *@
+                                            <div class="form-check">
+                                                <label class="form-check-label">
+                                                    <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
+                                                </label>
+                                            </div>
 
-                                    @if (Model.Id == 0)
-                                    {
-                                        <div id="export-check" class="form-check">
-                                            <label class="form-check-label">
-                                                <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
-                                            </label>
+                                            @if (Model.Id == 0)
+                                            {
+                                                <div id="export-check" class="form-check">
+                                                    <label class="form-check-label">
+                                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
+                                                    </label>
+                                                </div>
+                                            }
+
+                                            <div class="form-check">
+                                                <label class="form-check-label">
+                                                    <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
+                                                </label>
+                                            </div>
+
+                                            @if (Model.Id == 0)
+                                            {
+                                                <div id="return-check" class="form-check">
+                                                    <label class="form-check-label">
+                                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
+                                                    </label>
+                                                </div>
+                                            }
                                         </div>
-                                    }
-
-                                    <div class="form-check">
-                                        <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
-                                        </label>
                                     </div>
-
-                                    @if (Model.Id == 0)
-                                    {
-                                        <div id="return-check" class="form-check">
-                                            <label class="form-check-label">
-                                                <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
-                                            </label>
-                                        </div>
-                                    }
                                 }
-                            </div>
-                        </div>
                     }
                     <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3 mb-3 mb-sm-0"
                          id="invoice"
@@ -122,15 +115,17 @@
                     <div class="form-group">
                         @if (ViewBag.ClassificationId == 3)
                         {
-                            @* ESCENARIO: COTIZACIÓN / PROSPECTO *@
+                           @* ESCENARIO: COTIZACIÓN / PROSPECTO *@
                             <label>Nombre del Prospecto</label> <b class="text-danger">*</b>
-                            @* Usamos el campo ClientName o similar de tu Model. 
-                               Si no tienes uno, puedes usar ProspectName o mapearlo al ClientId como texto temporal *@
-                            <input type="text" name="ProspectName" id="ProspectName" class="form-control" placeholder="Escriba el nombre del prospecto..." required />
-                            <span class="text-danger">Este campo es obligatorio para cotizaciones</span>
+    
+                            @* USAR asp-for es lo que hace la "magia" de cargar el dato *@
+                            <input type="text" asp-for="ProspectName" class="form-control" placeholder="Escriba el nombre del prospecto..." />
+    
+                            @* Quitamos el mensaje estático y usamos el de validación del modelo si prefieres *@
+                            <span asp-validation-for="ProspectName" class="text-danger"></span>
             
-                            @* Mantenemos un ClientId oculto en 0 para que no truene el modelo al recibirlo en el Controller *@
-                            <input type="hidden" asp-for="ClientId" value="9999" />
+                            @* Mantenemos el ClientId en 9999 *@
+                            <input type="hidden" asp-for="ClientId" />
                         }
                         else
                         {
@@ -147,13 +142,12 @@
                         <div class="col-12 col-lg col-xl">
                             @if (ViewBag.ClassificationId == 3)
                             {
-                                @* ESCENARIO: COTIZACIÓN - Dirección Manual *@
                                 <label>Dirección del Prospecto</label> <b class="text-danger">*</b>
-                                <input type="text" name="ManualAddress" id="Address" class="form-control" placeholder="Escriba la dirección completa..." />
-                                <span id="error-address" class="text-danger" style="display:none;">La dirección es obligatoria</span>
-                
-                                @* Mantenemos un AddressId en 0 para que el modelo sea válido *@
-                                <input type="hidden" name="AddressId" value="0" />
+    
+                                @* Vinculamos al nuevo campo ManualAddress *@
+                                <input type="text" asp-for="ManualAddress" class="form-control" placeholder="Escriba la dirección completa..." />
+    
+                                <span asp-validation-for="ManualAddress" class="text-danger"></span>
                             }
                             else
                             {
@@ -550,7 +544,7 @@
             const invoiceType = selectedRadio ? selectedRadio.value : null;
             const $saveButton = $('#btn-guardar');
 
-            console.log("Tipo de facturación seleccionado:", invoiceType);
+           
 
             // Si NO es facturación, habilitamos el botón y ocultamos mensajes
             if (invoiceType !== "@OrderType.Invoice") {

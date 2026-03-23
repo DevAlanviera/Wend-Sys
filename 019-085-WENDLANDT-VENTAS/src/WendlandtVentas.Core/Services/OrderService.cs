@@ -101,6 +101,13 @@ namespace WendlandtVentas.Core.Services
                     return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
             }
 
+            // Dentro del Service (Add/Update)
+            if (model.OrderClassification == 3)
+            {
+                model.IsInvoice = OrderType.Remission;
+            }
+            Console.WriteLine("TIPO DE ORDEN: " + model.IsInvoice + " \n \n \n \n \n \n \n \n \n \n \n");
+
             foreach (var productPresentation in productPresentations)
             {
                 var i = model.ProductPresentationIds.FindIndex(x => x == productPresentation.Id);
@@ -165,12 +172,10 @@ namespace WendlandtVentas.Core.Services
             ? model.ManualAddress  // <-- Usamos la nueva propiedad
             : address?.AddressLocation; // 'address' es la entidad cargada por AddressId
 
-            Console.WriteLine(direccionParaMostrar + "\n \n \n \n \n \n \n \n \n \n");
-
             var order = new Order(
                 model.InvoiceCode, model.IsInvoice, initialStatus, model.Paid,
                 dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
-                user.Id, model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
+                user.Id, idABuscar, model.Comment, model.Delivery, model.DeliverySpecification,
                 orderProducts, orderPromotions, direccionParaMostrar, nombreParaMostrar,
                 dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(),
                 model.PayType, model.CurrencyType);
@@ -294,6 +299,12 @@ namespace WendlandtVentas.Core.Services
                     await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
                 }
 
+                // Dentro del Service (Add/Update)
+                if (model.OrderClassification == 3)
+                {
+                    model.IsInvoice = OrderType.Remission; // Forzamos que sea remisión en el servidor
+                }
+
                 foreach (var productPresentation in productPresentations)
                 {
                     var i = model.ProductPresentationIds.FindIndex(x => x == productPresentation.Id);
@@ -327,7 +338,7 @@ namespace WendlandtVentas.Core.Services
                 }
 
                 Address address = null;
-                if (model.AddressId != null && model.AddressId > 0)
+                if (order.OrderClassification != 3 && model.AddressId != null && model.AddressId > 0)
                 {
                     address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
                     if (address != null)
@@ -344,16 +355,24 @@ namespace WendlandtVentas.Core.Services
                     ? model.ProspectName
                     : client.Name;
 
-                string direccionParaGuardar = (order.OrderClassification == 3)
-                    ? model.Address
-                    : address?.AddressLocation;
+                string direccionFinal;
+                if (order.OrderClassification == 3)
+                {
+                    // CASO COTIZACIÓN:
+                    // El "calle diez" viene en model.Address (visto en tu debugger)
+                    direccionFinal = model.ManualAddress;
+                }
+                else
+                {
+                    direccionFinal = address?.AddressLocation ?? model.Address;
+                }
 
-                // Asignar los nuevos valores al pedido
-                order.ProntoPago = model.ProntoPago;
+                    // Asignar los nuevos valores al pedido
+                    order.ProntoPago = model.ProntoPago;
                 order.Edit(model.InvoiceCode, model.IsInvoice, order.OrderStatus, model.Paid,
                     dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
                     idABuscar, model.Comment, model.Delivery, model.DeliverySpecification,
-                    orderProducts, orderPromotions, direccionParaGuardar, nombreParaGuardar,
+                    orderProducts, orderPromotions, direccionFinal, nombreParaGuardar,
                     dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(), model.PayType, model.CurrencyType);
 
                 if (model.IsInvoice == OrderType.Return)

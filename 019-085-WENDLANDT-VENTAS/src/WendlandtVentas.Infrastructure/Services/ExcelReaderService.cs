@@ -91,7 +91,7 @@ namespace WendlandtVentas.Infrastructure.Services
             {
             // 1. Selección de Plantilla
             var excelFile = model.OrderClassification == 3
-            ? (model.TypeEnum == OrderType.Invoice ? "Cotizacion - factura.xlsx" : "Cotizacion.xlsx")
+            ? "Cotizacion.xlsx"
             : (model.TypeEnum == OrderType.Invoice ? "Facturación Wendlandt.xlsx" : "Remisión Wendlandt.xlsx");
 
 
@@ -126,107 +126,29 @@ namespace WendlandtVentas.Infrastructure.Services
                 switch (model.OrderClassification)
                 {
                     case 3:
-                        if (model.TypeEnum == OrderType.Invoice)
-                        {
-                            worksheet.Range["H3"].Text = model.OrderClassificationCode.ToString();
-                            worksheet.Range["R3"].Text = model.OrderClassificationCode.ToString();
 
-                            worksheet.Range["H5"].Text = model.RemissionCode;
-                            worksheet.Range["R5"].Text = model.RemissionCode;
-
-                            worksheet.Range["I27"].Text = model.SubTotal;
-                            worksheet.Range["I28"].Text = model.IVA;
-                            worksheet.Range["I29"].Text = model.IEPS;
-                            worksheet.Range["I30"].Text = model.Total;
-
-                            worksheet.Range["S27"].Text = model.SubTotal;
-                            worksheet.Range["S28"].Text = model.IVA;
-                            worksheet.Range["S29"].Text = model.IEPS;
-
-
-                            worksheet.Range["S30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
-                            worksheet.Range["I30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
-
-
-                            worksheet.Range["H7"].Text = model.CreateDate.Day.ToString();
-                            worksheet.Range["I7"].Text = model.CreateDate.Month.ToString();
-                            worksheet.Range["J7"].Text = model.CreateDate.Year.ToString();
-                            worksheet.Range["B9"].Text += model.Client.Name;
-                            worksheet.Range["B10"].Text += model.Address.AddressLocation;
-                            worksheet.Range["B11"].Text += model.Client.City;
-
-                            worksheet.Range["D27"].Text += string.IsNullOrEmpty(model.CollectionComment)
-                                ? string.Empty
-                                : model.CollectionComment.Length > 50
-                                ? $"{model.CollectionComment.Substring(0, 50)}..."
-                                : model.CollectionComment;
-                            worksheet.Range["D29"].Text += string.IsNullOrEmpty(model.Comment)
-                                ? string.Empty
-                                : model.Comment.Length > 50
-                                ? $"{model.Comment.Substring(0, 50)}..."
-                                : model.Comment;
-                            worksheet.Range["D31"].Text += $"{model.Weight} Kg.";
-
-
-                            // Asignar el comentario a las celdas
-                            worksheet.Range["D25:F26"].Text = commentText;
-                            worksheet.Range["N25:P26"].Text = commentText;
-
-                            // Habilitar el ajuste de texto
-                            worksheet.Range["D25:F26"].CellStyle.WrapText = true;
-                            worksheet.Range["N25:P26"].CellStyle.WrapText = true;
-
-                            worksheet.Range["R7"].Text = model.CreateDate.Day.ToString();
-                            worksheet.Range["S7"].Text = model.CreateDate.Month.ToString();
-                            worksheet.Range["T7"].Text = model.CreateDate.Year.ToString();
-                            worksheet.Range["L9"].Text += nombreCliente;
-                            worksheet.Range["L10"].Text += model.Address.AddressLocation;
-                            worksheet.Range["L11"].Text += model.Client.City;
-
-                            worksheet.Range["N27"].Text += string.IsNullOrEmpty(model.CollectionComment)
-                                ? string.Empty
-                                : model.CollectionComment.Length > 50
-                                ? $"{model.CollectionComment.Substring(0, 50)}..."
-                                : model.CollectionComment;
-                            worksheet.Range["N29"].Text += string.IsNullOrEmpty(model.Comment)
-                                ? string.Empty
-                                : model.Comment.Length > 50
-                                ? $"{model.Comment.Substring(0, 50)}..."
-                                : model.Comment;
-                            worksheet.Range["N31"].Text += $"{model.Weight} Kg.";
-                        }
-                        else
-                        {
-                           
                             // --- LÓGICA PARA COTIZACIÓN REMISION ---
                             worksheet.Range["E3"].Text = model.OrderClassificationCode.ToString();
-                            worksheet.Range["O3"].Text = model.OrderClassificationCode.ToString();
 
                             // En cotización solemos usar SubTotal o Total sin impuestos detallados
                             var amountQuote = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.SubTotal;
                             worksheet.Range["I30"].Text = amountQuote;
-                            worksheet.Range["S30"].Text = amountQuote;
 
                             // Mapeo de celdas específico para la plantilla de Cotización
                             worksheet.Range["E5"].Text = model.CreateDate.Day.ToString();
                             worksheet.Range["G5"].Text = model.CreateDate.Month.ToString();
                             worksheet.Range["I5"].Text = model.CreateDate.Year.ToString();
-                            worksheet.Range["O5"].Text = model.CreateDate.Day.ToString();   // Antes O5
-                            worksheet.Range["Q5"].Text = model.CreateDate.Month.ToString(); // Antes Q5
-                            worksheet.Range["S5"].Text = model.CreateDate.Year.ToString();  // Antes S5
                             worksheet.Range["E7"].Text += nombreCliente;
-                            worksheet.Range["O7"].Text += nombreCliente;
                             worksheet.Range["E9"].Text += model.Address.AddressLocation;
-                            worksheet.Range["O9"].Text += model.Address.AddressLocation;
-                           
 
                             // Comentarios y Formato
                             worksheet.Range["D26:F27"].CellStyle.WrapText = true;
                             worksheet.Range["N26:P27"].CellStyle.WrapText = true;
-                        }
+
+                        //Peso
+                        worksheet.Range["D32"].Text += $"{model.Weight} Kg.";
+
                         // Comentarios comunes para Cotización
-                        worksheet.Range["D26:F27"].Text = commentText;
-                        worksheet.Range["N26:P27"].Text = commentText;
                         break;
 
                     default:
@@ -404,15 +326,35 @@ namespace WendlandtVentas.Infrastructure.Services
                         worksheet.Range[$"C{i}"].Text = product.PresentationLiters;
                         worksheet.Range[$"G{i}"].Text = product.Price.ToString("C");
                         worksheet.Range[$"I{i}"].Text = product.Total.ToString("C");
-
-                        // Columna Derecha (Copia/Duplicado de la plantilla)
-                        worksheet.Range[$"L{i}"].Text = product.Quantity.ToString();
-                        worksheet.Range[$"M{i}"].Text = product.PresentationLiters;
-                        worksheet.Range[$"Q{i}"].Text = product.Price.ToString("C");
-                        worksheet.Range[$"S{i}"].Text = product.Total.ToString("C");
+                        if(model.OrderClassification != 3)
+                        {
+                            // Columna Derecha (Copia/Duplicado de la plantilla)
+                            worksheet.Range[$"L{i}"].Text = product.Quantity.ToString();
+                            worksheet.Range[$"M{i}"].Text = product.PresentationLiters;
+                            worksheet.Range[$"Q{i}"].Text = product.Price.ToString("C");
+                            worksheet.Range[$"S{i}"].Text = product.Total.ToString("C");
+                        }
+                        
                     }
                     i++;
                 }
+                if(model.OrderClassification == 3)
+                {
+                    // 1. Limpiamos el string por si trae "$" o "," (evita errores de parseo)
+                    string totalLimpio = model.Total?.Replace("$", "").Replace(",", "").Trim() ?? "0";
+
+                    // 2. Convertimos el texto a número (double) de forma segura
+                    if (double.TryParse(totalLimpio, out double totalNumerico))
+                    {
+                        // 3. Realizamos la operación del IVA
+                        double totalConIva = totalNumerico * 1.16;
+
+                        // 4. Asignamos a la celda con formato de moneda ($)
+                        worksheet.Range["G32"].Text = "Total más IVA: ";
+                        worksheet.Range["I32"].Text = totalConIva.ToString("C");
+                    }
+                }
+                
 
                 //Saving the workbook as stream
                 FileStream stream = new FileStream(guidExcel, FileMode.Create, FileAccess.ReadWrite);

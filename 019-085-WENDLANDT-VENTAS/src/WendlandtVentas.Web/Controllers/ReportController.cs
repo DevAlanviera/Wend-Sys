@@ -79,7 +79,13 @@ namespace WendlandtVentas.Web.Controllers
             }
 
             var filteredOrders = await _orderService.FilterValues(filter);
-            var products = filteredOrders.SelectMany(c => c.OrderProducts).Distinct().ToList();
+
+            // NUEVO FILTRO: Excluir órdenes con clasificación 3 directamente en las órdenes
+            var ordersToProcess = filteredOrders.Where(o => o.OrderClassification != 3).ToList();
+
+            var products = ordersToProcess.SelectMany(c => c.OrderProducts).Distinct().ToList();
+
+
             if (filter.ProductId.Any())
             {
                 products = products.Where(c => filter.ProductId.Any(d => c.ProductPresentation.ProductId.Equals(d))).ToList();

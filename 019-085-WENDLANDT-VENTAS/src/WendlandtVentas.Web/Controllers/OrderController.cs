@@ -399,6 +399,10 @@ namespace WendlandtVentas.Web.Controllers
                             // Solo productos de la marca Wellen
                             filtered = filtered.Where(c => c.Product.Distinction == Distinction.Wellen);
                         }
+                        else if (classificationId == 3) {
+                            // COTIZACIÓN: No filtramos. Al no entrar en los otros IF, 
+                            // se mantienen tanto Wellen como el resto de los productos.
+                        }
                         else
                         {
                             // Pedidos normales: Todo lo que NO sea Wellen
@@ -412,6 +416,7 @@ namespace WendlandtVentas.Web.Controllers
 
                 var model = new OrderAddProductViewModel
                 {
+                    ClassificationId = classificationId,
                     ProductsPresentations = new SelectList(productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }), "Value", "Text")
                 };
 
@@ -448,6 +453,11 @@ namespace WendlandtVentas.Web.Controllers
                     // APLICAR FILTRO DE DISTINCIÓN IGUAL QUE EN ADDPRODUCT
                     if (classificationId == 2)
                         filtered = filtered.Where(c => c.Product.Distinction == Distinction.Wellen);
+                    else if (classificationId == 3)
+                    {
+                        // Escenario Cotización: NO FILTRAMOS (Se muestran Wellen + Cervezas)
+                        // Al no aplicar .Where de distinción, la lista permanece completa.
+                    }
                     else
                         filtered = filtered.Where(c => c.Product.Distinction != Distinction.Wellen);
 
@@ -794,7 +804,6 @@ namespace WendlandtVentas.Web.Controllers
                 IsInvoice = order.Type,
                 RemissionCode = order.RemissionCode,
                 ReturnReason = order.CollectionComment,
-
                 ReturnRemisionNumber = order.RemissionCode,
                 ReturnRemisionNumberOptions = new SelectList(remissionsForReturn, "Value", "Text"),
                 InvoiceCode = order.InvoiceCode,
@@ -805,7 +814,8 @@ namespace WendlandtVentas.Web.Controllers
                 DeliveryDay = order.DeliveryDate.ToLocalTime().FormatDateShortMx(),
                 ClientId = order.OrderClassification == 3 ? 9999 : order.ClientId,
                 ProspectName = order.OrderClassification == 3 ? order.AddressName : string.Empty,
-                Address = order.OrderClassification == 3 ? order.Address : string.Empty,
+                Address = string.Empty,
+                ManualAddress = order.OrderClassification == 3 ? order.Address : string.Empty,
                 AddressId = address?.Id ?? 0,
                 PayType = order.PayType ?? PayType.Cash,
                 CurrencyType = order.CurrencyType,
