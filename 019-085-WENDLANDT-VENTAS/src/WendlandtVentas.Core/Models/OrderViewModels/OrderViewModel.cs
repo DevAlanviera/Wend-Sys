@@ -71,6 +71,8 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public string AddressName { get; set; }
         public string Address { get; set; }
 
+        public string ManualAddress { get; set; }
+
         [Display(Name = "Día de entrega")]
         [Required(ErrorMessage = "El día de entrega es obligatorio.")]
         public string DeliveryDay { get; set; }
@@ -94,6 +96,10 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         [Display(Name = "Motivo de devolución")]
         public string ReturnReason { get; set; }
 
+        // Agregamos esta propiedad para capturar el nombre del prospecto
+        [Display(Name = "Nombre del Prospecto")]
+        public string ProspectName { get; set; }
+
 
         //Checkbox para pronto pago
         public bool ProntoPago { get; set; }
@@ -105,7 +111,8 @@ namespace WendlandtVentas.Core.Models.OrderViewModels
         public enum OrderBrand
         {
             Cerveza = 1,
-            Wellen = 2
+            Wellen = 2,
+            Cotizacion = 3
         }
 
     }

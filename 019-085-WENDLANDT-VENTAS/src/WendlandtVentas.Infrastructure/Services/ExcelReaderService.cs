@@ -89,28 +89,14 @@ namespace WendlandtVentas.Infrastructure.Services
 
             public async Task<string> FillData(string path, OrderDetailsViewModel model)
             {
-                var excelFile = "";
-                if (model.TypeEnum == OrderType.Invoice)
-                    excelFile = "Facturación Wendlandt.xlsx";
-                else
-                    excelFile = "Remisión Wendlandt.xlsx";
-
-                /*if (model.TypeEnum == OrderType.Invoice)
-                {
-                    excelFile = model.ProntoPago
-                        ? "Facturación Wendlandt - Pronto Pago.xlsx"  // Si tiene pronto pago
-                        : "Facturación Wendlandt.xlsx";   // Si no tiene pronto pago
-                }
-                else
-                {
-                    excelFile = model.ProntoPago
-                        ? "Remisión Wendlandt - Pronto Pago.xlsx"  // Si tiene pronto pago
-                        : "Remisión Wendlandt.xlsx";    // Si no tiene pronto pago
-                }*/
+            // 1. Selección de Plantilla
+            var excelFile = model.OrderClassification == 3
+            ? "Cotizacion.xlsx"
+            : (model.TypeEnum == OrderType.Invoice ? "Facturación Wendlandt.xlsx" : "Remisión Wendlandt.xlsx");
 
 
 
-                var guidExcel = $"{Guid.NewGuid()}.xlsx";
+            var guidExcel = $"{Guid.NewGuid()}.xlsx";
                 var guidPdf = $"{Guid.NewGuid()}.pdf";
                 var pdfCreated = guidPdf;
 
@@ -127,227 +113,285 @@ namespace WendlandtVentas.Infrastructure.Services
                     IWorksheet worksheet = workbook.Worksheets[0];
 
 
-                    if (model.TypeEnum == OrderType.Invoice)
-                    {
-                        worksheet.Range["H3"].Text = model.InvoiceCode;
-                        worksheet.Range["R3"].Text = model.InvoiceCode;
+                // Variable para centralizar los comentarios del cliente y evitar repetición
+                var commentsList = model.Client.Comments.ToList();
+                string commentText = commentsList.Any()
+                    ? InsertLineBreaks(string.Join(" ", commentsList.Select(c => c.Comments)), 25)
+                    : "No hay comentarios disponibles";
 
-                        worksheet.Range["H5"].Text = model.RemissionCode;
-                        worksheet.Range["R5"].Text = model.RemissionCode;
+                string nombreCliente = (model.OrderClassification == 3 || model.Client.Id == 9999)
+                ? model.Address.Name // El AddressName que guardamos
+                : model.Client.Name;
 
-                        worksheet.Range["I27"].Text = model.SubTotal;
-                        worksheet.Range["I28"].Text = model.IVA;
-                        worksheet.Range["I29"].Text = model.IEPS;
-                        worksheet.Range["I30"].Text = model.Total;
+                switch (model.OrderClassification)
+                {
+                    case 3:
 
-                        worksheet.Range["S27"].Text = model.SubTotal;
-                        worksheet.Range["S28"].Text = model.IVA;
-                        worksheet.Range["S29"].Text = model.IEPS;
+                            // --- LÓGICA PARA COTIZACIÓN REMISION ---
+                            worksheet.Range["E3"].Text = model.OrderClassificationCode.ToString();
 
+                            // En cotización solemos usar SubTotal o Total sin impuestos detallados
+                            var amountQuote = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.SubTotal;
+                            worksheet.Range["I30"].Text = amountQuote;
 
-                        worksheet.Range["S30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
-                        worksheet.Range["I30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
+                            // Mapeo de celdas específico para la plantilla de Cotización
+                            worksheet.Range["E5"].Text = model.CreateDate.Day.ToString();
+                            worksheet.Range["G5"].Text = model.CreateDate.Month.ToString();
+                            worksheet.Range["I5"].Text = model.CreateDate.Year.ToString();
+                            worksheet.Range["E7"].Text += nombreCliente;
+                            worksheet.Range["E9"].Text += model.Address.AddressLocation;
 
+                            // Comentarios y Formato
+                            worksheet.Range["D26:F27"].CellStyle.WrapText = true;
+                            worksheet.Range["N26:P27"].CellStyle.WrapText = true;
 
-                        worksheet.Range["H7"].Text = model.CreateDate.Day.ToString();
-                        worksheet.Range["I7"].Text = model.CreateDate.Month.ToString();
-                        worksheet.Range["J7"].Text = model.CreateDate.Year.ToString();
-                        worksheet.Range["B9"].Text += model.Client.Name;
-                        worksheet.Range["B10"].Text += model.Address.AddressLocation;
-                        worksheet.Range["B11"].Text += model.Client.City;
-                        worksheet.Range["H11"].Text += model.Client.RFC;
-
-                        worksheet.Range["D27"].Text += string.IsNullOrEmpty(model.CollectionComment)
-                            ? string.Empty
-                            : model.CollectionComment.Length > 50
-                            ? $"{model.CollectionComment.Substring(0, 50)}..."
-                            : model.CollectionComment;
-                        worksheet.Range["D29"].Text += string.IsNullOrEmpty(model.Comment)
-                            ? string.Empty
-                            : model.Comment.Length > 50
-                            ? $"{model.Comment.Substring(0, 50)}..."
-                            : model.Comment;
-                        worksheet.Range["D31"].Text += $"{model.Weight} Kg.";
-
-                        var commentsList = model.Client.Comments.ToList();
-                        string commentText;
-
-                        if (commentsList.Any())
-                        {
-                            commentText = string.Join(" ", commentsList.Select(c => c.Comments));
-
-                            // Insertar saltos de línea automáticos cada 25 caracteres
-                            commentText = InsertLineBreaks(commentText, 25);
-                        }
-                        else
-                        {
-                            commentText = "No hay comentarios disponibles";
-                        }
-
-                        // Asignar el comentario a las celdas
-                        worksheet.Range["D25:F26"].Text = commentText;
-                        worksheet.Range["N25:P26"].Text = commentText;
-
-                        // Habilitar el ajuste de texto
-                        worksheet.Range["D25:F26"].CellStyle.WrapText = true;
-                        worksheet.Range["N25:P26"].CellStyle.WrapText = true;
-
-                        worksheet.Range["R7"].Text = model.CreateDate.Day.ToString();
-                        worksheet.Range["S7"].Text = model.CreateDate.Month.ToString();
-                        worksheet.Range["T7"].Text = model.CreateDate.Year.ToString();
-                        worksheet.Range["L9"].Text += model.Client.Name;
-                        worksheet.Range["L10"].Text += model.Address.AddressLocation;
-                        worksheet.Range["L11"].Text += model.Client.City;
-                        worksheet.Range["R11"].Text += model.Client.RFC;
-
-                        worksheet.Range["N27"].Text += string.IsNullOrEmpty(model.CollectionComment)
-                            ? string.Empty
-                            : model.CollectionComment.Length > 50
-                            ? $"{model.CollectionComment.Substring(0, 50)}..."
-                            : model.CollectionComment;
-                        worksheet.Range["N29"].Text += string.IsNullOrEmpty(model.Comment)
-                            ? string.Empty
-                            : model.Comment.Length > 50
-                            ? $"{model.Comment.Substring(0, 50)}..."
-                            : model.Comment;
-                        worksheet.Range["N31"].Text += $"{model.Weight} Kg.";
-                    }
-                    else
-                    {
-                        worksheet.Range["E3"].Text = model.RemissionCode;
-                        worksheet.Range["O3"].Text = model.RemissionCode;
-                        worksheet.Range["I30"].Text = model.RealAmount.HasValue
-                            ? model.RealAmount.Value.ToString("C2")
-                            : (model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal);
-                        worksheet.Range["S30"].Text = model.RealAmount.HasValue
-                            ? model.RealAmount.Value.ToString("C2")
-                            : (model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal);
-
-
-
-
-                        worksheet.Range["E5"].Text = model.CreateDate.Day.ToString();
-                        worksheet.Range["G5"].Text = model.CreateDate.Month.ToString();
-                        worksheet.Range["I5"].Text = model.CreateDate.Year.ToString();
-                        worksheet.Range["E7"].Text += model.Client.Name;
-                        worksheet.Range["E9"].Text += model.Address.AddressLocation;
-                        worksheet.Range["E12"].Text += model.Client.City;
-                        worksheet.Range["H12"].Text += model.Client.RFC;
-
-                        var commentsList = model.Client.Comments.ToList();
-                        string commentText;
-
-                        if (commentsList.Any())
-                        {
-                            commentText = string.Join(" ", commentsList.Select(c => c.Comments));
-
-                            // Insertar saltos de línea automáticos cada 25 caracteres
-                            commentText = InsertLineBreaks(commentText, 25);
-                        }
-                        else
-                        {
-                            commentText = "No hay comentarios disponibles";
-                        }
-
-
-                        // Asignar el comentario a las celdas
-                        worksheet.Range["N26:P27"].Text = commentText;
-                        worksheet.Range["D26:F27"].Text = commentText;
-
-                        // Habilitar el ajuste de texto para que se respeten los saltos de línea
-                        worksheet.Range["N26:P27"].CellStyle.WrapText = true;
-                        worksheet.Range["D26:F27"].CellStyle.WrapText = true;
-
-
-                        worksheet.Range["D28"].Text += string.IsNullOrEmpty(model.CollectionComment)
-                            ? string.Empty
-                            : model.CollectionComment.Length > 50
-                            ? $"{model.CollectionComment.Substring(0, 50)}..."
-                            : model.CollectionComment;
-                        worksheet.Range["D30"].Text += string.IsNullOrEmpty(model.Comment)
-                            ? string.Empty
-                            : model.Comment.Length > 50
-                            ? $"{model.Comment.Substring(0, 50)}..."
-                            : model.Comment;
+                        //Peso
                         worksheet.Range["D32"].Text += $"{model.Weight} Kg.";
 
+                        // Comentarios comunes para Cotización
+                        break;
 
-
-                        worksheet.Range["O5"].Text = model.CreateDate.Day.ToString();
-                        worksheet.Range["Q5"].Text = model.CreateDate.Month.ToString();
-                        worksheet.Range["S5"].Text = model.CreateDate.Year.ToString();
-                        worksheet.Range["O7"].Text += model.Client.Name;
-                        worksheet.Range["O9"].Text += model.Address.AddressLocation;
-                        worksheet.Range["O12"].Text += model.Client.City;
-                        worksheet.Range["R12"].Text += model.Client.RFC;
-
-                        worksheet.Range["N28"].Text += string.IsNullOrEmpty(model.CollectionComment)
-                            ? string.Empty
-                            : model.CollectionComment.Length > 50
-                            ? $"{model.CollectionComment.Substring(0, 50)}..."
-                            : model.CollectionComment;
-                        worksheet.Range["N30"].Text += string.IsNullOrEmpty(model.Comment)
-                            ? string.Empty
-                            : model.Comment.Length > 50
-                            ? $"{model.Comment.Substring(0, 50)}..."
-                            : model.Comment;
-                        worksheet.Range["N32"].Text += $"{model.Weight} Kg.";
-                    }
-
-                    int i = model.TypeEnum == OrderType.Remission ? 15 : 14;
-                    foreach (var product in model.Products)
-                    {
-                        if (i < 30)
+                    default:
+                        // Si no es cotización, evaluamos si es Factura o Remisión
+                        if (model.TypeEnum == OrderType.Invoice)
                         {
-                            worksheet.Range[$"B{i}"].Text = product.Quantity.ToString();
-                            worksheet.Range[$"C{i}"].Text = product.PresentationLiters;
-                            worksheet.Range[$"G{i}"].Text = product.Price.ToString("C");
-                            worksheet.Range[$"I{i}"].Text = product.Total.ToString("C");
+                            worksheet.Range["H3"].Text = model.InvoiceCode;
+                            worksheet.Range["R3"].Text = model.InvoiceCode;
 
+                            worksheet.Range["H5"].Text = model.RemissionCode;
+                            worksheet.Range["R5"].Text = model.RemissionCode;
+
+                            worksheet.Range["I27"].Text = model.SubTotal;
+                            worksheet.Range["I28"].Text = model.IVA;
+                            worksheet.Range["I29"].Text = model.IEPS;
+                            worksheet.Range["I30"].Text = model.Total;
+
+                            worksheet.Range["S27"].Text = model.SubTotal;
+                            worksheet.Range["S28"].Text = model.IVA;
+                            worksheet.Range["S29"].Text = model.IEPS;
+
+
+                            worksheet.Range["S30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
+                            worksheet.Range["I30"].Text = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.Total;
+
+
+                            worksheet.Range["H7"].Text = model.CreateDate.Day.ToString();
+                            worksheet.Range["I7"].Text = model.CreateDate.Month.ToString();
+                            worksheet.Range["J7"].Text = model.CreateDate.Year.ToString();
+                            worksheet.Range["O5"].Text = model.CreateDate.Day.ToString();
+                            worksheet.Range["Q5"].Text = model.CreateDate.Month.ToString();
+                            worksheet.Range["S5"].Text = model.CreateDate.Year.ToString();
+                            worksheet.Range["B9"].Text += model.Client.Name;
+                            worksheet.Range["B10"].Text += model.Address.AddressLocation;
+                            worksheet.Range["B11"].Text += model.Client.City;
+                            worksheet.Range["H11"].Text += model.Client.RFC;
+
+                            worksheet.Range["D27"].Text += string.IsNullOrEmpty(model.CollectionComment)
+                                ? string.Empty
+                                : model.CollectionComment.Length > 50
+                                ? $"{model.CollectionComment.Substring(0, 50)}..."
+                                : model.CollectionComment;
+                            worksheet.Range["D29"].Text += string.IsNullOrEmpty(model.Comment)
+                                ? string.Empty
+                                : model.Comment.Length > 50
+                                ? $"{model.Comment.Substring(0, 50)}..."
+                                : model.Comment;
+                            worksheet.Range["D31"].Text += $"{model.Weight} Kg.";
+
+
+                            // Asignar el comentario a las celdas
+                            worksheet.Range["D25:F26"].Text = commentText;
+                            worksheet.Range["N25:P26"].Text = commentText;
+
+                            // Habilitar el ajuste de texto
+                            worksheet.Range["D25:F26"].CellStyle.WrapText = true;
+                            worksheet.Range["N25:P26"].CellStyle.WrapText = true;
+
+                            worksheet.Range["R7"].Text = model.CreateDate.Day.ToString();
+                            worksheet.Range["S7"].Text = model.CreateDate.Month.ToString();
+                            worksheet.Range["T7"].Text = model.CreateDate.Year.ToString();
+                            worksheet.Range["L9"].Text += model.Client.Name;
+                            worksheet.Range["L10"].Text += model.Address.AddressLocation;
+                            worksheet.Range["L11"].Text += model.Client.City;
+                            worksheet.Range["R11"].Text += model.Client.RFC;
+
+                            worksheet.Range["N27"].Text += string.IsNullOrEmpty(model.CollectionComment)
+                                ? string.Empty
+                                : model.CollectionComment.Length > 50
+                                ? $"{model.CollectionComment.Substring(0, 50)}..."
+                                : model.CollectionComment;
+                            worksheet.Range["N29"].Text += string.IsNullOrEmpty(model.Comment)
+                                ? string.Empty
+                                : model.Comment.Length > 50
+                                ? $"{model.Comment.Substring(0, 50)}..."
+                                : model.Comment;
+                            worksheet.Range["N31"].Text += $"{model.Weight} Kg.";
+                        }
+                        else
+                        {
+                            worksheet.Range["E3"].Text = model.RemissionCode;
+                            worksheet.Range["O3"].Text = model.RemissionCode;
+                            worksheet.Range["I30"].Text = model.RealAmount.HasValue
+                                ? model.RealAmount.Value.ToString("C2")
+                                : (model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal);
+                            worksheet.Range["S30"].Text = model.RealAmount.HasValue
+                                ? model.RealAmount.Value.ToString("C2")
+                                : (model.TypeEnum == OrderType.Remission ? model.Total : model.SubTotal);
+
+
+
+
+                            worksheet.Range["E5"].Text = model.CreateDate.Day.ToString();
+                            worksheet.Range["G5"].Text = model.CreateDate.Month.ToString();
+                            worksheet.Range["I5"].Text = model.CreateDate.Year.ToString();
+                            worksheet.Range["O5"].Text = model.CreateDate.Day.ToString();   // Antes O5
+                            worksheet.Range["Q5"].Text = model.CreateDate.Month.ToString(); // Antes Q5
+                            worksheet.Range["S5"].Text = model.CreateDate.Year.ToString();  // Antes S5
+                            worksheet.Range["E7"].Text += model.Client.Name;
+                            worksheet.Range["E9"].Text += model.Address.AddressLocation;
+                            worksheet.Range["E12"].Text += model.Client.City;
+                            worksheet.Range["H12"].Text += model.Client.RFC;
+
+
+                            if (commentsList.Any())
+                            {
+                                commentText = string.Join(" ", commentsList.Select(c => c.Comments));
+
+                                // Insertar saltos de línea automáticos cada 25 caracteres
+                                commentText = InsertLineBreaks(commentText, 25);
+                            }
+                            else
+                            {
+                                commentText = "No hay comentarios disponibles";
+                            }
+
+
+                            // Asignar el comentario a las celdas
+                            worksheet.Range["N26:P27"].Text = commentText;
+                            worksheet.Range["D26:F27"].Text = commentText;
+
+                            // Habilitar el ajuste de texto para que se respeten los saltos de línea
+                            worksheet.Range["N26:P27"].CellStyle.WrapText = true;
+                            worksheet.Range["D26:F27"].CellStyle.WrapText = true;
+
+
+                            worksheet.Range["D28"].Text += string.IsNullOrEmpty(model.CollectionComment)
+                                ? string.Empty
+                                : model.CollectionComment.Length > 50
+                                ? $"{model.CollectionComment.Substring(0, 50)}..."
+                                : model.CollectionComment;
+                            worksheet.Range["D30"].Text += string.IsNullOrEmpty(model.Comment)
+                                ? string.Empty
+                                : model.Comment.Length > 50
+                                ? $"{model.Comment.Substring(0, 50)}..."
+                                : model.Comment;
+                            worksheet.Range["D32"].Text += $"{model.Weight} Kg.";
+
+
+
+                           
+                            worksheet.Range["O7"].Text += model.Client.Name;
+                            worksheet.Range["O9"].Text += model.Address.AddressLocation;
+                            worksheet.Range["O12"].Text += model.Client.City;
+                            worksheet.Range["R12"].Text += model.Client.RFC;
+
+                            worksheet.Range["N28"].Text += string.IsNullOrEmpty(model.CollectionComment)
+                                ? string.Empty
+                                : model.CollectionComment.Length > 50
+                                ? $"{model.CollectionComment.Substring(0, 50)}..."
+                                : model.CollectionComment;
+                            worksheet.Range["N30"].Text += string.IsNullOrEmpty(model.Comment)
+                                ? string.Empty
+                                : model.Comment.Length > 50
+                                ? $"{model.Comment.Substring(0, 50)}..."
+                                : model.Comment;
+                            worksheet.Range["N32"].Text += $"{model.Weight} Kg.";
+                        }
+                        break;
+                }
+
+                // Determinamos el renglón inicial: 
+                // Si es Clasificación 3 (Cotización) -> 15
+                // Si no, evaluamos el tipo: Remisión -> 15, Factura (Invoice) -> 14
+                int i = model.OrderClassification == 3
+                ? (model.TypeEnum == OrderType.Invoice ? 14 : 15) // Si es 3, Factura = 14, Remisión = 15
+                : (model.TypeEnum == OrderType.Invoice ? 14 : 15); // Si no es 3, Factura = 14, Remisión = 15
+
+                foreach (var product in model.Products)
+                {
+                    if (i < 30) // Límite de la plantilla
+                    {
+                        // Columna Izquierda (Original)
+                        worksheet.Range[$"B{i}"].Text = product.Quantity.ToString();
+                        worksheet.Range[$"C{i}"].Text = product.PresentationLiters;
+                        worksheet.Range[$"G{i}"].Text = product.Price.ToString("C");
+                        worksheet.Range[$"I{i}"].Text = product.Total.ToString("C");
+                        if(model.OrderClassification != 3)
+                        {
+                            // Columna Derecha (Copia/Duplicado de la plantilla)
                             worksheet.Range[$"L{i}"].Text = product.Quantity.ToString();
                             worksheet.Range[$"M{i}"].Text = product.PresentationLiters;
                             worksheet.Range[$"Q{i}"].Text = product.Price.ToString("C");
                             worksheet.Range[$"S{i}"].Text = product.Total.ToString("C");
                         }
-                        i++;
+                        
                     }
-
-                    //Saving the workbook as stream
-                    FileStream stream = new FileStream(guidExcel, FileMode.Create, FileAccess.ReadWrite);
-                    workbook.SaveAs(stream);
-                    await excelStream.DisposeAsync();
-                    await stream.DisposeAsync();
+                    i++;
                 }
-
-                if (File.Exists(guidExcel))
-                    using (ExcelEngine excelEngine = new ExcelEngine())
-                    {
-                        IApplication application = excelEngine.Excel;
-                        FileStream excelStream = new FileStream(guidExcel, FileMode.Open, FileAccess.Read);
-                        excelStream.Position = 0;
-                        IWorkbook workbook = application.Workbooks.Open(excelStream);
-
-                        //Initialize XlsIO renderer.
-                        XlsIORenderer renderer = new XlsIORenderer();
-
-                        //Convert Excel document into PDF document 
-                        PdfDocument pdfDocument = renderer.ConvertToPDF(workbook);
-
-                        Stream stream = new FileStream(guidPdf, FileMode.Create, FileAccess.ReadWrite);
-                        pdfDocument.Save(stream);
-
-                        await excelStream.DisposeAsync();
-                        File.Delete(guidExcel);
-                        await stream.DisposeAsync();
-                    }
-                else
+                if(model.OrderClassification == 3)
                 {
-                    return null;
+                    // 1. Limpiamos el string por si trae "$" o "," (evita errores de parseo)
+                    string totalLimpio = model.Total?.Replace("$", "").Replace(",", "").Trim() ?? "0";
+
+                    // 2. Convertimos el texto a número (double) de forma segura
+                    if (double.TryParse(totalLimpio, out double totalNumerico))
+                    {
+                        // 3. Realizamos la operación del IVA
+                        double totalConIva = totalNumerico * 1.16;
+
+                        // 4. Asignamos a la celda con formato de moneda ($)
+                        worksheet.Range["G32"].Text = "Total más IVA: ";
+                        worksheet.Range["I32"].Text = totalConIva.ToString("C");
+                    }
                 }
-                return guidPdf;
+                
+
+                //Saving the workbook as stream
+                FileStream stream = new FileStream(guidExcel, FileMode.Create, FileAccess.ReadWrite);
+                workbook.SaveAs(stream);
+                await excelStream.DisposeAsync();
+                await stream.DisposeAsync();
             }
 
-            private string InsertLineBreaks(string text, int maxLineLength)
+            if (File.Exists(guidExcel))
+                using (ExcelEngine excelEngine = new ExcelEngine())
+                {
+                    IApplication application = excelEngine.Excel;
+                    FileStream excelStream = new FileStream(guidExcel, FileMode.Open, FileAccess.Read);
+                    excelStream.Position = 0;
+                    IWorkbook workbook = application.Workbooks.Open(excelStream);
+
+                    //Initialize XlsIO renderer.
+                    XlsIORenderer renderer = new XlsIORenderer();
+
+                    //Convert Excel document into PDF document 
+                    PdfDocument pdfDocument = renderer.ConvertToPDF(workbook);
+
+                    Stream stream = new FileStream(guidPdf, FileMode.Create, FileAccess.ReadWrite);
+                    pdfDocument.Save(stream);
+
+                    await excelStream.DisposeAsync();
+                    File.Delete(guidExcel);
+                    await stream.DisposeAsync();
+                }
+            else
+            {
+                return null;
+            }
+            return guidPdf;
+        }
+
+        private string InsertLineBreaks(string text, int maxLineLength)
             {
                 if (string.IsNullOrEmpty(text))
                     return text;

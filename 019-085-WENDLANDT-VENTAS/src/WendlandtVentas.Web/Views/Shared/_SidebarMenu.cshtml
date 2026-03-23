@@ -89,9 +89,20 @@
                     </li>
                 </ul>
             </li>
+            @* --- BOTÓN DIRECTO: COTIZACIONES (Clasificación 3) --- *@
+            <li class="c-sidebar-nav-item">
+                <a class="c-sidebar-nav-link @(isOrderController && queryClassId == "3" ? "c-active" : "")"
+                   asp-controller="Order"
+                   asp-action="Index"
+                   asp-route-classificationId="3">
+                    <i class="c-sidebar-nav-icon far fa-file-alt"></i> Cotizaciones
+                </a>
+            </li>
+
+            @* --- BOTÓN DIRECTO: DEVOLUCIONES --- *@
             <li class="c-sidebar-nav-item @(currentPath.Equals("/returns") ? "active" : "")">
                 <a class="c-sidebar-nav-link" asp-controller="Returns" asp-action="Index">
-                    <i class="c-sidebar-nav-icon far fa-book"></i> Devoluciones
+                    <i class="c-sidebar-nav-icon far fa-undo"></i> Devoluciones
                 </a>
             </li>
             if (User.IsInRole("Administrator") || User.IsInRole("AdministratorCommercial") || User.IsInRole("Storekeeper") || User.IsInRole("Billing") || User.IsInRole("BillingAssistant"))

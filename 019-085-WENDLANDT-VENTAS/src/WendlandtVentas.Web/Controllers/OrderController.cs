@@ -164,71 +164,70 @@ namespace WendlandtVentas.Web.Controllers
                 int.TryParse(Request.Query["classificationId"], out classificationId);
             }
 
-            // 2. IMPORTANTE: Forzar el valor dentro del objeto filter 
-            // Esto garantiza que FilterValues reciba un 1 o un 2, nunca un 0.
+            // 2. IMPORTANTE: Ahora permitimos que sea 1, 2 o 3. 
+            // Si viene algo fuera de ese rango por error, podrías forzarlo a 1.
+            if (classificationId < 1 || classificationId > 3) classificationId = 1;
+
             filter.OrderClassification = classificationId;
 
-            // 3. La llave de caché ahora será única por pestaña
+            // 3. La llave de caché ahora incluirá el ID 3 cuando corresponda
             var cacheKey = $"OrderTableData_Class_{classificationId}_{System.Text.Json.JsonSerializer.Serialize(filter)}";
 
             // Intentar obtener datos del caché
             if (!_memoryCache.TryGetValue(cacheKey, out List<OrderTableModel> cachedData))
+    {
+        // Recuperar datos desde la fuente
+        var users = _userManager.Users.ToDictionary(c => c.Id, c => c.Name); 
+        
+        // El servicio FilterValues debe estar preparado para recibir el classificationId = 3
+        var filteredOrders = (await _orderService.FilterValues(filter)).ToList();
+
+        // Mapear datos al modelo de la tabla
+        cachedData = filteredOrders
+        .Where(c => c.Type != OrderType.Return)
+        .Select(c => new
+        {
+            Order = c,
+            Model = new OrderTableModel
             {
+                Id = c.Id,
+                OrderClassification = (int)c.OrderClassification,
+                OrderClassificationCode = c.OrderClassificationCode,
+                // Si es Cotización, podrías querer mostrar un texto diferente en Type
+                Type = (c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize()),
+                InvoiceCode = c.InvoiceCode ?? string.Empty,
+                RemissionCode = c.RemissionCode,
+                IsPaid = c.Paid,
+                PaymentDate = c.PaymentDate == DateTime.MinValue ? string.Empty : c.PaymentDate.ToLocalTime().FormatDateShortMx(),
+                PaymentPromiseDate = c.PaymentPromiseDate == DateTime.MinValue ? string.Empty : c.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
+                CreateDate = c.CreatedAt.ToLocalTime().FormatDateShortMx(),
+                Total = c.RealAmount.HasValue && c.RealAmount.Value != 0
+                ? c.RealAmount.Value.FormatCurrency()
+                : (c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency()),
+                Client = (c.OrderClassification == 3 || c.ClientId == 9999)
+                 ? (!string.IsNullOrEmpty(c.AddressName) ? c.AddressName : c.Client.Name)
+                 : c.Client.Name,
+                StatusEnum = c.OrderStatus,
+                Comment = c.Comment,
+                Address = c.Address ?? string.Empty,
+                // Las cotizaciones suelen ser editables siempre, o podrías aplicar otra lógica aquí
+                CanEdit = classificationId == 3 || (c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString())),
+            }
+        })
+        .OrderBy(x => x.Order.OrderStatus != OrderStatus.InProcess)
+        .ThenByDescending(x => x.Order.CreatedAt)
+        .Select(x => x.Model)
+        .ToList();
 
-                filter.OrderClassification = classificationId;
-
-                // Si no está en caché, recuperar datos desde la fuente
-                var users = _userManager.Users.ToDictionary(c => c.Id, c => c.Name); // Sin consulta async
-                var filteredOrders = (await _orderService.FilterValues(filter)).ToList();
-
-                // Mapear datos al modelo de la tabla
-                cachedData = filteredOrders
-                .Where(c => c.Type != OrderType.Return)
-                .Select(c => new
-                {
-                    Order = c,
-                    Model = new OrderTableModel
-                    {
-                        Id = c.Id,
-                        OrderClassification = (int)c.OrderClassification,
-                        OrderClassificationCode = c.OrderClassificationCode,
-                        Type = c.PayType.HasValue ? $"{c.Type.Humanize()} ({c.PayType.Value.Humanize()})" : c.Type.Humanize(),
-                        InvoiceCode = c.InvoiceCode ?? string.Empty,
-                        RemissionCode = c.RemissionCode,
-                        IsPaid = c.Paid,
-                        PaymentDate = c.PaymentDate == DateTime.MinValue ? string.Empty : c.PaymentDate.ToLocalTime().FormatDateShortMx(),
-                        PaymentPromiseDate = c.PaymentPromiseDate == DateTime.MinValue ? string.Empty : c.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
-                        CreateDate = c.CreatedAt.ToLocalTime().FormatDateShortMx(),
-                        Total = c.RealAmount.HasValue && c.RealAmount.Value != 0
-                        ? c.RealAmount.Value.FormatCurrency()
-                        : (c.Type != OrderType.Invoice ? c.SubTotal.FormatCurrency() : c.Total.FormatCurrency()),
-                        Client = c.Client.Name,
-                        StatusEnum = c.OrderStatus,
-                        Comment = c.Comment,
-                        Address = c.Address ?? string.Empty,
-                        CanEdit = c.OrderStatus != OrderStatus.PartialPayment && c.OrderStatus != OrderStatus.Paid || User.IsInRole(Role.Administrator.ToString()),
-                    }
-                })
-                .OrderBy(x => x.Order.OrderStatus != OrderStatus.InProcess) // Solo "En proceso" al inicio
-                .ThenByDescending(x => x.Order.CreatedAt)                   // Luego orden por fecha
-                .Select(x => x.Model)
-                .ToList();
-
-
-                // Guardar en caché con duración de 10 minutos
                 var cacheEntryOptions = new MemoryCacheEntryOptions()
-                    .SetSlidingExpiration(TimeSpan.FromMinutes(10)); // Duración de 10 minutos
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(10));
                 _memoryCache.Set(cacheKey, cachedData, cacheEntryOptions);
-
-               
             }
 
-            // Filtrar, ordenar y paginar correctamente
             var dataResult = _sfGridOperations.FilterDataSource(cachedData.AsQueryable(), dm);
 
-            // Retornar los datos con la cuenta requerida
             return dm.RequiresCounts
-                ? new JsonResult(new { result = dataResult.DataResult, count = dataResult.Count }) // La cuenta debe venir de dataResult.Count
+                ? new JsonResult(new { result = dataResult.DataResult, count = dataResult.Count })
                 : new JsonResult(dataResult.DataResult);
         }
    
@@ -279,7 +278,7 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> Add(int classificationId = 1)
         {
             ViewData["Action"] = nameof(Add);
-            ViewData["Title"] = "Agregar pedido";
+            ViewData["Title"] = classificationId == 3 ? "Generar Cotización" : "Agregar pedido";
             var clients = (await _repository.ListAllExistingAsync<Client>()).OrderBy(c => c.Name);
             var payTypes = Enum.GetValues(typeof(PayType)).Cast<PayType>().AsEnumerable();
             var currencyTypes = Enum.GetValues(typeof(CurrencyType)).Cast<CurrencyType>().AsEnumerable();
@@ -316,7 +315,7 @@ namespace WendlandtVentas.Web.Controllers
 
             // Validación condicional:
             // Si es devolución, no validamos estas fechas
-            if (model.IsInvoice == OrderType.Return)
+            if (model.OrderClassification == 3 || model.IsInvoice == OrderType.Return)
             {
                 ModelState.Remove(nameof(model.PaymentPromiseDate));
                 ModelState.Remove(nameof(model.PaymentDate));
@@ -329,31 +328,28 @@ namespace WendlandtVentas.Web.Controllers
                     .SelectMany(x => x.Errors)
                     .Select(x => x.ErrorMessage))));
 
-            // Validación de RFC antes de guardar
-            if (model.IsInvoice == OrderType.Invoice)
+            // 2. Validación de RFC: SOLO si es Factura Y NO es Cotización
+            if (model.IsInvoice == OrderType.Invoice && model.OrderClassification != 3)
             {
                 var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
                 if (rfcValidation != null)
                     return rfcValidation;
-            } 
+            }
 
-            var filters = new Dictionary<string, string>
+            // 3. Validación de Pedidos Pendientes: Ignorar si es Cotización
+            if (model.OrderClassification != 3)
             {
+                var filters = new Dictionary<string, string>
                 {
-                    nameof(model.ClientId),
-                    $"{model.ClientId}"
-                },
-                {
-                    "StatusList",
-                    $"{OrderStatus.OnRoute},{OrderStatus.InProcess}"
-                },
-                // Agregamos la clasificación para que solo busque pendientes de la MISMA línea
-                { "OrderClassification", $"{model.OrderClassification}" }
-            };
-            var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
+            { nameof(model.ClientId), $"{model.ClientId}" },
+            { "StatusList", $"{OrderStatus.OnRoute},{OrderStatus.InProcess}" },
+            { "OrderClassification", $"{model.OrderClassification}" }
+                };
+                var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
 
-            if (ordersPending.Any() && model.Type != OrderType.Return)
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
+                if (ordersPending.Any() && model.Type != OrderType.Return)
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
+            }
 
             var client = await GetByIdWithContactsAsync(model.ClientId);
             var primerEmail = client?.Contacts?.FirstOrDefault()?.Email;
@@ -403,6 +399,10 @@ namespace WendlandtVentas.Web.Controllers
                             // Solo productos de la marca Wellen
                             filtered = filtered.Where(c => c.Product.Distinction == Distinction.Wellen);
                         }
+                        else if (classificationId == 3) {
+                            // COTIZACIÓN: No filtramos. Al no entrar en los otros IF, 
+                            // se mantienen tanto Wellen como el resto de los productos.
+                        }
                         else
                         {
                             // Pedidos normales: Todo lo que NO sea Wellen
@@ -416,6 +416,7 @@ namespace WendlandtVentas.Web.Controllers
 
                 var model = new OrderAddProductViewModel
                 {
+                    ClassificationId = classificationId,
                     ProductsPresentations = new SelectList(productsInStock.Select(x => new { Value = $"{x.Id}-{x.PresentationId}", Text = $"{x.NameExtended()}" }), "Value", "Text")
                 };
 
@@ -452,6 +453,11 @@ namespace WendlandtVentas.Web.Controllers
                     // APLICAR FILTRO DE DISTINCIÓN IGUAL QUE EN ADDPRODUCT
                     if (classificationId == 2)
                         filtered = filtered.Where(c => c.Product.Distinction == Distinction.Wellen);
+                    else if (classificationId == 3)
+                    {
+                        // Escenario Cotización: NO FILTRAMOS (Se muestran Wellen + Cervezas)
+                        // Al no aplicar .Where de distinción, la lista permanece completa.
+                    }
                     else
                         filtered = filtered.Where(c => c.Product.Distinction != Distinction.Wellen);
 
@@ -662,8 +668,14 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetBalances(int clientId)
+        public async Task<IActionResult> GetBalances(int clientId, int classificationId = 1)
         {
+            // Si es clasificación 3 (Cotización), no permitimos ver balances.
+            if (classificationId == 3)
+            {
+                return Content(""); // O puedes retornar un Json de error si prefieres
+            }
+
             ViewData["ModalTitle"] = "Balance de facturas";
             var client = await _repository.GetByIdAsync<Client>(clientId);
             var model = new BalanceViewModel
@@ -744,11 +756,13 @@ namespace WendlandtVentas.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            ViewData["Action"] = nameof(Edit);
-            ViewData["Title"] = "Editar pedido";
+            
 
             // Ejecutar las consultas de manera secuencial para evitar conflictos con DbContext
             var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
+            ViewData["Action"] = nameof(Edit);
+            ViewData["Title"] = order.OrderClassification == 3 ? "Editar Cotización" : "Editar pedido";
+
             var remissionsForReturn = await _orderService.GetInvoiceRemissionNumbersAsync(); // No usa DbContext
             var clients = await _repository.ListAllExistingAsync<Client>();
             var addresses = await _repository.ListAsync(new AddressesByClientIdSpecification(order.ClientId));
@@ -788,9 +802,9 @@ namespace WendlandtVentas.Web.Controllers
             var filteredAddresses = addresses?.Where(c => !c.IsDeleted).ToList() ?? new List<Address>();
 
             // Buscar la dirección asociada al pedido
-            var address = order.Address != null
-                ? filteredAddresses.FirstOrDefault(c => c.AddressLocation == order.Address && c.ClientId == order.ClientId && c.Name == order.AddressName)
-                : null;
+            var address = (order.OrderClassification != 3 && order.Address != null)
+             ? filteredAddresses.FirstOrDefault(c => c.AddressLocation == order.Address && c.ClientId == order.ClientId)
+             : null;
 
             // Construir el modelo de vista
             var model = new OrderViewModel
@@ -803,10 +817,14 @@ namespace WendlandtVentas.Web.Controllers
                 ReturnRemisionNumberOptions = new SelectList(remissionsForReturn, "Value", "Text"),
                 InvoiceCode = order.InvoiceCode,
                 Paid = order.Paid,
+                OrderClassification = (int)order.OrderClassification,
                 PaymentPromiseDate = order.PaymentPromiseDate.ToLocalTime().FormatDateShortMx(),
                 PaymentDate = order.PaymentDate.ToLocalTime().FormatDateShortMx(),
                 DeliveryDay = order.DeliveryDate.ToLocalTime().FormatDateShortMx(),
-                ClientId = order.ClientId,
+                ClientId = order.OrderClassification == 3 ? 9999 : order.ClientId,
+                ProspectName = order.OrderClassification == 3 ? order.AddressName : string.Empty,
+                Address = string.Empty,
+                ManualAddress = order.OrderClassification == 3 ? order.Address : string.Empty,
                 AddressId = address?.Id ?? 0,
                 PayType = order.PayType ?? PayType.Cash,
                 CurrencyType = order.CurrencyType,
@@ -843,10 +861,13 @@ namespace WendlandtVentas.Web.Controllers
                 Addresses = new SelectList(filteredAddresses, "Id", "AddressLocation"),
                 PayTypes = new SelectList(Enum.GetValues(typeof(PayType)).Cast<PayType>().Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
                 CurrencyTypes = new SelectList(new[] { order.CurrencyType }.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
-                CanEditProducts = order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
+                CanEditProducts = order.OrderClassification == 3 || order.OrderStatus == OrderStatus.New || order.OrderStatus == OrderStatus.InProcess,
                 Comment = order.Comment,
                 ProntoPago = order.ProntoPago
             };
+
+            // También asegúrate de pasarlo al ViewBag para los @if de Razor
+            ViewBag.ClassificationId = (int)order.OrderClassification;
 
             return View("AddEdit", model);
         }
@@ -857,8 +878,14 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> Edit(OrderViewModel model)
         {
 
+            // --- NUEVO: Bypass de validación para Cotizaciones ---
+            if (model.OrderClassification == 3)
+            {
+                ModelState.Remove("DeliveryDay");
+                ModelState.Remove("PaymentDate");
+                ModelState.Remove("PaymentPromiseDate");
+            }
 
-            
             if (!ModelState.IsValid)
                 return Json(AjaxFunctions.GenerateJsonError(string.Join("; ", ModelState.Values
                     .SelectMany(x => x.Errors)
@@ -867,7 +894,7 @@ namespace WendlandtVentas.Web.Controllers
 
 
             // Validación de RFC antes de actualizar
-            if (model.IsInvoice == OrderType.Invoice)
+            if (model.IsInvoice == OrderType.Invoice && model.OrderClassification != 3)
             {
                 var rfcValidation = await ValidateClientRFCAsync(model.ClientId);
                 if (rfcValidation != null)
@@ -878,11 +905,11 @@ namespace WendlandtVentas.Web.Controllers
 
             if (response.IsSuccess)
             {
-                
+                string accion = model.OrderClassification == 3 ? "Editar cotización" : "Editar pedido";
                 var user = await _userManager.FindByNameAsync(User.Identity.Name); // Asegúrate de que _userManager esté inyectado en tu controlador
-                var bitacora = new Bitacora(model.Id, user.Name, "Editar pedido");
+                var bitacora = new Bitacora(model.Id, user.Name, accion);
                
-   
+                    
 
                 await _bitacoraService.AddAsync(bitacora);
 
@@ -1187,6 +1214,11 @@ namespace WendlandtVentas.Web.Controllers
         {
             ViewData["ModalTitle"] = "Detalles del pedido";
             var order = await _repository.GetAsync(new OrderExtendedSpecification(id));
+
+            // CAMBIO 1: Título dinámico del Modal
+            ViewData["ModalTitle"] = order.OrderClassification == 3
+                ? "Detalles de la Cotización"
+                : "Detalles del pedido";
             var user = await _userManager.FindByIdAsync(order.UserId);
             var weight = await CalcOrderWeight(id);
 
@@ -1231,7 +1263,9 @@ namespace WendlandtVentas.Web.Controllers
                     Id = order.ClientId,
                     Channel = order.Client.Channel == null ? "-" : order.Client.Channel.Humanize(),
                     PayType = order.PayType.HasValue ? order.PayType.Humanize() : "-",
-                    Name = order.Client.Name,
+                    Name = (order.OrderClassification == 3 || order.ClientId == 9999)
+                   ? (!string.IsNullOrEmpty(order.AddressName) ? order.AddressName : order.Client.Name)
+                   : order.Client.Name,
                     Classification = order.Client.Classification == null ? "-" : order.Client.Classification.Humanize(),
                     State = order.Client.State == null ? "-" : order.Client.State.Name,
                     Comments = (order.Client.Comment != null && order.Client.Comment.Any())
@@ -1326,6 +1360,8 @@ namespace WendlandtVentas.Web.Controllers
                 Id = order.Id,
                 TypeEnum = order.Type,
                 RemissionCode = order.RemissionCode,
+                OrderClassificationCode = order.OrderClassificationCode,
+                OrderClassification = order.OrderClassification,
                 InvoiceCode = order.InvoiceCode,
                 IsPaid = order.Paid,
                 CreateDate = order.CreatedAt.ToLocalTime(),
@@ -1407,8 +1443,22 @@ namespace WendlandtVentas.Web.Controllers
             {
                 var archivo_generado = await _excelReadService.FillData(currentPath, model);
 
-                FileStream fileStream = new FileStream(archivo_generado, FileMode.Open, FileAccess.ReadWrite);
-                return File(fileStream, "application/octet-stream", $"Pedido{(model.TypeEnum == OrderType.Invoice ? model.InvoiceCode : model.RemissionCode)}.pdf");
+                // Determinamos el nombre del archivo según la clasificación y el tipo
+                string nombreArchivo;
+                if (model.OrderClassification == 3)
+                {
+                    nombreArchivo = $"Cotizacion_{model.OrderClassificationCode}.pdf";
+                }
+                else
+                {
+                    nombreArchivo = (model.TypeEnum == OrderType.Invoice ? "Factura_" + model.InvoiceCode : "Remision_" + model.RemissionCode) + ".pdf";
+                }
+
+                FileStream fileStream = new FileStream(archivo_generado, FileMode.Open, FileAccess.Read);
+
+                // Es mejor usar "application/pdf" en lugar de "application/octet-stream" 
+                // para que el navegador sepa que es un PDF.
+                return File(fileStream, "application/pdf", nombreArchivo);
             }
             catch (Exception err)
             {
@@ -1550,7 +1600,7 @@ namespace WendlandtVentas.Web.Controllers
                         }
                     });
                 });
-
+                
                 var client = await _repository.GetByIdAsync<Client>(checkPromotion.ClientId);
                 var promotions = (await _repository.ListExistingAsync(new PromotionByClientSpecification(client))).SelectMany(d => d.PresentationPromotions);
 

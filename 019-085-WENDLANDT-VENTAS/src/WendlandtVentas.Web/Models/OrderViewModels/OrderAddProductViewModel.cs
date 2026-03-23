@@ -37,6 +37,8 @@ namespace WendlandtVentas.Web.Models.OrderViewModels
 
         public CurrencyType CurrencyType { get; set; }
 
+        // Agregamos esta:
+        public int ClassificationId { get; set; }
 
         public bool IsAuthorized(ClaimsPrincipal user)
         {//Se quito al AdministratorCommercial y Billing

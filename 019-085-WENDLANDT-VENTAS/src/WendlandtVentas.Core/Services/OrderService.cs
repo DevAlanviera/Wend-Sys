@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
@@ -66,11 +67,20 @@ namespace WendlandtVentas.Core.Services
             var rolesUser = await _userManager.GetRolesAsync(user);
             var role = rolesUser != null ? rolesUser.First() : string.Empty;
 
-            var client = await _repository.GetByIdAsync<Client>(model.ClientId);
+            // 1. Determinamos qué ID buscar: si es 3, forzamos el 9999
+            int idABuscar = (model.OrderClassification == 3) ? 9999 : model.ClientId;
+            var client = await _repository.GetByIdAsync<Client>(idABuscar);
+
+            // 3. Parse de fechas normal
             var dates = GetParsePaymentDate(model.PaymentDate, model.PaymentPromiseDate, model.DeliveryDay);
+
+            // 4. Calculamos el vencimiento (dueDate)
+            // Si es clasificación 3, forzamos 0 días de crédito para que no sume de más
+            int diasDeCredito = (model.OrderClassification == 3) ? 0 : client.CreditDays;
+
             var dueDate = dates.DeliveryDay > DateTime.MinValue
-                ? dates.DeliveryDay.AddDays(client.CreditDays + 1)
-                : DateTime.UtcNow.ToLocalTime().AddDays(client.CreditDays + 1);
+                 ? dates.DeliveryDay.AddDays(diasDeCredito + 1)
+                 : DateTime.UtcNow.ToLocalTime().AddDays(diasDeCredito + 1);
 
             var productPresentations = await _repository.GetQueryableExisting<ProductPresentation>()
             .Include(pp => pp.Product)
@@ -84,12 +94,19 @@ namespace WendlandtVentas.Core.Services
             var orderPromotionsItems = new List<PromotionItemModel>();
 
             // Validación final de RFC (redundante por seguridad)
-            if (model.IsInvoice == OrderType.Invoice)
+            if (model.IsInvoice == OrderType.Invoice && model.OrderClassification != 3)
             {
                
                 if (client == null || string.IsNullOrEmpty(client.RFC))
                     return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
             }
+
+            // Dentro del Service (Add/Update)
+            if (model.OrderClassification == 3)
+            {
+                model.IsInvoice = OrderType.Remission;
+            }
+            Console.WriteLine("TIPO DE ORDEN: " + model.IsInvoice + " \n \n \n \n \n \n \n \n \n \n \n");
 
             foreach (var productPresentation in productPresentations)
             {
@@ -126,9 +143,14 @@ namespace WendlandtVentas.Core.Services
                 orderPromotions = await GetOrderProductsValidate(model.ClientId, orderPromotionsItems);
             }
 
-            if (model.AddressId != null)
+            // 1. Declaras el tipo de objeto y lo inicializas en null
+            Address address = null;
+
+            if (model.AddressId != null && model.AddressId > 0)
             {
-                var address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
+                // 2. Asignas el resultado de la base de datos
+                address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
+
                 if (address != null)
                 {
                     model.Address = address.AddressLocation;
@@ -138,11 +160,23 @@ namespace WendlandtVentas.Core.Services
 
             int siguienteFolio = await GenerarSiguienteFolio(model.OrderClassification);
 
+            var initialStatus = model.OrderClassification == 3 ? OrderStatus.New : OrderStatus.New;
+
+            string nombreParaMostrar = (model.OrderClassification == 3)
+            ? model.ProspectName  // Asegúrate que este sea el nombre de la propiedad en tu ViewModel
+            : client.Name;
+
+            // Definir dirección (Manual vs Catálogo)
+            // Usamos model.Address que es el 'name' que pusimos en el input de la vista
+            string direccionParaMostrar = (model.OrderClassification == 3)
+            ? model.ManualAddress  // <-- Usamos la nueva propiedad
+            : address?.AddressLocation; // 'address' es la entidad cargada por AddressId
+
             var order = new Order(
-                model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
+                model.InvoiceCode, model.IsInvoice, initialStatus, model.Paid,
                 dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
-                user.Id, model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
-                orderProducts, orderPromotions, model.Address, model.AddressName,
+                user.Id, idABuscar, model.Comment, model.Delivery, model.DeliverySpecification,
+                orderProducts, orderPromotions, direccionParaMostrar, nombreParaMostrar,
                 dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(),
                 model.PayType, model.CurrencyType);
 
@@ -154,7 +188,12 @@ namespace WendlandtVentas.Core.Services
                 await _repository.AddAsync(order);
 
                 var orderTypeName = "Pedido";
-                if (model.IsInvoice == OrderType.Return)
+                if (model.OrderClassification == 3)
+                {
+                    orderTypeName = "Cotización";
+                    // Aquí NO generamos remisión fiscal si no quieres que gaste folios aún
+                }
+                else if (model.IsInvoice == OrderType.Return)
                 {
                     orderTypeName = "Devolución";
                     order.UpdateReturnInformation(model.ReturnRemisionNumber, model.ReturnReason);
@@ -166,14 +205,15 @@ namespace WendlandtVentas.Core.Services
 
                 await _repository.UpdateAsync(order);
 
-
-                var clientName = client != null ? client.Name : string.Empty;
-                var roles = new List<Role>() { Role.Administrator, Role.Storekeeper, Role.Billing, Role.BillingAssistant };
-                var title = $"{orderTypeName} {order.Id}";
-                var message = $"{orderTypeName} nuevo: #{order.Id} - {clientName} - {order.Total:C2}";
-
-                await _notificationService.AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
-                var bitacora = new Bitacora(order.Id, user.Name, "Crear pedido");
+                if (model.OrderClassification != 3)
+                {
+                    var clientName = client != null ? client.Name : string.Empty;
+                    var roles = new List<Role>() { Role.Administrator, Role.Storekeeper, Role.Billing, Role.BillingAssistant };
+                    var title = $"{orderTypeName} {order.Id}";
+                    var message = $"{orderTypeName} nuevo: #{order.Id} - {clientName} - {order.Total:C2}";
+                    await _notificationService.AddAndSendNotificationByRoles(roles, title, message, user.Id, role);
+                }
+                var bitacora = new Bitacora(order.Id, user.Name, $"Crear {orderTypeName.ToLower()}");
                 await _bitacoraService.AddAsync(bitacora);
                 
                 _cacheService.InvalidateOrderCache();
@@ -181,7 +221,7 @@ namespace WendlandtVentas.Core.Services
                 // ? "Confirmado: Es un Distribuidor"
                 // : $"Cuidado: El canal actual es {client.Channel}";
                 // 
-                if (client.Channel == Entities.Enums.Channel.Distributor)
+                if (client.Channel == Entities.Enums.Channel.Distributor && model.OrderClassification != 3)
                 {
                    
                     try
@@ -235,8 +275,11 @@ namespace WendlandtVentas.Core.Services
             {
                 var user = await _userManager.FindByEmailAsync(currrentUserEmail);
                 var order = await _repository.GetAsync(new OrderExtendedSpecification(model.Id));
-                var client = await _repository.GetByIdAsync<Client>(model.ClientId);
+
+                int idABuscar = (order.OrderClassification == 3) ? 9999 : model.ClientId;
+                var client = await _repository.GetByIdAsync<Client>(idABuscar);
                 var dates = GetParsePaymentDate(model.PaymentDate, model.PaymentPromiseDate, model.DeliveryDay);
+                int diasDeCredito = (order.OrderClassification == 3) ? 0 : client.CreditDays;
                 var dueDate = dates.DeliveryDay > DateTime.MinValue ? dates.DeliveryDay.AddDays(client.CreditDays + 1) : order.CreatedAt.ToLocalTime().AddDays(client.CreditDays + 1);
                 var productPresentations = (await _repository.ListAllAsync<ProductPresentation>()).Where(c => model.ProductPresentationIds.Any(m => m == c.Id));
                 var orderProducts = new List<OrderProduct>();
@@ -244,16 +287,22 @@ namespace WendlandtVentas.Core.Services
                 var orderPromotions = new List<OrderPromotion>();
                 var orderPromotionsItems = new List<PromotionItemModel>();
 
-                if (model.IsInvoice == OrderType.Invoice)
+                if (model.IsInvoice == OrderType.Invoice && order.OrderClassification != 3)
                 {
 
                     if (client == null || string.IsNullOrEmpty(client.RFC))
                         return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
                 }
 
-                if (order.InventoryDiscount)
+                if (order.InventoryDiscount && order.OrderClassification != 3)
                 {
                     await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
+                }
+
+                // Dentro del Service (Add/Update)
+                if (model.OrderClassification == 3)
+                {
+                    model.IsInvoice = OrderType.Remission; // Forzamos que sea remisión en el servidor
                 }
 
                 foreach (var productPresentation in productPresentations)
@@ -288,22 +337,42 @@ namespace WendlandtVentas.Core.Services
                     orderPromotions = await GetOrderProductsValidate(model.ClientId, orderPromotionsItems);
                 }
 
-                if (model.AddressId != null)
+                Address address = null;
+                if (order.OrderClassification != 3 && model.AddressId != null && model.AddressId > 0)
                 {
-                    var address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
+                    address = await _repository.GetByIdAsync<Address>(model.AddressId.Value);
                     if (address != null)
                     {
                         model.Address = address.AddressLocation;
                         model.AddressName = address.Name;
                     }
                 }
+                // NOTA: Si es Clasificación 3, model.Address ya trae el texto manual 
+                // gracias al cambio que hicimos en el HTML (name="ManualAddress" o name="Address")
 
-                // Asignar los nuevos valores al pedido
-                order.ProntoPago = model.ProntoPago;
-                order.Edit(model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
+                // 4. Determinar Nombre y Dirección Final para el método Edit
+                string nombreParaGuardar = (order.OrderClassification == 3)
+                    ? model.ProspectName
+                    : client.Name;
+
+                string direccionFinal;
+                if (order.OrderClassification == 3)
+                {
+                    // CASO COTIZACIÓN:
+                    // El "calle diez" viene en model.Address (visto en tu debugger)
+                    direccionFinal = model.ManualAddress;
+                }
+                else
+                {
+                    direccionFinal = address?.AddressLocation ?? model.Address;
+                }
+
+                    // Asignar los nuevos valores al pedido
+                    order.ProntoPago = model.ProntoPago;
+                order.Edit(model.InvoiceCode, model.IsInvoice, order.OrderStatus, model.Paid,
                     dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
-                    model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
-                    orderProducts, orderPromotions, model.Address, model.AddressName,
+                    idABuscar, model.Comment, model.Delivery, model.DeliverySpecification,
+                    orderProducts, orderPromotions, direccionFinal, nombreParaGuardar,
                     dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(), model.PayType, model.CurrencyType);
 
                 if (model.IsInvoice == OrderType.Return)
@@ -314,7 +383,7 @@ namespace WendlandtVentas.Core.Services
                 // Actualizar la fecha de LastModified antes de guardar la orden
                 await _repository.UpdateAsync(order);
 
-                if (order.InventoryDiscount)
+                if (order.InventoryDiscount && order.OrderClassification != 3)
                 {
                     await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
                 }

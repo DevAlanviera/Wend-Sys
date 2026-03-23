@@ -1,7 +1,23 @@
 ﻿﻿﻿@using WendlandtVentas.Core.Entities.Enums
 @using WendlandtVentas.Core.Models.OrderViewModels
 @model OrderViewModel
+@{
+    // 1. Capturamos el ID de la clasificación
+    var classificationId = Context.Request.Query["classificationId"].ToString();
 
+    string tipo;
+    if (classificationId == "3")
+    {
+        tipo = "cotización";
+    }
+    else
+    {
+        tipo = "pedido";
+        
+    }
+
+
+}
 
 <h4 class="mb-3">
     <a asp-action="Index"
@@ -37,45 +53,58 @@
                 <div class="row">
                     @if (Model.IsInvoice != OrderType.Export && Model.IsInvoice != OrderType.Return)
                     {
-                        <div class="col-12 col-sm-5 col-md-4 col-lg-3 col-xl-2 mb-3 mb-sm-0 mr-sm-5 mr-lg-auto">
-                            <div class="form-group">
-                                <label asp-for="IsInvoice" class="pb-1"></label>
-                                <br />
-                                <div class="form-check">
-                                    <label class="form-check-label">
-                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
-                                    </label>
-                                </div>
-                                @if (Model.Id == 0)
+                      
+
+                                @if (ViewBag.ClassificationId == 3)
                                 {
-                                    <div id="export-check" class="form-check">
-                                        <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
-                                        </label>
+                                    @* ESCENARIO: COTIZACIÓN (Totalmente oculto) *@
+                                    <input type="hidden" name="IsInvoice" id="IsInvoice" value="@((int)OrderType.Remission)" />
+                                }
+                                else
+                                {
+                                    <div class="col-12 col-sm-5 col-md-4 col-lg-3 col-xl-2 mb-3 mb-sm-0 mr-sm-5 mr-lg-auto">
+                                        <div class="form-group">
+                                            <label asp-for="IsInvoice" class="pb-1"></label>
+                                            <br />
+                
+                                            @* ESCENARIO: PEDIDO NORMAL *@
+                                            <div class="form-check">
+                                                <label class="form-check-label">
+                                                    <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Remission" @(Model.IsInvoice == OrderType.Remission ? "checked" : string.Empty)>Remisión
+                                                </label>
+                                            </div>
+
+                                            @if (Model.Id == 0)
+                                            {
+                                                <div id="export-check" class="form-check">
+                                                    <label class="form-check-label">
+                                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Export" @(Model.IsInvoice == OrderType.Export ? "checked" : string.Empty)>Exportación
+                                                    </label>
+                                                </div>
+                                            }
+
+                                            <div class="form-check">
+                                                <label class="form-check-label">
+                                                    <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
+                                                </label>
+                                            </div>
+
+                                            @if (Model.Id == 0)
+                                            {
+                                                <div id="return-check" class="form-check">
+                                                    <label class="form-check-label">
+                                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
+                                                    </label>
+                                                </div>
+                                            }
+                                        </div>
                                     </div>
                                 }
-                                <div class="form-check">
-                                    <label class="form-check-label">
-                                        <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Invoice" @(Model.IsInvoice == OrderType.Invoice ? "checked" : string.Empty)>Facturación
-                                    </label>
-                                </div>
-                                @if (Model.Id == 0)
-                                {
-                                    <div id="return-check" class="form-check">
-                                        <label class="form-check-label">
-                                            <input type="radio" class="form-check-input radio-invoice" name="IsInvoice" value="@OrderType.Return" @(Model.IsInvoice == OrderType.Return ? "checked" : string.Empty)>Devolución
-                                        </label>
-                                    </div>
-                                }
-                                <!--COMENTADO HASTA QUE SE HABILITE EN PRODUCCION-->
-                            @*<div class="form-check mt-2">
-                            <input asp-for="ProntoPago" class="form-check-input" id="early-payment-check" />
-                            <label class="form-check-label" for="early-payment-check">¿Pronto pago?</label>
-                            </div>*@
-                            </div>
-                        </div>
                     }
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3 mb-3 mb-sm-0" id="invoice" @(Model.IsInvoice == OrderType.Invoice ? string.Empty : "hidden")>
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-4 col-xl-3 mb-3 mb-sm-0"
+                         id="invoice"
+                         @(Model.IsInvoice == OrderType.Invoice && ViewBag.ClassificationId != 3 ? string.Empty : "hidden")>
+
                         <div class="form-group">
                             <label asp-for="InvoiceCode"></label>
                             <input asp-for="InvoiceCode" class="form-control" readonly />
@@ -83,70 +112,105 @@
                         </div>
                     </div>
                     <div class="col-12 col-md-12 col-lg col-xl">
-                        <div class="form-group">
+                    <div class="form-group">
+                        @if (ViewBag.ClassificationId == 3)
+                        {
+                           @* ESCENARIO: COTIZACIÓN / PROSPECTO *@
+                            <label>Nombre del Prospecto</label> <b class="text-danger">*</b>
+    
+                            @* USAR asp-for es lo que hace la "magia" de cargar el dato *@
+                            <input type="text" asp-for="ProspectName" class="form-control" placeholder="Escriba el nombre del prospecto..." />
+    
+                            @* Quitamos el mensaje estático y usamos el de validación del modelo si prefieres *@
+                            <span asp-validation-for="ProspectName" class="text-danger"></span>
+            
+                            @* Mantenemos el ClientId en 9999 *@
+                            <input type="hidden" asp-for="ClientId" />
+                        }
+                        else
+                        {
+                            @* ESCENARIO: CLIENTE EXISTENTE *@
                             <label asp-for="ClientId"></label> <b class="text-danger">*</b>
                             @Html.DropDownListFor(m => m.ClientId, Model.Clients, "Seleccionar cliente", new { @class = "form-control select2", @style = "width:100%;" })
                             <span asp-validation-for="ClientId" class="text-danger"></span>
-                        </div>
+                        }
                     </div>
+                </div>
                 </div>
                 <section id="noreturn" class="@(Model.IsInvoice == OrderType.Return ? "d-none" : "")">
                     <div class="row">
                         <div class="col-12 col-lg col-xl">
-                            <div class="form-group">
-                                <label asp-for="AddressId"></label>
+                            @if (ViewBag.ClassificationId == 3)
+                            {
+                                <label>Dirección del Prospecto</label> <b class="text-danger">*</b>
+    
+                                @* Vinculamos al nuevo campo ManualAddress *@
+                                <input type="text" asp-for="ManualAddress" class="form-control" placeholder="Escriba la dirección completa..." />
+    
+                                <span asp-validation-for="ManualAddress" class="text-danger"></span>
+                            }
+                            else
+                            {
+                                @* ESCENARIO: CLIENTE EXISTENTE - Selector de Direcciones *@
+                                <label asp-for="AddressId"></label> <b class="text-danger">*</b>
                                 @Html.DropDownListFor(m => m.AddressId, Model.Addresses, "Seleccionar dirección", new { @class = "form-control select2", @style = "width:100%;" })
                                 <span asp-validation-for="AddressId" class="text-danger"></span>
+                            }
+                        </div>
+                        </div>
+                        @if (ViewBag.ClassificationId != 3)
+                        {
+                            <div class="row">
+                                <div class="col-12 col-lg col-xl">
+                                    <div class="form-group">
+                                        <label asp-for="DeliverySpecification"></label>
+                                        <input asp-for="DeliverySpecification" class="form-control" />
+                                        <span asp-validation-for="DeliverySpecification" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="row">
+                            @if(ViewBag.ClassificationId != 3){
+                                <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
+                                    <div class="form-group">
+                                        <label asp-for="PaymentPromiseDate"></label>
+                                        <input asp-for="PaymentPromiseDate" class="form-control date-picker" autocomplete="off" />
+                                        <span asp-validation-for="PaymentPromiseDate" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
+                                    <div class="form-group">
+                                        <label asp-for="PaymentDate"></label>
+                                        <input asp-for="PaymentDate" class="form-control date-picker" autocomplete="off" />
+                                        <span asp-validation-for="PaymentDate" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+                                    <div class="form-group">
+                                        <label asp-for="DeliveryDay"></label>
+                                        <input asp-for="DeliveryDay" class="form-control date-picker" autocomplete="off" />
+                                        <span asp-validation-for="DeliveryDay" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-6 col-sm-6 col-md-6 col-lg-3 col-xl-3">
+                                <div class="form-group">
+                                    <label asp-for="PayType"></label>
+                                    @Html.DropDownListFor(m => m.PayType, Model.PayTypes, new { @class = "form-control select2", @style = "width:100%;" })
+                                    <span asp-validation-for="PayType" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-6 col-lg-3 col-xl-3">
+                                <div class="form-group">
+                                    <label asp-for="CurrencyType"></label>
+                                    @Html.DropDownListFor(m => m.CurrencyTypes, Model.CurrencyTypes, new { @class = "form-control select2", @style = "width:100%;" })
+                                    <input asp-for="CurrencyType" value="@Model.CurrencyType" class="form-control" type="hidden" />
+                                    <span asp-validation-for="CurrencyType" class="text-danger"></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12 col-lg col-xl">
-                            <div class="form-group">
-                                <label asp-for="DeliverySpecification"></label>
-                                <input asp-for="DeliverySpecification" class="form-control" />
-                                <span asp-validation-for="DeliverySpecification" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
-                            <div class="form-group">
-                                <label asp-for="PaymentPromiseDate"></label>
-                                <input asp-for="PaymentPromiseDate" class="form-control date-picker" autocomplete="off" />
-                                <span asp-validation-for="PaymentPromiseDate" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-3 mb-sm-0">
-                            <div class="form-group">
-                                <label asp-for="PaymentDate"></label>
-                                <input asp-for="PaymentDate" class="form-control date-picker" autocomplete="off" />
-                                <span asp-validation-for="PaymentDate" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2">
-                            <div class="form-group">
-                                <label asp-for="DeliveryDay"></label>
-                                <input asp-for="DeliveryDay" class="form-control date-picker" autocomplete="off" />
-                                <span asp-validation-for="DeliveryDay" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-sm-6 col-md-6 col-lg-3 col-xl-3">
-                            <div class="form-group">
-                                <label asp-for="PayType"></label>
-                                @Html.DropDownListFor(m => m.PayType, Model.PayTypes, new { @class = "form-control select2", @style = "width:100%;" })
-                                <span asp-validation-for="PayType" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-6 col-lg-3 col-xl-3">
-                            <div class="form-group">
-                                <label asp-for="CurrencyType"></label>
-                                @Html.DropDownListFor(m => m.CurrencyTypes, Model.CurrencyTypes, new { @class = "form-control select2", @style = "width:100%;" })
-                                <input asp-for="CurrencyType" value="@Model.CurrencyType" class="form-control" type="hidden" />
-                                <span asp-validation-for="CurrencyType" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
+                    
                     <div class="row">
                         <div class="col-12 col-lg-12 col-xl-12">
                             <div class="form-group">
@@ -325,9 +389,13 @@
 </form>
 
 @section Modals {
-    <div class="modal" id="addProductModal" tabindex="false" role="dialog" aria-labelledby="addProductModal-label"></div>
+    <div class="modal" id="addProductModal" @*tabindex="false"*@ role="dialog" aria-labelledby="addProductModal-label"></div>
     <div class="modal modal-focus-first" id="addPromotionsModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("AddPromotions")"></div>
+    @* Solo renderizamos el modal si NO es una cotización *@
+    @if (ViewBag.ClassificationId != 3)
+    {
     <div class="modal" id="balanceModal" tabindex="-1" role="dialog" aria-labelledby="balanceModal-label" data-url="@Url.Action("ShowBalance")"></div>
+    }
 }
 @section Scripts {
     <script>
@@ -353,8 +421,6 @@
                         const $select = $modal.find('.select2');
 
                         // --- Intentar usar datos precargados en sessionStorage ---
-                        // Opción A (preload global): clave simple que sugerimos en el preloader
-                        const classificationId = $('#OrderClassification').val();
                         const globalCacheKey = `products_${currencyType}_class_${classificationId}`;
                         let globalCache = null;
                         try {
@@ -429,6 +495,7 @@
                         });
                     });
             });
+            
 
             // Tu lógica existente de CurrencyTypes
             $('#CurrencyTypes').attr('disabled', 'disabled');
@@ -438,19 +505,21 @@
                 CalculateTotals();
             });
 
-            function toggleRequiredFields() {
-                const selected = $('input[name="OrderType"]:checked').val();
+                    function toggleRequiredFields() {
+            const selected = $('input[name="OrderType"]:checked').val();
+            const classificationId = $('#OrderClassification').val(); // <--- Leer clasificación
 
-                if (selected === "Devolucion") {
-                    $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
-                        .prop('required', false)
-                        .closest('.form-group').hide();
-                } else {
-                    $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
-                        .prop('required', true)
-                        .closest('.form-group').show();
-                }
+            // Si es Devolución O es Cotización (3), relajamos la obligatoriedad
+            if (selected === "Devolucion" || classificationId === "3") {
+                $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
+                    .prop('required', false)
+                    .closest('.form-group').show(); // Los mostramos pero no son obligatorios
+            } else {
+                $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
+                    .prop('required', true)
+                    .closest('.form-group').show();
             }
+        }
 
             // Detectar cambios
             $(document).on('change', 'input[name="OrderType"]', toggleRequiredFields);
@@ -475,7 +544,7 @@
             const invoiceType = selectedRadio ? selectedRadio.value : null;
             const $saveButton = $('#btn-guardar');
 
-            console.log("Tipo de facturación seleccionado:", invoiceType);
+           
 
             // Si NO es facturación, habilitamos el botón y ocultamos mensajes
             if (invoiceType !== "@OrderType.Invoice") {
@@ -496,9 +565,17 @@
                 return;
             }
 
-            // Verificamos el RFC solo para facturación con cliente seleccionado
+                    const isQuote = $('#OrderClassification').val() == 3;
+        console.log( $('#OrderClassification').val());
+        if (!isQuote) {
+            // Si NO es cotización, aplicamos la validación estricta de RFC
             const hasValidRFC = await checkClientRFCAsync();
             $saveButton.prop('disabled', !hasValidRFC);
+        } else {
+            // Si ES cotización, el RFC no importa, el botón debe estar habilitado
+            $saveButton.prop('disabled', false);
+        }
+           
         }
 
         // Evento para cambios en el cliente
@@ -549,6 +626,9 @@
             const $btnConfirmarModal = $('#confirmarEnvio');
             const $form = $('#forma-order');
 
+            // Traemos la clasificación desde el servidor a JS
+            const classificationId = '@ViewBag.ClassificationId';
+
             $btnGuardar.on('click.confirmacion', function (e) {
                 e.preventDefault();
 
@@ -556,12 +636,21 @@
                 // Solo verificamos si ya se envió para no hacer nada
                 if (alreadySubmitted) return;
 
-                // Obtener tipo de orden para el texto del modal
-                let $radioSeleccionado = $('input[name="IsInvoice"]:checked');
+                // --- LÓGICA DINÁMICA PARA EL TEXTO ---
                 let textoTipo = "Pedido";
+                let labelOrden = "El pedido";
+
+                if (classificationId === "3") {
+                    // Si es cotización, forzamos los textos
+                    textoTipo = "Cotización";
+                    labelOrden = "La cotización";
+                }else {
+                // Lógica original para Pedidos (Cerveza/Wellen)
+                let $radioSeleccionado = $('input[name="IsInvoice"]:checked');
                 if ($radioSeleccionado.length) {
                     textoTipo = $radioSeleccionado.closest('.form-check')
                                                  .find('.form-check-label').text().trim();
+                    }
                 }
 
                 $('.tipo-orden-texto').text(textoTipo);
@@ -764,9 +853,20 @@
             var error = "Ha ocurrido un error inesperado.";
             const $form = $(this);
             const $modal = $('#addProductModal');
-            var isValid = $form.valid();
+            
             var $container = $('#content-products');
             var selectKeyValues = $form.find("#ProductPresentationId").val().split("-");
+            var classificationId = $('#OrderClassification').val();
+
+           // --- SOLUCIÓN DE VALIDACIÓN ---
+            if (classificationId == 3) {
+                // Removemos las reglas de validación de ClientId dinámicamente
+                $('#ClientId').rules('remove', 'required');
+                // También le decimos al validador que ignore este elemento
+                $form.validate().settings.ignore = "#ClientId";
+            }
+
+            var isValid = $form.valid();
             var clientId = $('#ClientId').val();
             const productPresentationId = selectKeyValues[0];
             const presentationId = selectKeyValues[1];
@@ -776,13 +876,28 @@
             var existPresentation = false;
             var currencyType = $('#CurrencyType').val();
 
+
             if ($('.presentation-' + presentationId)[0]) {
                 existPresentation = true;
             }
 
-            if (clientId <= 0) {
-                isValid = false;
-                error = "Es necesario seleccionar un cliente.";
+            if (classificationId != 3) {
+                if (clientId <= 0) {
+                    isValid = false;
+                    error = "Es necesario seleccionar un cliente.";
+                }
+            }else {
+                // Validar el nombre del prospecto manualmente ya que ClientId se ignora
+                var ProspectName = $('input[name="ProspectName"]').val();
+                console.log(ProspectName);
+                if (!ProspectName || ProspectName.trim() === "") {
+                    isValid = false;
+                    error = "Es necesario escribir el nombre del prospecto.";
+                    // Agregamos un borde rojo visual para el UX
+                    $('input[name="ProspectName"]').addClass('is-invalid');
+                } else {
+                    $('input[name="ProspectName"]').removeClass('is-invalid');
+                }
             }
 
             $.each($container.find('.row-product'), function (key, value) {
@@ -812,7 +927,11 @@
                         } else {
                             $container.append(data);
                         }
+                        CalculateTotals();
+                         if (classificationId 
+                             != 3) {
                         CheckPromotions();
+                             }
                     });
             } else {
                 monoloading("hide");
