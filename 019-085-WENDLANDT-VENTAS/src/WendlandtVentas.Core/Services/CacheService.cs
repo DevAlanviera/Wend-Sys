@@ -32,12 +32,29 @@ namespace WendlandtVentas.Core.Services
 
         public void ClearProductCache()
         {
-            // Borrar el caché para los productos
+            // Limpiar solo caché de productos ACTIVOS
+            _memoryCache.Remove("ProductTable_Active_Wellen");
+            _memoryCache.Remove("ProductTable_Active_Regular");
+
+            // Los desactivados no tienen caché, no necesitas limpiarlos
+
+            // Tus limpiezas existentes
             _memoryCache.Remove("ProductTableData");
             InvalidateCacheByPrefix("ProductsInStock_");
-            // También podemos borrar el cache por prefijo si tienes otros cachés con prefijos similares
             InvalidateCacheByPrefix("ProductTableData_");
+        }
 
+        // Método adicional si quieres limpiar solo activos o solo eliminados
+        public void ClearActiveProductsCache()
+        {
+            _memoryCache.Remove("ProductTable_Active_Wellen");
+            _memoryCache.Remove("ProductTable_Active_Regular");
+           
+        }
+
+        public void ClearDeletedProductsCache()
+        {
+            _memoryCache.Remove("ProductTable_Deleted_All");
            
         }
 

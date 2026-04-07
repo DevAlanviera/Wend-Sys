@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using WendlandtVentas.Core.DTO;
+using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Models.ProductPresentationViewModels;
 
 namespace WendlandtVentas.Core.Interfaces
@@ -12,5 +14,11 @@ namespace WendlandtVentas.Core.Interfaces
         Task<int> GetAvailableStock(int productPresentationId);
 
         Task ReverseOrderInventory(int orderId);
+        Task VerificarStockBajoAsync(ProductPresentation p);
+
+        Task ProcesarYEnviarReporteMatutinoAsync();
+
+        Task<List<FilaReporteInventario>> ObtenerDatosParaReporteExcelAsync();
     }
+
 }

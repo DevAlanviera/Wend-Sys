@@ -9,6 +9,7 @@
         </div>
         <div class="modal-body">
             @Html.HiddenFor(t => t.ProductPresentationId)
+            @Html.HiddenFor(m => m.BatchId)
             <p class="text-muted small">
                 Campos marcados con asterisco son requeridos.
             </p>
@@ -25,15 +26,36 @@
                                 new { @class = "form-control", id = "batchSelector" })
                 <span asp-validation-for="BatchId" class="text-danger"></span>
             </div>
+            <!-- 🔥 AGREGAR: Campo para mostrar el número de lote seleccionado -->
+            <div class="form-group" id="batchNumberContainer" style="display:none;">
+                <label>Número de Lote</label>
+                <input type="text" id="displayBatchNumber" class="form-control" readonly />
+            </div>
+
             <input type="hidden" name="BatchNumber" value="N/A" />
-                        }
+            }
             else
             {
-                <div class="form-group">
-                    <label asp-for="BatchNumber">Número de Lote</label> <b class="text-danger">*</b>
-                    <input asp-for="BatchNumber" class="form-control" id="inputBatchNumber" placeholder="Ej. L-2024-001" />
-                    <span asp-validation-for="BatchNumber" class="text-danger"></span>
-                </div>
+                @* Si el BatchId tiene valor, es una entrada a lote existente *@
+                @if (Model.BatchId.HasValue)
+                {
+                    <div class="form-group">
+                        <label asp-for="BatchNumber">Número de Lote (Existente)</label>
+                        @* Lo ponemos readonly para que no lo editen por error *@
+                        <input asp-for="BatchNumber" class="form-control" readonly />
+                        <input type="hidden" asp-for="BatchId" />
+                        <span asp-validation-for="BatchNumber" class="text-danger"></span>
+                        <small class="text-info">Usted está agregando stock a este lote específico.</small>
+                    </div>
+                }
+                else
+                {
+                    <div class="form-group">
+                        <label asp-for="BatchNumber">Número de Lote</label> <b class="text-danger">*</b>
+                        <input asp-for="BatchNumber" class="form-control" id="inputBatchNumber" placeholder="Ej. L-2024-001" />
+                        <span asp-validation-for="BatchNumber" class="text-danger"></span>
+                    </div>
+                }
             }
 
             @* --- SECCIÓN DE CANTIDAD Y FECHA --- *@
@@ -47,11 +69,25 @@
                 @* SOLO MOSTRAR FECHA SI NO ES SALIDA *@
                 @if ((string)ViewData["Action"] != "Out")
                 {
-                    <div class="form-group col-md-6">
-                        <label asp-for="ExpiryDate">Fecha de Caducidad</label> <b class="text-danger">*</b>
-                        <input asp-for="ExpiryDate" type="text" class="form-control date-picker-lotes" id="inputExpiry" autocomplete="off" />
-                        <span asp-validation-for="ExpiryDate" class="text-danger"></span>
-                    </div>
+                    @if (Model.BatchId.HasValue)
+                    {
+                        <div class="form-group">
+                            <label asp-for="ExpiryDate">Fecha de Caducidad</label>
+                            @* La mostramos readonly para que el usuario sepa qué lote está afectando *@
+                            <input type="text" class="form-control" value="@Model.ExpiryDate?.ToString("dd/MM/yyyy")" readonly />
+                            @* Enviamos la fecha oculta para que el modelo sea válido en el POST *@
+                            <input type="hidden" asp-for="ExpiryDate" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-group col-md-6">
+                            <label asp-for="ExpiryDate">Fecha de Caducidad</label> <b class="text-danger">*</b>
+                            <input asp-for="ExpiryDate" type="text" class="form-control date-picker-lotes" id="inputExpiry" autocomplete="off" />
+                            <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                        </div>
+                    }
+                    
                 }
 
                 
@@ -72,6 +108,7 @@
         </div>
     </form>
 </div>
+
 <script>
     $(function () {
         // Inicializar selector de fecha
@@ -82,32 +119,39 @@
         });
 
         // Lógica de autocompletado solo para Ajuste o Salida
-           $('#batchSelector').on('change', function() {
+            $('#batchSelector').on('change', function() {
         var batchId = $(this).val();
         if (batchId) {
+            // 🔥 IMPORTANTE: Actualizar el campo oculto BatchId
+            $('input[name="BatchId"]').val(batchId);
+            // O si tiene id específico: $('#BatchId').val(batchId);
+
+            console.log('BatchId seleccionado:', batchId);
+            console.log('BatchId oculto actualizado:', $('input[name="BatchId"]').val());
+
             $.get('/Inventory/GetBatchDetails/' + batchId, function(data) {
-                // ELIMINA ESTA LÍNEA -> $('#inputQuantity').val(data.currentQuantity);
+                console.log('Datos del lote:', data);
 
                 @if (Model.IsAdjustment)
                 {
                         <text>$('#inputQuantity').val(data.currentQuantity);</text>
-                    // Carga valor para editar
                 }
                 else
                 {
                         <text>$('#inputQuantity').val('');</text>
-                        // Deja vacío para que el usuario escriba cuánto sale
+                        <text>$('#inputQuantity').attr('placeholder', 'Cantidad a retirar (Stock: ' + data.currentQuantity + ')');</text>
                 }
 
-                    if(data.expiryDate) {
-        // Tomamos solo la parte de la fecha YYYY-MM-DD
-        var datePart = data.expiryDate.split('T')[0];
-        var parts = datePart.split('-');
-        // Creamos la fecha usando año, mes (0-11) y día
-        var date = new Date(parts[0], parts[1] - 1, parts[2]);
-        $('#inputExpiry').datepicker('setDate', date);
-    }
+                if(data.expiryDate) {
+                    var date = new Date(data.expiryDate);
+                    $('#inputExpiry').datepicker('setDate', date);
+                }
             });
+        } else {
+            // Limpiar cuando no hay selección
+            $('input[name="BatchId"]').val('');
+            $('#inputQuantity').val('');
+            $('#inputExpiry').val('');
         }
     });
     });

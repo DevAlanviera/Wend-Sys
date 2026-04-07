@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WendlandtVentas.Core.DTO;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Interfaces;
@@ -529,5 +530,68 @@ namespace WendlandtVentas.Infrastructure.Services
              string commentText = string.Join(" ", commentsList.Select(c => c.Comments));
              return InsertLineBreaks(commentText, 25);
          }
+
+        public byte[] GenerarReporteInventario(List<FilaReporteInventario> datos)
+        {
+            string templatePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "resources", "Plantilla_Inventario.xlsx");
+
+            using (var workbook = new XLWorkbook(templatePath))
+            {
+                var ws = workbook.Worksheet(1);
+                ws.Cell("C3").Value = DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy");
+
+                // 1. SEPARAR LISTAS
+                var productosLinea = datos.Where(x => !x.EsTemporada).OrderBy(x => x.Cerveza).ToList();
+                var productosTemporada = datos.Where(x => x.EsTemporada).OrderBy(x => x.Cerveza).ToList();
+
+                int currentRow = 7; // Empezamos en la fila del encabezado LINEA
+
+                // --- SECCIÓN LINEA ---
+                ws.Cell(currentRow, 1).Value = "LINEA";
+                ws.Cell(currentRow, 1).Style.Font.Bold = true;
+                currentRow++; // Los productos empiezan en la 8
+
+                foreach (var item in productosLinea)
+                {
+                    EscribirFilaExcel(ws, currentRow, item);
+                    currentRow++;
+                }
+
+                // --- ESPACIO Y SECCIÓN TEMPORADA ---
+                currentRow++; // Fila de espacio en blanco
+                ws.Cell(currentRow, 1).Value = "TEMPORADA";
+                ws.Cell(currentRow, 1).Style.Font.Bold = true;
+                currentRow++;
+
+                foreach (var item in productosTemporada)
+                {
+                    EscribirFilaExcel(ws, currentRow, item);
+                    currentRow++;
+                }
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
+        }
+
+        // Método auxiliar para no repetir código de celdas
+        private void EscribirFilaExcel(IXLWorksheet ws, int row, FilaReporteInventario item)
+        {
+            ws.Cell(row, 1).Value = item.Cerveza;
+            ws.Cell(row, 2).Value = item.CajaBotella > 0 ? item.CajaBotella : (object)null;
+            ws.Cell(row, 3).Value = item.BotellaSuelta > 0 ? item.BotellaSuelta : (object)null;
+            ws.Cell(row, 4).Value = item.LataSuelta > 0 ? item.LataSuelta : (object)null;
+            ws.Cell(row, 5).Value = item.Sesentas > 0 ? item.Sesentas : (object)null;
+            ws.Cell(row, 6).Value = item.VeintesSteel > 0 ? item.VeintesSteel : (object)null;
+            ws.Cell(row, 7).Value = item.VeintesPet > 0 ? item.VeintesPet : (object)null;
+            ws.Cell(row, 8).Value = item.Lote;
+            ws.Cell(row, 9).Value = item.Caducidad;
+
+            // Borde de la A a la I (1 a 9)
+            ws.Range(row, 1, row, 9).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
     }
 }

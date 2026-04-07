@@ -3,6 +3,7 @@ using Humanizer;
 using Monobits.SharedKernel;
 using Monobits.SharedKernel.Interfaces;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WendlandtVentas.Core.Entities
 {
@@ -19,6 +20,9 @@ namespace WendlandtVentas.Core.Entities
 
         // Agrega esta línea para habilitar la relación
         public virtual ICollection<Batch> Batches { get; set; } = new HashSet<Batch>();
+        // Agregamos el ID de origen (opcional)
+        [NotMapped]
+        public int? InventorySourceId { get; private set; }
 
         public ProductPresentation() { }
 
@@ -48,9 +52,14 @@ namespace WendlandtVentas.Core.Entities
         {
             Weight = weight;
         }
+        // Método para asignar el origen cuando sea necesario
+        public void SetInventorySource(int? sourceId)
+        {
+            InventorySourceId = sourceId;
+        }
 
-       // public string NameExtended() =>
-    //$"{Product?.Name ?? "Sin producto"} - {Product?.Distinction.Humanize() ?? ""} ({Presentation?.Name ?? "Sin presentación"} {Presentation?.Liters.ToString() ?? ""} lts.)";
+        // public string NameExtended() =>
+        //$"{Product?.Name ?? "Sin producto"} - {Product?.Distinction.Humanize() ?? ""} ({Presentation?.Name ?? "Sin presentación"} {Presentation?.Liters.ToString() ?? ""} lts.)";
 
         public string NameExtended() => $"{Product?.Name} - {Product.Distinction.Humanize()} ({Presentation?.Name} {Presentation?.Liters} lts.)";
     }

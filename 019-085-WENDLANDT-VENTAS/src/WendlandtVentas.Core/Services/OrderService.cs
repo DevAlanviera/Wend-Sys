@@ -236,6 +236,23 @@ namespace WendlandtVentas.Core.Services
                 
               }
 
+                if (order.OrderClassification != 3) // No validamos en cotizaciones
+                {
+                    foreach (var item in order.OrderProducts)
+                    {
+                        // Buscamos en la lista que ya trajimos de la DB al inicio del método
+                        var pEnMemoria = productPresentations.FirstOrDefault(x => x.Id == item.ProductPresentationId);
+
+                        if (pEnMemoria != null)
+                        {
+                            // Usamos AWAIT. El código se detendrá aquí un momento hasta que 
+                            // termine de verificar y (si es necesario) enviar el correo.
+                            await _inventoryService.VerificarStockBajoAsync(pEnMemoria);
+                        }
+                    }
+                }
+
+
                 return new Response(true, "Pedido guardado");
 
                 

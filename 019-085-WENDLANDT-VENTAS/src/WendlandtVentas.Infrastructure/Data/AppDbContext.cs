@@ -250,6 +250,12 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Property(c => c.Name)
                 .HasMaxLength(200)
                 .IsRequired();
+
+            // --- Nueva configuración para el Vínculo de Inventario ---
+            builder.HasOne(x => x.InventorySource)
+                .WithMany() // Si decides no agregar la colección 'Variants' en la clase, déjalo así.
+                .HasForeignKey(x => x.InventorySourceId)
+                .OnDelete(DeleteBehavior.Restrict); // Evita borrar el BC si tiene variantes vinculadas
         }
 
         private void ConfigureExecution(EntityTypeBuilder<ProductPresentation> builder)

@@ -1,13 +1,11 @@
 ﻿@using WendlandtVentas.Core.Entities.Enums
 @{
     ViewData["Title"] = "Productos";
-    // Capturamos la clasificación de la URL (Cerveza = 1, Wellen = 2)
-    // Esto captura el ?classificationId=2 de la barra de direcciones
+    // Si no hay id, por defecto es 1 (Cerveza)
     var classificationId = Context.Request.Query["classificationId"].ToString();
     if (string.IsNullOrEmpty(classificationId)) { classificationId = "1"; }
 
-    // Forzamos que la URL del Grid lleve el parámetro
-    var targetUrl = $"{Url.Action("GetData")}?classificationId={classificationId}";
+    var gridUrl = Url.Action("GetData", new { classificationId = classificationId });
 }
 <h4>
     @ViewData["Title"]
@@ -28,21 +26,36 @@
             <i class="fa fa-tint"></i> Wellen
         </a>
     </li>
-</ul>
-<section class="mt-3">
-    <ul class="list-inline">
-        <li>
-            <a href="#addModal" data-classification="@classificationId" class="btn btn-primary btn-modal-action">
-                <i class="fa fa-plus"></i> Agregar
+     @if (User.IsInRole("Administrator") || User.IsInRole("Storekeeper"))
+    {
+        <li class="nav-item">
+            <a class="nav-link @(classificationId == "3" ? "active" : "") text-danger"
+            href="@Url.Action("Index", new { classificationId = 3 })">
+                <i class="fa fa-trash"></i> Desactivados
             </a>
         </li>
-    </ul>
-</section>
+    }
+</ul>
+@if (classificationId != "3")
+{
+    <section class="mt-3">
+        <ul class="list-inline">
+            <li>
+                <a href="#addModal" data-classification="@classificationId" class="btn btn-primary btn-modal-action">
+                    <i class="fa fa-plus"></i> Agregar
+                </a>
+            </li>
+        </ul>
+    </section>
+}
 
 <div class="datatable-container">
-    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+        <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
+
         <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
-        <e-data-manager url="@Url.Action("GetData", new { classificationId = classificationId })" adaptor="UrlAdaptor"></e-data-manager>
+        <e-data-manager url="@Url.Action("GetData", new { classificationId = classificationId })"
+                        adaptor="UrlAdaptor">
+        </e-data-manager>
         <e-grid-searchsettings fields="@(new[] { "Name" })"></e-grid-searchsettings>
         <e-grid-columns>
             <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
@@ -62,7 +75,7 @@
             <!--Agregamos para obtener los datos del small can six-->
             <e-grid-column template="#smallcansix" headerText="Small Can 6-pack" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
             
-            <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right"></e-grid-column>
+            <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right" disableHtmlEncode="false"></e-grid-column>
         </e-grid-columns>
     </ejs-grid>
 </div>
@@ -70,7 +83,14 @@
 @section Modals{
     <div class="modal modal-focus-first" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Add")"></div>
     <div class="modal modal-focus-first" id="editModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Edit")"></div>
-    <div class="modal modal-focus-first" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Delete")"></div>
+
+    @* Solo Administradores y Almacenistas pueden borrar o restaurar *@
+    @if (User.IsInRole("Administrator") || User.IsInRole("Storekeeper"))
+    {
+        <div class="modal modal-focus-first" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Delete")"></div>
+        <div class="modal modal-focus-first" id="restoreModal" tabindex="-1" role="dialog" aria-labelledby="addModal-label" data-url="@Url.Action("Restore")"></div>
+    }
+    
 }
 @section Scripts{
     <script id="tasting" type="text/x-template">
@@ -169,8 +189,25 @@
     
     <script id="actionButtons" type="text/x-template">
         <div>
-            <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-edit"></i></a>
-            <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action"><i class="fa fa-fw fa-trash"></i></a>
+            ${if(isDeleted)} @* Usamos minúscula inicial (camelCase) *@
+                @if (User.IsInRole("Administrator") || User.IsInRole("Storekeeper"))
+                {
+                        <a href="#restoreModal" data-id="${id}" title="Restaurar" class="tip btn btn-sm btn-success btn-modal-action">
+                            <i class="fa fa-fw fa-undo"></i>
+                        </a>
+                }
+            ${else}
+                <a href="#editModal" data-id="${id}" title="Editar" class="tip btn btn-sm btn-light mr-2 btn-modal-action">
+                    <i class="fa fa-fw fa-edit"></i>
+                </a>
+
+                @if (User.IsInRole("Administrator") || User.IsInRole("Storekeeper"))
+                {
+                        <a href="#deleteModal" data-id="${id}" title="Eliminar" class="tip btn btn-sm btn-light btn-modal-action">
+                            <i class="fa fa-fw fa-trash"></i>
+                        </a>
+                }
+            ${/if}
         </div>
     </script>
 
@@ -306,6 +343,62 @@
                 $('.input-season').addClass('d-none');
                 }
             }
+        });
+    </script>
+    <script>
+        $(document).ready(function() {
+            // Función para refrescar el grid
+            function refreshGrid() {
+                var gridElement = document.getElementById('Grid');
+                if (gridElement && gridElement.ej2_instances && gridElement.ej2_instances[0]) {
+                    var grid = gridElement.ej2_instances[0];
+                    console.log('Refrescando grid...');
+                    grid.refresh();
+                } else {
+                    console.log('Grid no encontrado, intentando nuevamente en 500ms');
+                    setTimeout(refreshGrid, 500);
+                }
+            }
+
+            // Refrescar el grid cuando la página carga
+            setTimeout(refreshGrid, 1000);
+
+            // Cuando cambia la URL (por las pestañas), refrescar el grid
+            var lastUrl = window.location.href;
+            setInterval(function() {
+                var currentUrl = window.location.href;
+                if (currentUrl !== lastUrl) {
+                    lastUrl = currentUrl;
+                    console.log('URL cambió a:', currentUrl);
+                    setTimeout(refreshGrid, 500);
+                }
+            }, 500);
+        });
+    </script>
+    <script>
+                $(document).on('submit', '#form-restore-product', function (e) {
+            e.preventDefault();
+            monoloading("show");
+
+            var $form = $(this);
+            var url = "@Url.Action("Restore")";
+            var id = $form.find("#Id").val(); // El modal debe tener un hidden input con el Id
+
+            $.post(url, { id: id }, function (res) {
+                monoloading("hide");
+                if (res.status == 'ok') {
+                    $('#restoreModal').modal("hide");
+                    monotoast(res.body);
+
+                    // Esperamos un segundo y recargamos para que el producto
+                    // desaparezca de "Desactivados" y vuelva a su pestaña original
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    monotoast(res.body);
+                }
+            });
         });
     </script>
 }

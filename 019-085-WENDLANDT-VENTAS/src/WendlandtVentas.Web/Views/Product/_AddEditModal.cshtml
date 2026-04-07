@@ -16,8 +16,19 @@
             </p>
             <div class="form-group">
                 <label asp-for="Name"></label> <b class="text-danger">*</b>
-                <input asp-for="Name" class="form-control" autofocus />
+                <input asp-for="Name" class="form-control" id="Name" autofocus />
                 <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            @* --- Selector de Producto Maestro --- *@
+            <div class="form-group" id="sectionInventorySource" style="display:none;">
+                <label asp-for="InventorySourceId">Vincular Inventario a (Producto B.C.)</label>
+                @* Agregamos id="InventorySourceId" explícitamente *@
+                <select asp-for="InventorySourceId" id="InventorySourceId" asp-items="Model.MasterProducts" class="form-control select2">
+                    <option value="">-- Este es un producto maestro (B.C.) --</option>
+                </select>
+                <small class="text-muted">
+                    <i class="fa fa-info-circle"></i> Selecciona la versión <b>B.C.</b> de la cual se descontará el stock físico.
+                </small>
             </div>
             <div class="form-group">
                 <label asp-for="Distinction"></label>
@@ -107,7 +118,123 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" id="btn-save-product" class="btn btn-primary">Guardar</button>
         </div>
     </form>
 </div>
+<script>
+        $(document).ready(function () {
+        // Inicializar Select2 con el padre correcto para evitar el bloqueo de selección
+        $('.select2').select2({
+            dropdownParent: $('#form-product'),
+            width: '100%'
+        });
+
+            // --- LOG DE PRUEBA: Esto se ejecutará apenas abra el modal ---
+       
+        var valorInicial = $('#InventorySourceId').val();
+
+        function checkVariantNaming() {
+            var name = $('#Name').val().toUpperCase();
+
+            // Tu nueva lógica de detección
+            var isVariant = name.includes("NACIONAL") ||
+                            name.includes("FG") ||
+                            name.includes("FREE GOOD") ||
+                            name.includes("NAL") ||
+                            name.includes("F.G.");
+
+            if (isVariant) {
+                $('#sectionInventorySource').slideDown();
+            } else {
+                $('#sectionInventorySource').slideUp();
+                // Solo reseteamos si realmente cambia el valor para no romper el focus
+                if($('#InventorySourceId').val() !== "") {
+                    $('#InventorySourceId').val('').trigger('change');
+                }
+            }
+        }
+        // -------------------------------------------------------------
+
+
+        $('#InventorySourceId').on('select2:select', function (e) {
+        // 'e.params.data' contiene el objeto seleccionado por Select2
+        var data = e.params.data;
+
+        // Si quieres imprimirlo en un alert o en algún label de la pantalla para pruebas:
+        // alert("Seleccionaste: " + data.text + " (ID: " + data.id + ")");
+    });
+
+    // También puedes usar el evento 'change' estándar de jQuery
+    $('#InventorySourceId').on('change', function () {
+        var selectedId = $(this).val();
+        var selectedText = $(this).find('option:selected').text();
+
+      
+    });
+
+        
+
+        $('#Name').on('input', checkVariantNaming);
+        checkVariantNaming();
+
+
+        $('#btn-save-product').off('click').on('click', function (e) {
+        e.preventDefault();
+
+        var $btn = $(this);
+        $btn.prop('disabled', true); // Evitamos el doble clic accidental
+
+        // Recolectamos presentaciones
+        var presentationPricesAdd = [];
+        $('.presentation-check:checked').each(function () {
+            var id = $(this).val();
+            presentationPricesAdd.push({
+                PresentationId: id,
+                Price: $('.price-' + id).val(),
+                PriceUsd: $('.priceUsd-' + id).val(),
+                Weight: $('.weight-' + id).val()
+            });
+        });
+
+        var model = {
+            Id: $('#Id').val(),
+            Name: $('#Name').val(),
+            Distinction: $('.radio-distinction:checked').val(),
+            Season: $('#Season').val(),
+            InventorySourceId: $('#InventorySourceId').val(),
+            PresentationPricesAdd: presentationPricesAdd
+        };
+
+        $.ajax({
+                url: '/Product/' + $('#form-product').attr('data-action'),
+                type: 'POST',
+                data: model,
+                success: function (response) {
+                    // Si el servidor responde "ok", cerramos todo de inmediato
+                    if (response.status === "ok") {
+
+                        // 1. Cerrar el modal
+                        $('.modal').modal('hide');
+                        $('body').removeClass('modal-open');
+                        $('.modal-backdrop').remove();
+
+                        // 2. Refrescar el Grid
+                        var gridObj = document.getElementById('Grid').ej2_instances[0];
+                        if (gridObj) {
+                            gridObj.refresh();
+                        }
+                    } else {
+                        // En caso de error de validación, avisamos con un alert normal
+                        alert("Error: " + (response.body || "No se pudo guardar"));
+                        $btn.prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    alert("Error crítico en el servidor");
+                    $btn.prop('disabled', false);
+                }
+            });
+        });
+    });
+</script>

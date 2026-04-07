@@ -428,6 +428,7 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
+
         [HttpGet]
         public async Task<IActionResult> GetProductStock(int id)
         {
@@ -461,6 +462,11 @@ namespace WendlandtVentas.Web.Controllers
                     // APLICAR FILTRO DE DISTINCIÓN IGUAL QUE EN ADDPRODUCT
                     if (classificationId == 2)
                         filtered = filtered.Where(c => c.Product.Distinction == Distinction.Wellen);
+                    else if (classificationId == 3)
+                    {
+                        // Escenario Cotización: NO FILTRAMOS (Se muestran Wellen + Cervezas)
+                        // Al no aplicar .Where de distinción, la lista permanece completa.
+                    }
                     else
                         filtered = filtered.Where(c => c.Product.Distinction != Distinction.Wellen);
 
@@ -496,6 +502,7 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(new { results = new List<object>(), pagination = new { more = false } });
             }
         }
+
 
         private async Task<IActionResult> ValidateClientRFCAsync(int clientId)
         {

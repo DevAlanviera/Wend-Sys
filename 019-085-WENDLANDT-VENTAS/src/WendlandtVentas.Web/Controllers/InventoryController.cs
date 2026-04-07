@@ -12,9 +12,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
+using WendlandtVentas.Core.Interfaces;
 using WendlandtVentas.Core.Specifications; 
 using WendlandtVentas.Core.Specifications.ProductPresentationSpecifications;
 using WendlandtVentas.Infrastructure.Commons;
+using WendlandtVentas.Infrastructure.Services;
 using WendlandtVentas.Web.Extensions;
 using WendlandtVentas.Web.Libs;
 using WendlandtVentas.Web.Models.InventoryViewModels;
@@ -25,17 +27,22 @@ namespace WendlandtVentas.Web.Controllers
     [Authorize(Roles = "Administrator, AdministratorCommercial, Storekeeper, Billing, BillingAssistant")]
     public class InventoryController : Controller
     {
+        private readonly IExcelReadService _excelReaderService;
         private readonly IAsyncRepository _repository;
         private readonly ILogger<InventoryController> _logger;
         private readonly SfGridOperations _sfGridOperations;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IInventoryService _inventoryService;
 
-        public InventoryController(IAsyncRepository repository, ILogger<InventoryController> logger, SfGridOperations sfGridOperations, UserManager<ApplicationUser> userManager)
+        public InventoryController(IAsyncRepository repository, ILogger<InventoryController> logger, SfGridOperations sfGridOperations, UserManager<ApplicationUser> userManager,
+            IInventoryService inventoryService, IExcelReadService excelReaderService)
         {
             _repository = repository;
             _logger = logger;
             _sfGridOperations = sfGridOperations;
             _userManager = userManager;
+            _inventoryService = inventoryService;
+            _excelReaderService = excelReaderService;
         }
 
         public async Task<IActionResult> Index(FilterViewModel model)
@@ -43,10 +50,25 @@ namespace WendlandtVentas.Web.Controllers
             var products = await _repository.ListAllExistingAsync<Product>();
             var presentations = await _repository.ListAllExistingAsync<Presentation>();
 
+            // 1. Definimos las mismas palabras prohibidas que en el GetData
+            var excludedKeywords = new[] { "N.A.L.", "NAL.", "NAL", "FG", "F.G." };
+
+            // 2. Filtramos los productos
+            var filteredProducts = products
+                .Where(x => !excludedKeywords.Any(key => x.Name.Contains(key, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(x => x.Name);
+
+            // 3. Filtramos las presentaciones
+            var filteredPresentations = presentations
+                .Where(x => !excludedKeywords.Any(key => x.Name.Contains(key, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(x => x.Name);
+
             model.ProductId = model.ProductId;
             model.PresentationId = model.PresentationId;
-            model.Products = new SelectList(products.Select(x => new { Value = x.Id, Text = $"{x.Name}" }), "Value", "Text");
-            model.Presentations = new SelectList(presentations.Select(x => new { Value = x.Id, Text = $"{x.Name} ({x.Liters.FormatCommasNullableTwoDecimals()} lts.)" }), "Value", "Text");
+
+            // 4. Usamos las listas filtradas para los SelectList
+            model.Products = new SelectList(filteredProducts.Select(x => new { Value = x.Id, Text = x.Name }), "Value", "Text");
+            model.Presentations = new SelectList(filteredPresentations.Select(x => new { Value = x.Id, Text = $"{x.Name} ({x.Liters.FormatCommasNullableTwoDecimals()} lts.)" }), "Value", "Text");
 
             return View(model);
         }
@@ -55,25 +77,25 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm, FilterViewModel model)
         {
             var filters = new Dictionary<string, int?>
-    {
-        { nameof(model.ProductId), model.ProductId },
-        { nameof(model.PresentationId), model.PresentationId }
-    };
+     {
+         { nameof(model.ProductId), model.ProductId },
+         { nameof(model.PresentationId), model.PresentationId }
+     };
 
-            // La especificación debe tener el .AddInclude(x => x.Batches) para que esto funcione
+            // Obtenemos los datos con los lotes incluidos
             var data = await _repository.ListExistingAsync<ProductPresentation>(new ListByFiltersProductPresentationSpecification(filters));
 
+            // Definimos las palabras a excluir
+            var excludedKeywords = new[] { "N.A.L.", "NAL.", "NAL", "FG", "F.G." };
+
             var dataSource = data
-                .OrderBy(c => c.Product.Name)
                 .Select(c =>
                 {
-                    // 1. Filtramos los lotes activos y con existencias para el stock real
                     var activeBatches = c.Batches
                         .Where(b => b.IsActive && !b.IsDeleted && b.CurrentQuantity > 0)
                         .OrderBy(b => b.ExpiryDate)
                         .ToList();
 
-                    // 2. Calculamos el stock sumando las cantidades enteras de los lotes
                     int realStock = activeBatches.Sum(b => b.CurrentQuantity);
 
                     return new InventoryTableModel
@@ -81,47 +103,78 @@ namespace WendlandtVentas.Web.Controllers
                         Id = c.Id,
                         Name = c.Product.Name,
                         Presentation = $"{c.Presentation.Name} {c.Presentation.Liters.FormatCommasNullableTwoDecimals()} lts.",
-
-                        // Calculamos litros totales basados en el stock de lotes
                         Liters = (double)c.Presentation.Liters * realStock,
                         Stock = realStock.ToString(),
 
-                        // 3. Mapeamos la lista de lotes para el detailTemplate del Grid
+                        // --- NUEVA PROPIEDAD DE ORDEN ---
+                        // 1 para cervezas de línea (B.C.), 2 para el resto
+                        SortPriority = c.Product.Name.StartsWith("B.C.", StringComparison.OrdinalIgnoreCase) ? 1 : 2,
+
                         Batches = activeBatches.Select(b => new BatchRowModel
                         {
+                            Id = b.Id,
                             BatchNumber = b.BatchNumber,
-                            CurrentQuantity = b.CurrentQuantity, // Mantenemos como int
+                            CurrentQuantity = b.CurrentQuantity,
                             ExpiryDateFormatted = b.ExpiryDate.ToString("dd/MM/yyyy"),
                             StatusText = b.ExpiryDate < DateTime.Now ? "Vencido" : "En buen estado",
                             StatusColor = b.ExpiryDate < DateTime.Now ? "badge-danger" : "badge-success"
                         }).ToList()
                     };
-                });
+                })
+                // --- APLICAMOS EXCLUSIÓN ---
+                .Where(i => !excludedKeywords.Any(key => i.Name.Contains(key, StringComparison.OrdinalIgnoreCase)))
+                // --- APLICAMOS ORDEN DE LÍNEA ---
+                .OrderBy(i => i.SortPriority)
+                .ThenBy(i => i.Name)
+                .ToList();
 
             var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
 
-            // Resolvemos la ambigüedad de tipo para evitar errores de compilación CS8957
             return Json(dm.RequiresCounts
                 ? (object)new { result = dataResult.DataResult, dataResult.Count }
                 : (object)dataResult.DataResult);
         }
 
         [HttpGet]
-        public IActionResult In(int id)
+        public async Task<IActionResult> In(int id, int? batchId = null)
         {
+            // 1. Configuramos los títulos para la Vista Parcial compartida
             ViewData["Action"] = nameof(In);
             ViewData["ModalTitle"] = "Agregar entrada";
 
-            // Inicializamos el modelo con una lista vacía para que el Dropdown de la vista compartida no falle
-            var model = new InOutViewModel()
+            // 2. Inicializamos el ViewModel
+            var model = new InOutViewModel
             {
                 ProductPresentationId = id,
-                IsAdjustment = false, // <--- ASIGNACIÓN EXPLÍCITA AQUÍ
-                AvailableBatches = new List<SelectListItem>(), // <--- Vital para evitar el error de ViewData
+                BatchId = batchId,      // <--- Clave: Si este ID llega, el modal se pondrá en readonly
+                IsAdjustment = false,
                 Quantity = 0,
-                Comment = string.Empty
+                Comment = string.Empty,
+                ExpiryDate = DateTime.Now, // Fecha por defecto para entradas nuevas
+                AvailableBatches = new List<SelectListItem>() // Lista vacía para que el Dropdown de la vista no sea null
             };
 
+            // 3. Lógica de carga para Lotes Existentes
+            if (batchId.HasValue && batchId.Value > 0)
+            {
+                // Buscamos el lote en la base de datos
+                var batch = await _repository.GetByIdAsync<Batch>(batchId.Value);
+
+                if (batch != null)
+                {
+                    // Mapeamos los datos del lote al modelo
+                    model.BatchNumber = batch.BatchNumber;
+                    model.ExpiryDate = batch.ExpiryDate;
+                }
+                else
+                {
+                    // Opcional: Si el ID venía pero no se encontró en la DB (error de integridad)
+                    // Podrías loguear esto o limpiar el BatchId para que no bloquee la vista
+                    model.BatchId = null;
+                }
+            }
+
+            // 4. Retornamos la vista parcial con el modelo ya poblado
             return PartialView("_AddInOutModal", model);
         }
 
@@ -323,17 +376,53 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> DescargarReportePlantilla()
+        {
+            // 1. Usamos el mismo método de extracción de datos que usa el correo
+            var datos = await _inventoryService.ObtenerDatosParaReporteExcelAsync();
+
+            if (datos == null || !datos.Any())
+            {
+                return BadRequest("No hay datos disponibles para generar el reporte.");
+            }
+
+            // 2. Reutilizamos TU método GenerarReporteInventario que usa la plantilla física
+            // Este método ya sabe que debe ir a wwwroot/resources/Plantilla_Inventario.xlsx
+            var content = _excelReaderService.GenerarReporteInventario(datos);
+
+            // 3. Retornamos el archivo al navegador
+            string nombreArchivo = $"Reporte_Inventario_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            return File(
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                nombreArchivo
+            );
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Adjustment(InOutViewModel model)
         {
 
+            // 🔥 DEBUG: Ver qué está llegando
+            System.Diagnostics.Debug.WriteLine($"=== Adjustment CALLED ===");
+            System.Diagnostics.Debug.WriteLine($"BatchId: {model.BatchId}");
+            System.Diagnostics.Debug.WriteLine($"IsAdjustment: {model.IsAdjustment}");
+            System.Diagnostics.Debug.WriteLine($"Quantity: {model.Quantity}");
+            System.Diagnostics.Debug.WriteLine($"ProductPresentationId: {model.ProductPresentationId}");
+            System.Diagnostics.Debug.WriteLine($"ExpiryDate: {model.ExpiryDate}");
+            System.Diagnostics.Debug.WriteLine($"\n \n \n \n \n \n \n \n ");
+            System.Diagnostics.Debug.WriteLine($"\n \n \n \n \n \n \n \n ");
+
             if (!ModelState.IsValid) {
-                var error = string.Join(" | ", ModelState.Values
-            .SelectMany(v => v.Errors)
-            .Select(e => e.ErrorMessage));
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                var errorMessage = string.Join(" | ", errors);
                 // ESTO VA A APARECER EN TU ALERTA ROJA
-                return Json(AjaxFunctions.GenerateJsonError("ERROR REAL: " + error));
+
+                // 🔥 Log específico para ver el error real
+                _logger.LogError($"ModelState inválido: {errorMessage}");
+                return Json(AjaxFunctions.GenerateJsonError("ERROR REAL: " + errorMessage));
             }
 
             try

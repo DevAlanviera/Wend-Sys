@@ -29,6 +29,13 @@ namespace WendlandtVentas.Web.Models.ProductViewModels
         public IEnumerable<PresentationPrice> PresentationsEdit { get; set; } = new List<PresentationPrice>();
         [BindNever]
         public IEnumerable<PresentationPrice> Presentations { get; set; } = new List<PresentationPrice>();
+
+        //Unificacion de inventario
+        // El ID del maestro que el usuario seleccionará
+        public int? InventorySourceId { get; set; }
+
+        // La lista para llenar el dropdown en la vista
+        public IEnumerable<SelectListItem> MasterProducts { get; set; } = new List<SelectListItem>();
     }
 
     public class PresentationPrice
