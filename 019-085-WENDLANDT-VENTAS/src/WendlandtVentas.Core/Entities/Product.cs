@@ -26,6 +26,9 @@ namespace WendlandtVentas.Core.Entities
         public virtual Product InventorySource { get; private set; }
 
         public bool IsBundle { get; set; } // Identifica si es un paquete (como el 12-pack)
+        // Esto le dice a EF y a C# que un Producto puede ser un Pack con muchos componentes
+        public virtual ICollection<ProductBundleComponent> BundleComponents { get; set; } = new List<ProductBundleComponent>();
+
         public Product()
         {
             ProductPresentations = new List<ProductPresentation>();

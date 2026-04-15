@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Monobits.SharedKernel;
 using Monobits.SharedKernel.Interfaces;
+using OpenXmlPowerTools;
 using Syncfusion.DocIO.DLS;
 using System;
 using System.Linq;
@@ -60,6 +61,7 @@ namespace WendlandtVentas.Infrastructure.Data
         //Db set para los batches
         public DbSet<Batch> Batches { get; set; }
 
+        public DbSet<ProductBundleComponent> ProductBundleComponents { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
 
@@ -80,6 +82,7 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Entity<State>(ConfigureExecution);
             builder.Entity<Bitacora>(ConfigureExecution);
             builder.Entity<PrecioEspecial>(ConfigureExecution);
+            builder.Entity<ProductBundleComponent>(ConfigureExecution);
         }
 
         private void ConfigureExecution(EntityTypeBuilder<PrecioEspecial> builder)
@@ -192,6 +195,25 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Property(o => o.PrecioEspecial)
         .HasDefaultValue(false)
         .HasColumnName("PrecioEspecial");
+        }
+
+      private void ConfigureExecution(EntityTypeBuilder<ProductBundleComponent> builder)
+        {
+            builder.HasKey(e => e.Id);
+
+            // 1. Relación con el "Padre" (El Pack)
+            // Aquí le decimos que 'BundleProductId' es el que mapea a 'Product.BundleComponents'
+            builder.HasOne(d => d.BundleProduct)
+            .WithMany(p => p.BundleComponents)
+            .HasForeignKey(d => d.BundleProductId)
+            .OnDelete(DeleteBehavior.Cascade); // Si borras el pack, se borra su "receta"
+
+            // 2. Relación con el "Hijo" (La cerveza individual)
+            // Esta no necesita una lista en Product, así que usamos WithMany() vacío
+            builder.HasOne(d => d.ComponentProduct)
+            .WithMany()
+            .HasForeignKey(d => d.ComponentProductId)
+            .OnDelete(DeleteBehavior.Restrict); // No borres la cerveza si borras el pack
         }
 
 

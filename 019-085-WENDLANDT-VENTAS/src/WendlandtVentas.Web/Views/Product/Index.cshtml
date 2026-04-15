@@ -13,6 +13,7 @@
     <small class="text-muted">Catálogo de productos.</small>
 </h4>
 
+@* --- NAVEGACIÓN DE CATEGORÍAS --- *@
 <ul class="nav nav-tabs mt-4" role="tablist">
     <li class="nav-item">
         <a class="nav-link @(classificationId == "1" ? "active" : "")"
@@ -26,16 +27,25 @@
             <i class="fa fa-tint"></i> Wellen
         </a>
     </li>
-     @if (User.IsInRole("Administrator") || User.IsInRole("Storekeeper"))
+    @* --- NUEVA PESTAÑA DE PAQUETES --- *@
+    <li class="nav-item">
+        <a class="nav-link @(classificationId == "4" ? "active" : "")"
+           href="@Url.Action("Index", new { classificationId = 4 })">
+            <i class="fa fa-cubes"></i> Paquetes
+        </a>
+    </li>
+    @if (User.IsInRole("Administrator") || User.IsInRole("Storekeeper"))
     {
         <li class="nav-item">
             <a class="nav-link @(classificationId == "3" ? "active" : "") text-danger"
-            href="@Url.Action("Index", new { classificationId = 3 })">
+               href="@Url.Action("Index", new { classificationId = 3 })">
                 <i class="fa fa-trash"></i> Desactivados
             </a>
         </li>
     }
 </ul>
+
+@* El botón Agregar aparecerá para Cerveza, Wellen y Paquetes (ID 1, 2 y 4) *@
 @if (classificationId != "3")
 {
     <section class="mt-3">
@@ -50,31 +60,36 @@
 }
 
 <div class="datatable-container">
-        <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
-
+    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() { "Search" })">
         <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
         <e-data-manager url="@Url.Action("GetData", new { classificationId = classificationId })"
                         adaptor="UrlAdaptor">
         </e-data-manager>
         <e-grid-searchsettings fields="@(new[] { "Name" })"></e-grid-searchsettings>
         <e-grid-columns>
+            @* --- Columnas siempre visibles --- *@
             <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
-            <e-grid-column field="distinction" headerText="Distinción" width="200"></e-grid-column>
-            <e-grid-column field="season" headerText="Temporada" width="200"></e-grid-column>
-            <e-grid-column template="#barrelPet20" headerText="Barril Pet 20 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
-            @*<e-grid-column template="#barrelPet30" headerText="Barril Pet 30 lts" disableHtmlEncode="false" textAlign="Right" width="200"></e-grid-column>*@
-            <e-grid-column template="#barrelInox20" headerText="Barril Inox 20 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
-            @*Ya no se maneja barril inoxidable de 30 litros*@
-            @*<e-grid-column template="#barrelInox30" headerText="Barril Inox 30 lts" disableHtmlEncode="false" textAlign="Right" width="200"></e-grid-column>*@
-            <e-grid-column template="#barrelInox60" headerText="Barril Inox 60 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
-            <e-grid-column template="#tasting" headerText="Tasting 1 lt" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
-            <e-grid-column template="#bottle" headerText="Botella 0.355 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
-            <e-grid-column template="#can" headerText="Lata 0.355 lts" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
-                <!--Agregamos para obtener los datos del doce pack-->
-            <e-grid-column template="#botelladocepack" headerText="Botella 12 pack" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
-            <!--Agregamos para obtener los datos del small can six-->
-            <e-grid-column template="#smallcansix" headerText="Small Can 6-pack" disableHtmlEncode="false" textAlign="Right" width="250"></e-grid-column>
-            
+            <e-grid-column field="distinction" headerText="Distinción" width="150"></e-grid-column>
+            <e-grid-column field="season" headerText="Temporada" width="150"></e-grid-column>
+
+            @* --- Columnas solo para PRODUCTOS NORMALES (Cerveza y Wellen) --- *@
+            @if (classificationId != "4")
+            {
+                <e-grid-column template="#barrelPet20" headerText="Barril Pet 20L" textAlign="Right" width="220"></e-grid-column>
+                <e-grid-column template="#barrelInox20" headerText="Barril Inox 20L" textAlign="Right" width="220"></e-grid-column>
+                <e-grid-column template="#barrelInox60" headerText="Barril Inox 60L" textAlign="Right" width="220"></e-grid-column>
+                <e-grid-column template="#bottle" headerText="Botella 0.355L" textAlign="Right" width="220"></e-grid-column>
+                <e-grid-column template="#can" headerText="Lata 0.355L" textAlign="Right" width="220"></e-grid-column>
+            }
+
+            @* --- Columnas solo para PAQUETES --- *@
+            @if (classificationId == "4")
+            {
+                <e-grid-column template="#botelladocepack" headerText="Precio 12-Pack" textAlign="Right" width="250"></e-grid-column>
+                <e-grid-column template="#smallcansix" headerText="Precio 6-Pack" textAlign="Right" width="250"></e-grid-column>
+                @* Podríamos agregar una columna que diga "Unidades" si lo necesitas *@
+            }
+
             <e-grid-column headerText="" width="130" template="#actionButtons" textAlign="Right" disableHtmlEncode="false"></e-grid-column>
         </e-grid-columns>
     </ejs-grid>

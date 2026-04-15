@@ -332,11 +332,13 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
+            let esBundleGlobal = false;
+            let currentProductId = 0;
+            let currentPresentationId = 0;
+
             // Abrir modal y configurar Select2 usando caché si existe
             $("#addProduct").on("click", function () {
                 const currencyType = $('#CurrencyType').val();
-
-                    // 1. Obtenemos la clasificación del campo oculto
                 const classificationId = $('#OrderClassification').val();
 
                 $.get("@Url.Action("AddProduct", "Order")", { currencyType: currencyType, classificationId: classificationId })
@@ -345,90 +347,106 @@
                         $modal.html(data);
                         $modal.modal('show');
 
-                        // Botón Guardar dentro del modal (no tiene id en tu markup)
                         const $btnSave = $modal.find('button[type="submit"]');
-                        $btnSave.prop('disabled', true);
-
-                        // Select del modal
                         const $select = $modal.find('.select2');
 
-                        // --- Intentar usar datos precargados en sessionStorage ---
-                        // Opción A (preload global): clave simple que sugerimos en el preloader
-                        const classificationId = $('#OrderClassification').val();
-                        const globalCacheKey = `products_${currencyType}_class_${classificationId}`;
-                        let globalCache = null;
-                        try {
-                            const raw = sessionStorage.getItem(globalCacheKey);
-                            if (raw) globalCache = JSON.parse(raw);
-                        } catch (e) {
-                            // ignorar errores de parseo
-                        }
+                        $select.select2({ theme: 'bootstrap4', placeholder: "Seleccionar..." });
 
-                        // Si tienes caché granular por página/término, detecta cualquiera
-                        const hasGranularCache = (function () {
-                            for (let i = 0; i < sessionStorage.length; i++) {
-                                const k = sessionStorage.key(i);
-                                if (k && k.startsWith(`products_${currencyType}_`)) return true;
-                            }
-                            return false;
-                        })();
-
-                        // Si hay caché global y trae results, preinyecta opciones al <select>
-                        if (globalCache && Array.isArray(globalCache.results)) {
-                            const opts = [];
-                            for (const item of globalCache.results) {
-                                if (!item || typeof item.id === 'undefined') continue;
-                                // Evitar duplicados si el servidor ya generó opciones
-                                if ($select.find(`option[value="${item.id}"]`).length === 0) {
-                                    opts.push(new Option(item.text || item.name || item.id, item.id, false, false));
-                                }
-                            }
-                            if (opts.length) $select.append(opts);
-                        }
-
-                        // Inicializar Select2 con AJAX + transport con caché (granular o global)
-                        const currentClass = $('#OrderClassification').val();
-                        const dynamicCacheKey = `products_${currencyType}_class_${currentClass}`;
-                        var cachedData = JSON.parse(sessionStorage.getItem(dynamicCacheKey) || "null") || { results: [] };
-
-                        $('#addProductModal .select2').select2({
-                            theme: 'bootstrap4',
-                            placeholder: "Seleccionar producto",
-                            minimumInputLength: 0,
-                            data: cachedData.results,
-                            matcher: function (params, data) {
-                                if ($.trim(params.term) === '') return data;
-                                if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) return data;
-                                return null;
-                            }
-                        });
-
-                        // Cuando selecciona un producto, obtener precio y habilitar guardar
                         $select.on('select2:select', function (e) {
-                            $btnSave.prop('disabled', true);
-
                             const value = e.params.data.id;
                             const parts = String(value).split("-");
-                            const id = parts[0];
+                            const presentationId = parts[0];
 
-                            $.get("@Url.Action("GetProductPrice", "Order")", {
-                                currencyType: currencyType,
-                                id: id
-                            }).done(function (data) {
-                                $('#Price').val(data);
-                                $btnSave.prop('disabled', false);
-                            }).fail(function () {
-                                $btnSave.prop('disabled', false);
+                            currentPresentationId = parseInt(presentationId);
+
+
+                            $btnSave.prop('disabled', true);
+                            $(".modal-errors").html('<div class="text-muted small">Cargando detalles...</div>');
+
+                            $.get("@Url.Action("GetProductInfo", "Order")", {
+                                presentationId: presentationId,
+                                currencyType: $('#CurrencyType').val()
+                            })
+                            .done(function (response) {
+                                console.log("🎯 Respuesta de GetProductInfo:", response);
+                                $("#Price").val(response.price);
+                                currentProductId = response.productId;
+                                esBundleGlobal = response.isBundle;
+                                ejecutarValidacionIntegral();
+                            })
+                            .fail(function() {
+                                $(".modal-errors").html('<div class="alert alert-danger py-1">Error al cargar información del producto</div>');
+                                $btnSave.prop('disabled', true);
                             });
-                        });
-
-                        // Limpieza al cerrar modal (evita fugas de memoria)
-                        $modal.off('hidden.bs.modal._cleanup').on('hidden.bs.modal._cleanup', function () {
-                            try { $select.select2('destroy'); } catch (e) { }
-                            $modal.empty();
                         });
                     });
             });
+
+            // Validar cuando cambia la cantidad
+            $(document).on('input', '#Quantity', function () {
+                ejecutarValidacionIntegral();
+            });
+
+            function ejecutarValidacionIntegral() {
+                const cantidad = parseInt($("#Quantity").val()) || 0;
+                const $btnSave = $('#form-addProduct button[type="submit"]');
+
+                if (cantidad <= 0) {
+                    $(".modal-errors").html('<div class="alert alert-warning py-1">Ingresa una cantidad válida.</div>');
+                    $btnSave.prop('disabled', true);
+                    return;
+                }
+
+                if (esBundleGlobal) {
+                    // Validar stock del bundle
+                    $.get("@Url.Action("CheckBundleStock", "Order")", {
+                        productId: currentProductId,
+                        quantityRequested: cantidad
+                    })
+                    .done(function (res) {
+                       
+
+                        if (res.hasStock) {
+                            $(".modal-errors").html('<div class="alert alert-success py-1">✅ Componentes disponibles para armar ' + cantidad + ' paquete(s).</div>');
+                            $btnSave.prop('disabled', false);
+                        } else {
+                            $(".modal-errors").html('<div class="alert alert-warning py-1">⚠️ ' + res.message + '</div>');
+                            $btnSave.prop('disabled', true);
+                        }
+                    })
+                    .fail(function() {
+                        $(".modal-errors").html('<div class="alert alert-danger py-1">Error al validar stock del paquete</div>');
+                        $btnSave.prop('disabled', true);
+                    });
+                } else {
+                    // Validación para producto normal
+                   
+
+                    $.get("@Url.Action("GetProductStock", "Order")", { id: currentPresentationId })
+                    .done(function (response) {
+                        console.log("🍺 Stock disponible:", response.stock);
+
+                        if (cantidad > response.stock) {
+                            $(".modal-errors").html('<div class="alert alert-danger py-1">⚠️ Stock insuficiente. Disponible: ' + response.stock + '</div>');
+                            $btnSave.prop('disabled', true);
+                        } else {
+                            $(".modal-errors").html('<div class="alert alert-info py-1">✅ Stock disponible: <b>' + response.stock + '</b> unidades</div>');
+                            $btnSave.prop('disabled', false);
+                        }
+                    })
+                    .fail(function() {
+                        $(".modal-errors").html('<div class="alert alert-danger py-1">Error al validar stock</div>');
+                        $btnSave.prop('disabled', true);
+                    });
+                }
+            }
+
+            function formatPrice(price) {
+                return new Intl.NumberFormat('es-MX', {
+                    style: 'currency',
+                    currency: 'MXN'
+                }).format(price);
+            }
 
             // Tu lógica existente de CurrencyTypes
             $('#CurrencyTypes').attr('disabled', 'disabled');
@@ -440,7 +458,6 @@
 
             function toggleRequiredFields() {
                 const selected = $('input[name="OrderType"]:checked').val();
-
                 if (selected === "Devolucion") {
                     $('#PaymentPromiseDate, #PaymentDate, #DeliveryDay')
                         .prop('required', false)
@@ -452,14 +469,8 @@
                 }
             }
 
-            // Detectar cambios
             $(document).on('change', 'input[name="OrderType"]', toggleRequiredFields);
-
-            // Ejecutar al inicio
             toggleRequiredFields();
-
-
-
         });
     </script>
 

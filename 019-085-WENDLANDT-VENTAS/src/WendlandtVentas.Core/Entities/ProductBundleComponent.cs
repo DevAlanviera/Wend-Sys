@@ -1,12 +1,13 @@
-﻿using System;
+﻿using Monobits.SharedKernel;
+using Monobits.SharedKernel.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace WendlandtVentas.Core.Entities
 {
-    public class ProductBundleComponent
+    public class ProductBundleComponent : BaseEntity, IAggregateRoot
     {
-        public int Id { get; set; }
         public int BundleProductId { get; set; } // El ID del "12-pack Costco"
         public virtual Product BundleProduct { get; set; }
 

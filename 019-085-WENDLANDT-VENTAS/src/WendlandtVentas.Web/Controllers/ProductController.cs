@@ -77,16 +77,24 @@ namespace WendlandtVentas.Web.Controllers
                 }
                 else
                 {
-                    // PESTAÑAS ACTIVAS (Cerveza o Wellen):
+                    // PESTAÑAS ACTIVAS:
                     var allProducts = await _repository.ListExistingAsync(new ProductTableSpecification());
 
-                    if (classificationId == 2)
+                    if (classificationId == 4)
                     {
-                        filteredProducts = allProducts.Where(p => p.Distinction == Distinction.Wellen);
+                        // --- NUEVA PESTAÑA: PAQUETES ---
+                        // Filtramos solo los que marcamos con el nuevo campo IsBundle
+                        filteredProducts = allProducts.Where(p => p.IsBundle == true);
+                    }
+                    else if (classificationId == 2)
+                    {
+                        // PESTAÑA WELLEN: Excluimos paquetes para que no se dupliquen
+                        filteredProducts = allProducts.Where(p => p.Distinction == Distinction.Wellen && p.IsBundle == false);
                     }
                     else
                     {
-                        filteredProducts = allProducts.Where(p => p.Distinction != Distinction.Wellen);
+                        // PESTAÑA CERVEZA (ID 1): Excluimos Wellen y paquetes
+                        filteredProducts = allProducts.Where(p => p.Distinction != Distinction.Wellen && p.IsBundle == false);
                     }
                 }
 
@@ -163,21 +171,19 @@ namespace WendlandtVentas.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Add()
         {
-
             _cacheService.ClearProductCache();
-
 
             ViewData["Action"] = nameof(Add);
             ViewData["ModalTitle"] = "Crear producto";
+
+            // 1. Obtener datos base
             var presentations = await _repository.ListAllExistingAsync<Presentation>();
             var distinctions = Enum.GetValues(typeof(Distinction)).Cast<Distinction>().AsEnumerable();
-            // 2. Traemos los posibles productos "Maestros" para el inventario
-            // Usamos la especificación que ya incluye las relaciones
-            //var allProducts = await _repository.ListExistingAsync(new ProductExtendedSpecification());
 
-            // Filtramos: Solo productos que NO dependen de otro (los BC)
-            // Usa una consulta directa o una especificación básica sin Includes:
-            var masterProducts = (await _repository.ListAllExistingAsync<Product>())
+            // 2. Traer productos "Maestros" (Para el vínculo de inventario B.C. / Nacional)
+            var allExistingProducts = await _repository.ListAllExistingAsync<Product>();
+
+            var masterProducts = allExistingProducts
                 .Where(p => !p.InventorySourceId.HasValue &&
                             (p.Name.Contains("BC") || p.Name.Contains("B.C.")) &&
                             !p.IsDeleted)
@@ -188,9 +194,21 @@ namespace WendlandtVentas.Web.Controllers
                     Text = p.Name
                 }).ToList();
 
+            // 3. NUEVO: Traer productos para componentes (Para armar el 12-pack)
+            // Filtramos para que NO aparezcan otros paquetes (IsBundle == false)
+            var componentProducts = allExistingProducts
+                .Where(p => !p.IsBundle && !p.IsDeleted)
+                .OrderBy(p => p.Name)
+                .Select(p => new SelectListItem
+                {
+                    Value = p.Id.ToString(),
+                    Text = p.Name
+                }).ToList();
+
+            // 4. Construir el modelo
             var model = new ProductViewModel
             {
-                Distinction = Distinction.Hops,
+                Distinction = Distinction.Hops, // Valor por defecto
                 Presentations = presentations.Select(x => new PresentationPrice
                 {
                     PresentationId = x.Id,
@@ -202,8 +220,10 @@ namespace WendlandtVentas.Web.Controllers
                     Text = x.Humanize()
                 }), "Value", "Text"),
 
-                // 3. Pasamos la lista al ViewModel
-                MasterProducts = masterProducts
+                MasterProducts = masterProducts,
+
+                // Esta es la lista que alimentará tu 'bundleSearcher' en el front
+                AvailableComponents = componentProducts
             };
 
             return PartialView("_AddEditModal", model);
@@ -217,13 +237,14 @@ namespace WendlandtVentas.Web.Controllers
 
             var distinctions = Enum.GetValues(typeof(Distinction)).Cast<Distinction>().AsEnumerable();
 
-            // 1. Obtenemos el producto (Asegúrate que product.InventorySourceId tenga valor)
+            // 1. Obtenemos el producto con sus presentaciones y COMPONENTES (Asegúrate que la especificación incluya BundleComponents)
             var product = await _repository.GetAsync(new ProductExtendedSpecification(id));
-
             if (product == null) return NotFound();
 
-            // 2. IMPORTANTÍSIMO: Cargar la lista de maestros para el dropdown
+            // 2. Cargar listas para dropdowns
             var allProducts = await _repository.ListAllExistingAsync<Product>();
+
+            // Maestros para inventario B.C.
             var masterProducts = allProducts
                 .Where(p => !p.InventorySourceId.HasValue &&
                             (p.Name.ToUpper().Contains("BC") || p.Name.ToUpper().Contains("B.C.")) &&
@@ -232,8 +253,20 @@ namespace WendlandtVentas.Web.Controllers
                 .Select(p => new SelectListItem { Value = p.Id.ToString(), Text = p.Name })
                 .ToList();
 
+            // Componentes disponibles para la pestaña de paquetes (Excluimos el mismo producto y otros bundles)
+            var availableComponents = allProducts
+                .Where(p => !p.IsBundle && !p.IsDeleted)
+                .OrderBy(p => p.Name)
+                .Select(p => new SelectListItem { Value = p.Id.ToString(), Text = p.Name })
+                .ToList();
+
             var presentations = await _repository.ListAllExistingAsync<Presentation>();
             var presentationsEdit = product.ProductPresentations.Where(c => !c.IsDeleted);
+
+            // 3. Lógica para detectar precios de Bundle
+            // Buscamos si tiene la presentación de 12-pack o 6-pack para sacar el precio
+            var packPresentation = presentationsEdit.FirstOrDefault(p =>
+                p.Presentation.Name.Contains("12-Pack") || p.Presentation.Name.Contains("6-Pack"));
 
             var vm = new ProductViewModel
             {
@@ -241,15 +274,38 @@ namespace WendlandtVentas.Web.Controllers
                 Name = product.Name,
                 Distinction = product.Distinction,
                 Season = product.Season,
+                IsBundle = product.IsBundle,
+                InventorySourceId = product.InventorySourceId,
+                MasterProducts = masterProducts,
+                AvailableComponents = availableComponents,
 
-                // --- ESTO ES LO QUE TE FALTA ---
-                InventorySourceId = product.InventorySourceId, // El ID que ya está en la DB
-                MasterProducts = masterProducts,               // Las opciones del select
-                                                               // -------------------------------
+                // --- DATOS DEL BUNDLE ---
+                BundlePriceMXN = packPresentation?.Price,
+                BundlePriceUSD = packPresentation?.PriceUsd,
+                BundleQuantityTarget = packPresentation?.Presentation.Name.Contains("12") == true ? 12 : 6,
+
+                // Cargamos la "Receta" actual desde la tabla puente
+                Components = product.BundleComponents.Select(c => new BundleComponentViewModel
+                {
+                    ProductId = c.ComponentProductId,
+                    Quantity = c.Quantity
+                }).ToList(),
+                // -----------------------
 
                 Distinctions = new SelectList(distinctions.Select(x => new { Value = x, Text = x.Humanize() }), "Value", "Text"),
-                PresentationsEdit = presentationsEdit.Select(x => new PresentationPrice { PresentationId = x.PresentationId, PresentationName = x.NameExtended(), Price = x.Price, PriceUsd = x.PriceUsd, Weight = x.Weight }),
-                Presentations = presentations.Select(x => new PresentationPrice { PresentationId = x.Id, PresentationName = x.NameExtended() }),
+                PresentationsEdit = presentationsEdit.Select(x => new PresentationPrice
+                {
+                    PresentationId = x.PresentationId,
+                    PresentationName = x.NameExtended(),
+                    Price = x.Price,
+                    PriceUsd = x.PriceUsd,
+                    Weight = x.Weight
+                }),
+                Presentations = presentations.Select(x => new PresentationPrice
+                {
+                    PresentationId = x.Id,
+                    PresentationName = x.NameExtended()
+                }),
             };
 
             return PartialView("_AddEditModal", vm);
@@ -277,34 +333,94 @@ namespace WendlandtVentas.Web.Controllers
 
             try
             {
-                if (!model.PresentationPricesAdd.Any())
-                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Es necesario agregar por lo menos una presentación"));
-
+                // 1. VALIDACIONES INICIALES
                 var products = await _repository.ListAllExistingAsync<Product>();
                 if (products.Any(c => c.Name.ToLower().Equals(model.Name.ToLower())))
                     return Json(AjaxFunctions.GenerateJsonError("El producto ya existe"));
 
-                var productPresentations = new List<ProductPresentation>();
-                // --- CAMBIO AQUÍ: Pasamos el InventorySourceId del model al constructor ---
-                product = new Product(model.Name, model.Distinction, model.Season, model.InventorySourceId);
+                if (model.IsBundle)
+                {
+                    // Validación para Paquetes
+                    if (model.Components == null || !model.Components.Any())
+                        return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Es necesario agregar componentes al paquete"));
+
+                    int totalQty = model.Components.Sum(c => c.Quantity);
+                    if (totalQty != model.BundleQuantityTarget)
+                        return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, $"La cantidad total ({totalQty}) no coincide con el objetivo del pack ({model.BundleQuantityTarget})"));
+                }
+                else
+                {
+                    // Validación para Productos Normales
+                    if (model.PresentationPricesAdd == null || !model.PresentationPricesAdd.Any())
+                        return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Es necesario agregar por lo menos una presentación"));
+                }
+
+                // 2. CREACIÓN DEL PRODUCTO PADRE
+                // Agregamos IsBundle al constructor o propiedad
+                product = new Product(model.Name, model.Distinction, model.Season, model.InventorySourceId)
+                {
+                    IsBundle = model.IsBundle
+                };
 
                 await _repository.AddAsync(product);
 
-                foreach (var pres in model.PresentationPricesAdd)
-                    productPresentations.Add(new ProductPresentation(product.Id, pres.PresentationId, pres.Price, pres.PriceUsd, pres.Weight));
+                // 3. LÓGICA DIFERENCIADA SEGÚN TIPO
+                if (model.IsBundle)
+                {
+                    // --- A. GUARDAR COMPONENTES (RECETA) ---
+                    var bundleComponents = model.Components.Select(c => new ProductBundleComponent
+                    {
+                        BundleProductId = product.Id,
+                        ComponentProductId = c.ProductId,
+                        Quantity = c.Quantity
+                    }).ToList();
 
-                await _repository.AddRangeAsync(productPresentations);
+                    await _repository.AddRangeAsync(bundleComponents);
+
+                    // --- B. ASIGNAR PRECIO ÚNICO A LA PRESENTACIÓN DEL PACK ---
+                    // Buscamos el ID de la presentación (ej. "Botella 12-Pack")
+                    string targetName = model.BundleQuantityTarget == 12 ? "botella 12-pack" : "small can 6-pack";
+                    var presentations = await _repository.ListAllExistingAsync<Presentation>();
+                    // Buscamos ignorando mayúsculas/minúsculas y espacios extras
+                    var targetPres = presentations.FirstOrDefault(p =>
+                        p.Name.Trim().ToLower().Contains(targetName.ToLower()));
+
+                    if (targetPres != null)
+                    {
+                        var packPresentation = new ProductPresentation(
+                            product.Id,
+                            targetPres.Id,
+                            model.BundlePriceMXN ?? 0,
+                            model.BundlePriceUSD ?? 0,
+                            0 // El peso puedes calcularlo o dejarlo en 0
+                        );
+                        await _repository.AddAsync(packPresentation);
+                    }
+                }
+                else
+                {
+                    // --- C. GUARDAR PRESENTACIONES NORMALES ---
+                    var productPresentations = new List<ProductPresentation>();
+                    foreach (var pres in model.PresentationPricesAdd)
+                    {
+                        productPresentations.Add(new ProductPresentation(product.Id, pres.PresentationId, pres.Price, pres.PriceUsd, pres.Weight));
+                    }
+                    await _repository.AddRangeAsync(productPresentations);
+                }
+
+                // 4. LIMPIEZA Y RESPUESTA
                 _cacheService.ClearProductCache();
                 _cacheService.RemoveProductsCache();
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Producto guardado"));
+
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Producto guardado con éxito"));
             }
             catch (Exception e)
             {
-                // Si falla al agregar las presentaciones, borramos el producto nuevo.
+                // Rollback manual (como lo tenías)
                 if (product.Id > 0)
                     await _repository.DeleteAsync(product);
 
-                _logger.LogInformation($"Error: {e.Message}");
+                _logger.LogError($"Error al agregar producto: {e.Message}");
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo guardar el producto"));
             }
         }
@@ -314,8 +430,12 @@ namespace WendlandtVentas.Web.Controllers
         {
             try
             {
-                if (!model.PresentationPricesAdd.Any())
+                // 1. VALIDACIONES INICIALES
+                if (!model.IsBundle && !model.PresentationPricesAdd.Any())
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Es necesario agregar por lo menos una presentación"));
+
+                if (model.IsBundle && (model.Components == null || !model.Components.Any()))
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Un paquete debe tener componentes"));
 
                 var product = await _repository.GetAsync<Product>(new ProductExtendedSpecification(model.Id));
                 if (product == null)
@@ -325,32 +445,87 @@ namespace WendlandtVentas.Web.Controllers
                 if (products.Any(c => c.Name.ToLower().Equals(model.Name.ToLower())))
                     return Json(AjaxFunctions.GenerateJsonError("El producto ya existe"));
 
-                product.ProductPresentations.ToList().ForEach(c => c.Delete());
-
-                foreach (var pres in model.PresentationPricesAdd)
+                // 2. LÓGICA DE ACTUALIZACIÓN SEGÚN TIPO
+                if (model.IsBundle)
                 {
-                    var presentationCurrent = product.ProductPresentations.FirstOrDefault(c => c.PresentationId == pres.PresentationId);
-
-                    if (presentationCurrent != null)
+                    // --- A. SINCRONIZAR COMPONENTES (RECETA) ---
+                    // Limpiamos los componentes actuales (Borrado lógico usando tu método Delete si existe)
+                    if (product.BundleComponents != null)
                     {
-                        presentationCurrent.Delete(false);
-                        presentationCurrent.EditPrice(pres.Price);
-                        presentationCurrent.EditPriceUsd(pres.PriceUsd);
-                        presentationCurrent.EditWeight(pres.Weight);
+                        foreach (var oldComp in product.BundleComponents.ToList())
+                        {
+                            // Si tu repositorio soporta Delete físico o lógico, aplícalo aquí
+                            await _repository.DeleteAsync(oldComp);
+                        }
                     }
-                    else
-                        await _repository.AddAsync(new ProductPresentation(product.Id, pres.PresentationId, pres.Price, pres.PriceUsd, pres.Weight));
+
+                    // Agregamos los nuevos componentes desde el modelo
+                    foreach (var comp in model.Components)
+                    {
+                        var newComp = new ProductBundleComponent
+                        {
+                            BundleProductId = product.Id,
+                            ComponentProductId = comp.ProductId,
+                            Quantity = comp.Quantity
+                        };
+                        await _repository.AddAsync(newComp);
+                    }
+
+                    // --- B. ACTUALIZAR PRECIO DEL PACK EN PRESENTACIONES ---
+                    string targetName = model.BundleQuantityTarget == 12 ? "Botella 12-Pack" : "Small Can 6-Pack";
+                    var presentations = await _repository.ListAllExistingAsync<Presentation>();
+                    var targetPres = presentations.FirstOrDefault(p => p.Name.Trim().ToLower().Contains(targetName.ToLower()));
+
+                    if (targetPres != null)
+                    {
+                        var currentPrice = product.ProductPresentations.FirstOrDefault(p => p.PresentationId == targetPres.Id);
+                        if (currentPrice != null)
+                        {
+                            currentPrice.Delete(false); // Aseguramos que esté activo
+                            currentPrice.EditPrice(model.BundlePriceMXN ?? 0);
+                            currentPrice.EditPriceUsd(model.BundlePriceUSD ?? 0);
+                        }
+                        else
+                        {
+                            await _repository.AddAsync(new ProductPresentation(product.Id, targetPres.Id, model.BundlePriceMXN ?? 0, model.BundlePriceUSD ?? 0, 0));
+                        }
+                    }
+                }
+                else
+                {
+                    // --- C. LÓGICA ORIGINAL PARA PRODUCTOS NORMALES ---
+                    product.ProductPresentations.ToList().ForEach(c => c.Delete());
+
+                    foreach (var pres in model.PresentationPricesAdd)
+                    {
+                        var presentationCurrent = product.ProductPresentations.FirstOrDefault(c => c.PresentationId == pres.PresentationId);
+
+                        if (presentationCurrent != null)
+                        {
+                            presentationCurrent.Delete(false);
+                            presentationCurrent.EditPrice(pres.Price);
+                            presentationCurrent.EditPriceUsd(pres.PriceUsd);
+                            presentationCurrent.EditWeight(pres.Weight);
+                        }
+                        else
+                            await _repository.AddAsync(new ProductPresentation(product.Id, pres.PresentationId, pres.Price, pres.PriceUsd, pres.Weight));
+                    }
                 }
 
+                // 3. ACTUALIZAR CAMPOS GENERALES Y GUARDAR
                 product.Edit(model.Name, model.Distinction, model.Season, model.InventorySourceId);
+                product.IsBundle = model.IsBundle; // No olvides actualizar la bandera
+
                 await _repository.UpdateAsync(product);
-                _cacheService.ClearProductCache(); //Limpiamos Cache
-                _cacheService.RemoveProductsCache(); //Limpiamos Cache
+
+                _cacheService.ClearProductCache();
+                _cacheService.RemoveProductsCache();
+
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Producto actualizado"));
             }
             catch (Exception e)
             {
-                _logger.LogInformation($"Error: {e.Message}");
+                _logger.LogError($"Error al actualizar: {e.Message}");
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo actualizar el producto"));
             }
         }

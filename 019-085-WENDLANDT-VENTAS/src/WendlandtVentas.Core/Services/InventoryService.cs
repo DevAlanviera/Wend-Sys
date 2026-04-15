@@ -227,7 +227,7 @@ namespace WendlandtVentas.Core.Services
 
         public async Task<int> GetAvailableStock(int productPresentationId)
         {
-            Console.WriteLine("CHECKEANDO INVENTARIO \n \n \n \n \n \n \n \n \n \n ");
+           
 
             // 1. Buscamos la presentación que nos pasaron
             var presentation = await _repository.GetQueryable<ProductPresentation>()
@@ -304,6 +304,80 @@ namespace WendlandtVentas.Core.Services
             {
                 await EnviarCorreoAlertaStockAsync(p, stockActual);
             }
+        }
+
+        public async Task<List<ProductPresentationQuantity>> DescomponerBundlesAsync(IEnumerable<ProductPresentationQuantity> items)
+        {
+            var result = new List<ProductPresentationQuantity>();
+            const int BOTELLA_PRESENTATION_ID = 3;
+
+            foreach (var item in items)
+            {
+                var presentation = await _repository.GetQueryable<ProductPresentation>()
+                    .Include(pp => pp.Product)
+                    .FirstOrDefaultAsync(pp => pp.Id == item.Id);
+
+                if (presentation == null)
+                {
+                    result.Add(item);
+                    continue;
+                }
+
+                // 🔥 Verificar si es bundle
+                if (presentation.Product != null && presentation.Product.IsBundle)
+                {
+                    // Consulta directa a ProductBundleComponent
+                    var bundleComponents = await _repository.GetQueryable<ProductBundleComponent>()
+                        .Include(bc => bc.ComponentProduct)
+                            .ThenInclude(cp => cp.ProductPresentations)
+                                .ThenInclude(pp => pp.Presentation)
+                        .Where(bc => bc.BundleProductId == presentation.Product.Id && !bc.IsDeleted)
+                        .ToListAsync();
+
+                    if (!bundleComponents.Any())
+                    {
+                        _logger.LogWarning($"Bundle {presentation.Product.Name} no tiene componentes");
+                        continue;
+                    }
+
+                    foreach (var component in bundleComponents)
+                    {
+                        // 🔥 CORREGIDO: Acceder correctamente a las presentaciones
+                        var componentPresentation = component.ComponentProduct?.ProductPresentations
+                            .FirstOrDefault(pp => !pp.IsDeleted && pp.PresentationId == BOTELLA_PRESENTATION_ID);
+
+                        if (componentPresentation != null)
+                        {
+                            result.Add(new ProductPresentationQuantity
+                            {
+                                Id = componentPresentation.Id,
+                                Quantity = component.Quantity * item.Quantity
+                            });
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"Componente {component.ComponentProduct?.Name} no tiene presentación Botella");
+                        }
+                    }
+                }
+                else
+                {
+                    // Producto normal
+                    result.Add(item);
+                }
+            }
+
+            // Agrupar por ID para sumar cantidades iguales
+            var groupedResult = result
+                .GroupBy(x => x.Id)
+                .Select(g => new ProductPresentationQuantity
+                {
+                    Id = g.Key,
+                    Quantity = g.Sum(x => x.Quantity)
+                })
+                .ToList();
+
+            return groupedResult;
         }
 
         private async Task<bool> EnviarCorreoAlertaStockAsync(ProductPresentation p, int stockActual)

@@ -11,25 +11,33 @@
         <div class="modal-body">
             @Html.HiddenFor(t => t.Id)
             @Html.HiddenFor(t => t.Distinction)
-            <p class="text-muted">
-                Campos marcados con asterisco son requeridos.
-            </p>
-            <div class="form-group">
-                <label asp-for="Name"></label> <b class="text-danger">*</b>
-                <input asp-for="Name" class="form-control" id="Name" autofocus />
-                <span asp-validation-for="Name" class="text-danger"></span>
+
+            @* --- CABECERA COMÚN --- *@
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label asp-for="Name"></label> <b class="text-danger">*</b>
+                        <input asp-for="Name" class="form-control" id="Name" autofocus />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>¿Es un Paquete?</label>
+                        <div class="custom-control custom-switch custom-switch-on-success mt-1">
+                            <input type="checkbox" class="custom-control-input" id="IsBundle" @(Model.IsBundle ? "checked" : "")>
+                            <label class="custom-control-label" for="IsBundle">Modo Bundle</label>
+                        </div>
+                    </div>
+                </div>
             </div>
-            @* --- Selector de Producto Maestro --- *@
+
             <div class="form-group" id="sectionInventorySource" style="display:none;">
                 <label asp-for="InventorySourceId">Vincular Inventario a (Producto B.C.)</label>
-                @* Agregamos id="InventorySourceId" explícitamente *@
                 <select asp-for="InventorySourceId" id="InventorySourceId" asp-items="Model.MasterProducts" class="form-control select2">
                     <option value="">-- Este es un producto maestro (B.C.) --</option>
                 </select>
-                <small class="text-muted">
-                    <i class="fa fa-info-circle"></i> Selecciona la versión <b>B.C.</b> de la cual se descontará el stock físico.
-                </small>
             </div>
+
             <div class="form-group">
                 <label asp-for="Distinction"></label>
                 <div>
@@ -38,83 +46,134 @@
                         var selected = distinction.Value.Equals(Model.Distinction.ToString());
                         <div class="form-check form-check-inline">
                             <input class="form-check-input radio-distinction" type="radio" name="radioDistinction" @(selected ? "checked='true'" : string.Empty) value="@distinction.Value">
-                            <label class="form-check-label" for="radioDistinction">@distinction.Text</label>
+                            <label class="form-check-label">@distinction.Text</label>
                         </div>
                     }
                 </div>
-                <span asp-validation-for="Distinction" class="text-danger"></span>
             </div>
-            <div class="form-group input-season @(Model.Distinction != Distinction.Season ? "d-none" : string.Empty)">
-                <label asp-for="Season"></label>
-                <input asp-for="Season" class="form-control" autofocus />
-                <span asp-validation-for="Season" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label>Presentaciones</label> <b class="text-danger">*</b>
-                <div class="row">
-                    <div class="col">
-                        <label>Presentación</label>
-                    </div>
-                    <div class="col">
-                        <label>$ Precio MXN</label>
-                    </div>
-                    <div class="col">
-                        <label>$ Precio USD</label>
-                    </div>
-                    <div class="col">
-                        <label>Peso unitario</label>
-                    </div>
+
+            <hr />
+
+            @* --- SECCIÓN 1: PRODUCTO NORMAL (PRESENTACIONES) --- *@
+            <div id="section-normal">
+                <label class="font-weight-bold"><i class="fa fa-list"></i> Configuración de Presentaciones</label>
+                <div class="row text-muted small font-weight-bold mb-2">
+                    <div class="col-4">Presentación</div>
+                    <div class="col-3">Precio MXN</div>
+                    <div class="col-3">Precio USD</div>
+                    <div class="col-2">Peso (kg)</div>
                 </div>
-                <div class="presentations">
+                <div class="presentations border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto;">
                     @foreach (var presentation in Model.Presentations)
                     {
-                        var selected = false;
-                        var price = 0.0M;
-                        var priceUsd = 0.0M;
-                        var weight = 0.0M;
+                        var selected = Model.PresentationsEdit?.Any(c => c.PresentationId == presentation.PresentationId) ?? false;
+                        var pEdit = Model.PresentationsEdit?.FirstOrDefault(c => c.PresentationId == presentation.PresentationId);
 
-                        if (Model.PresentationsEdit != null)
-                        {
-                            var presentationEdit = Model.PresentationsEdit.SingleOrDefault(c => c.PresentationId == presentation.PresentationId);
-                            if (presentationEdit != null)
-                            {
-                                selected = true;
-                                price = presentationEdit.Price;
-                                priceUsd = presentationEdit.PriceUsd;
-                                weight = presentationEdit.Weight;
-                            }
-                        }
-                        <div class="row">
-                            <div class="col">
+                        <div class="row mb-2 align-items-center">
+                            <div class="col-4">
                                 <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" class="custom-control-input presentation-check" id="@presentation.PresentationId" value="@presentation.PresentationId" @(selected ? "checked='true'" : string.Empty)>
-                                    <label class="custom-control-label" for="@presentation.PresentationId">@presentation.PresentationName</label>
+                                    <input type="checkbox" class="custom-control-input presentation-check" id="pres-@presentation.PresentationId" value="@presentation.PresentationId" @(selected ? "checked" : "")>
+                                    <label class="custom-control-label" for="pres-@presentation.PresentationId">@presentation.PresentationName</label>
                                 </div>
                             </div>
-                            <div class="col">
-                                <div class="form-group">
-                                    <input name="@presentation.PresentationId" type="number" min="0" class="form-control price-@presentation.PresentationId" @(selected ? string.Empty : "disabled") value="@price" data-val="true" data-val-required="Campo requerido" aria-describedby="@presentation.PresentationId-error" aria-invalid="true">
-                                    <span class="text-danger field-validation-error" data-valmsg-for="@presentation.PresentationId" data-valmsg-replace="true"></span>
-                                </div>
+                            <div class="col-3">
+                                <input type="number" class="form-control form-control-sm price-@presentation.PresentationId" @(selected ? "" : "disabled") value="@(pEdit?.Price ?? 0)">
                             </div>
-                            <div class="col">
-                                <div class="form-group">
-                                    <input name="@presentation.PresentationId" type="number" min="0" class="form-control priceUsd-@presentation.PresentationId" @(selected ? string.Empty : "disabled") value="@priceUsd" data-val="true" data-val-required="Campo requerido" aria-describedby="@presentation.PresentationId-error" aria-invalid="true">
-                                    <span class="text-danger field-validation-error" data-valmsg-for="@presentation.PresentationId" data-valmsg-replace="true"></span>
-                                </div>
+                            <div class="col-3">
+                                <input type="number" class="form-control form-control-sm priceUsd-@presentation.PresentationId" @(selected ? "" : "disabled") value="@(pEdit?.PriceUsd ?? 0)">
                             </div>
-                            <div class="col">
-                                <div class="form-group">
-                                    <input name="@presentation.PresentationId" type="number" min="0" class="form-control weight-@presentation.PresentationId" @(selected ? string.Empty : "disabled") value="@weight" data-val="true" data-val-required="Campo requerido" aria-describedby="@presentation.PresentationId-error" aria-invalid="true">
-                                    <span class="text-danger field-validation-error" data-valmsg-for="@presentation.PresentationId" data-valmsg-replace="true"></span>
-                                </div>
+                            <div class="col-2">
+                                <input type="number" class="form-control form-control-sm weight-@presentation.PresentationId" @(selected ? "" : "disabled") value="@(pEdit?.Weight ?? 0)">
                             </div>
                         </div>
                     }
                 </div>
-
             </div>
-            <div class="modal-errors text-danger"></div>
+
+            @* --- SECCIÓN 2: 12-PACK / 6-PACK (COMPOSICIÓN) --- *@
+            <div id="section-bundle" style="display:none;">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Tamaño del Pack</label> <b class="text-danger">*</b>
+                            <select id="BundleTargetQty" class="form-control">
+                                <option value="12">12 Unidades (12-Pack)</option>
+                                <option value="6">6 Unidades (6-Pack)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Precio Pack MXN</label> <b class="text-danger">*</b>
+                            @* Agregamos el value y el step *@
+                            <input type="number" id="BundlePriceMXN" class="form-control"
+                                   placeholder="0.00" step="any" value="@Model.BundlePriceMXN">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Precio Pack USD</label>
+                            @* Agregamos el value y el step *@
+                            <input type="number" id="BundlePriceUSD" class="form-control"
+                                   placeholder="0.00" step="any" value="@Model.BundlePriceUSD">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Buscar Productos para el Pack</label>
+                    <select id="bundleSearcher" asp-items="Model.AvailableComponents" class="form-control select2">
+                        <option value="">-- Escribe el nombre de la cerveza --</option>
+                    </select>
+                </div>
+
+                <table class="table table-sm table-hover border">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Producto</th>
+                            <th width="120">Cantidad</th>
+                            <th width="50"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bundleTableBody">
+                        @if (Model.Components != null && Model.Components.Any())
+                        {
+                            foreach (var item in Model.Components)
+                            {
+                                var productName = Model.AvailableComponents.FirstOrDefault(x => x.Value == item.ProductId.ToString())?.Text ?? "Producto desconocido";
+
+                                // Agregamos la clase "bundle-row" para que el botón Guardar la vea
+                                <tr class="bundle-row" data-id="@item.ProductId">
+                                    <td>@productName</td>
+                                    <td>
+                                        @* Cambiamos "bundle-item-qty" por "comp-qty" para que el script sume el total *@
+                                        <input type="number" class="form-control form-control-sm comp-qty"
+                                               value="@item.Quantity" min="1">
+                                    </td>
+                                    <td class="text-right">
+                                        @* Usamos la clase "remove-comp" que ya tienes en el script *@
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-comp">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot class="bg-light font-weight-bold">
+                        <tr>
+                            <td class="text-right">Total:</td>
+                            <td id="currentBundleTotal">0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div id="bundle-warning" class="alert alert-warning d-none">
+                    La cantidad de productos debe ser exactamente <span id="target-label">12</span>.
+                </div>
+            </div>
+
+            <div class="modal-errors text-danger mt-2"></div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -123,118 +182,141 @@
     </form>
 </div>
 <script>
-        $(document).ready(function () {
-        // Inicializar Select2 con el padre correcto para evitar el bloqueo de selección
-        $('.select2').select2({
-            dropdownParent: $('#form-product'),
-            width: '100%'
-        });
+    $(document).ready(function () {
+        // Inicialización
+        $('.select2').select2({ dropdownParent: $('#form-product'), width: '100%' });
 
-            // --- LOG DE PRUEBA: Esto se ejecutará apenas abra el modal ---
-       
-        var valorInicial = $('#InventorySourceId').val();
-
-        function checkVariantNaming() {
-            var name = $('#Name').val().toUpperCase();
-
-            // Tu nueva lógica de detección
-            var isVariant = name.includes("NACIONAL") ||
-                            name.includes("FG") ||
-                            name.includes("FREE GOOD") ||
-                            name.includes("NAL") ||
-                            name.includes("F.G.");
-
-            if (isVariant) {
-                $('#sectionInventorySource').slideDown();
+        // --- TOGGLE BUNDLE VS NORMAL ---
+        function toggleMode() {
+            const isBundle = $('#IsBundle').is(':checked');
+            if (isBundle) {
+                $('#section-normal').hide();
+                $('#section-bundle').show();
+                $('#target-label').text($('#BundleTargetQty').val());
+                validateBundle(); // Esto calculará el total inicial si ya hay filas
             } else {
-                $('#sectionInventorySource').slideUp();
-                // Solo reseteamos si realmente cambia el valor para no romper el focus
-                if($('#InventorySourceId').val() !== "") {
-                    $('#InventorySourceId').val('').trigger('change');
-                }
+                $('#section-normal').show();
+                $('#section-bundle').hide();
             }
         }
-        // -------------------------------------------------------------
 
-
-        $('#InventorySourceId').on('select2:select', function (e) {
-        // 'e.params.data' contiene el objeto seleccionado por Select2
-        var data = e.params.data;
-
-        // Si quieres imprimirlo en un alert o en algún label de la pantalla para pruebas:
-        // alert("Seleccionaste: " + data.text + " (ID: " + data.id + ")");
-    });
-
-    // También puedes usar el evento 'change' estándar de jQuery
-    $('#InventorySourceId').on('change', function () {
-        var selectedId = $(this).val();
-        var selectedText = $(this).find('option:selected').text();
-
-      
-    });
-
-        
-
-        $('#Name').on('input', checkVariantNaming);
-        checkVariantNaming();
-
-
-        $('#btn-save-product').off('click').on('click', function (e) {
-        e.preventDefault();
-
-        var $btn = $(this);
-        $btn.prop('disabled', true); // Evitamos el doble clic accidental
-
-        // Recolectamos presentaciones
-        var presentationPricesAdd = [];
-        $('.presentation-check:checked').each(function () {
-            var id = $(this).val();
-            presentationPricesAdd.push({
-                PresentationId: id,
-                Price: $('.price-' + id).val(),
-                PriceUsd: $('.priceUsd-' + id).val(),
-                Weight: $('.weight-' + id).val()
-            });
+        $('#IsBundle').on('change', toggleMode);
+        $('#BundleTargetQty').on('change', function() {
+            $('#target-label').text($(this).val());
+            validateBundle();
         });
 
-        var model = {
-            Id: $('#Id').val(),
-            Name: $('#Name').val(),
-            Distinction: $('.radio-distinction:checked').val(),
-            Season: $('#Season').val(),
-            InventorySourceId: $('#InventorySourceId').val(),
-            PresentationPricesAdd: presentationPricesAdd
-        };
+        // --- LÓGICA DE PRESENTACIONES NORMALES ---
+        $('.presentation-check').on('change', function() {
+            const id = $(this).val();
+            const checked = $(this).is(':checked');
+            $('.price-' + id + ', .priceUsd-' + id + ', .weight-' + id).prop('disabled', !checked);
+        });
 
-        $.ajax({
-                url: '/Product/' + $('#form-product').attr('data-action'),
-                type: 'POST',
-                data: model,
-                success: function (response) {
-                    // Si el servidor responde "ok", cerramos todo de inmediato
-                    if (response.status === "ok") {
+        // --- LÓGICA DE BUNDLE (TABLA) ---
+        $('#bundleSearcher').on('select2:select', function(e) {
+            const data = e.params.data;
+            if (!data.id) return;
+            if ($(`tr.bundle-row[data-id="${data.id}"]`).length > 0) return;
 
-                        // 1. Cerrar el modal
-                        $('.modal').modal('hide');
-                        $('body').removeClass('modal-open');
-                        $('.modal-backdrop').remove();
+            const html = `
+                <tr class="bundle-row" data-id="${data.id}">
+                    <td>${data.text}</td>
+                    <td><input type="number" class="form-control form-control-sm comp-qty" value="1" min="1"></td>
+                    <td class="text-right">
+                        <button type="button" class="btn btn-sm btn-danger remove-comp"><i class="fa fa-times"></i></button>
+                    </td>
+                </tr>`;
+            $('#bundleTableBody').append(html);
+            $(this).val('').trigger('change');
+            validateBundle();
+        });
 
-                        // 2. Refrescar el Grid
-                        var gridObj = document.getElementById('Grid').ej2_instances[0];
-                        if (gridObj) {
-                            gridObj.refresh();
-                        }
-                    } else {
-                        // En caso de error de validación, avisamos con un alert normal
-                        alert("Error: " + (response.body || "No se pudo guardar"));
-                        $btn.prop('disabled', false);
-                    }
-                },
-                error: function () {
-                    alert("Error crítico en el servidor");
+        // Eventos delegados
+        $(document).on('click', '.remove-comp', function() {
+            $(this).closest('tr').remove();
+            validateBundle();
+        });
+
+        $(document).on('input', '.comp-qty', validateBundle);
+
+        // --- FUNCIÓN MAESTRA DE VALIDACIÓN ---
+        function validateBundle() {
+            let total = 0;
+            const target = parseInt($('#BundleTargetQty').val()) || 12;
+
+            $('.comp-qty').each(function() {
+                total += parseInt($(this).val()) || 0;
+            });
+
+            $('#currentBundleTotal').text(total);
+            $('#target-label').text(target);
+
+            if (total !== target) {
+                $('#currentBundleTotal').removeClass('text-success').addClass('text-danger');
+                $('#bundle-warning').removeClass('d-none');
+                return false;
+            } else {
+                $('#currentBundleTotal').removeClass('text-danger').addClass('text-success');
+                $('#bundle-warning').addClass('d-none');
+                return true;
+            }
+        }
+
+        // --- GUARDADO ---
+        $('#btn-save-product').on('click', function() {
+            const isBundle = $('#IsBundle').is(':checked');
+            let model = {
+                Id: $('#Id').val(),
+                Name: $('#Name').val(),
+                IsBundle: isBundle,
+                Distinction: $('.radio-distinction:checked').val(),
+                Season: $('#Season').val(),
+                InventorySourceId: $('#InventorySourceId').val()
+            };
+
+            if (isBundle) {
+                if (!validateBundle()) {
+                    alert("La cantidad del paquete no coincide con el objetivo.");
+                    return;
+                }
+                model.BundlePriceMXN = $('#BundlePriceMXN').val();
+                model.BundlePriceUSD = $('#BundlePriceUSD').val();
+                model.BundleQuantityTarget = $('#BundleTargetQty').val();
+                model.Components = [];
+                $('.bundle-row').each(function() {
+                    model.Components.push({
+                        ProductId: $(this).data('id'),
+                        Quantity: $(this).find('.comp-qty').val()
+                    });
+                });
+            } else {
+                model.PresentationPricesAdd = [];
+                $('.presentation-check:checked').each(function() {
+                    const id = $(this).val();
+                    model.PresentationPricesAdd.push({
+                        PresentationId: id,
+                        Price: $('.price-' + id).val(),
+                        PriceUsd: $('.priceUsd-' + id).val(),
+                        Weight: $('.weight-' + id).val()
+                    });
+                });
+            }
+
+            const $btn = $(this);
+            $btn.prop('disabled', true);
+
+            $.post('/Product/' + $('#form-product').data('action'), model, function(res) {
+                if (res.status === "ok") {
+                    location.reload();
+                } else {
+                    alert(res.body);
                     $btn.prop('disabled', false);
                 }
             });
         });
+
+        // DISPARO INICIAL (Crucial para Edit)
+        toggleMode();
     });
 </script>

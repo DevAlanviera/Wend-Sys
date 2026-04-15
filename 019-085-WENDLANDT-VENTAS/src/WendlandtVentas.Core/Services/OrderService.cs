@@ -156,29 +156,30 @@ namespace WendlandtVentas.Core.Services
                 // 1. Preparamos los productos de la orden normal
                 if (order.OrderClassification != 3)
                 {
+                    // Preparar productos a procesar
                     var productsToProcess = order.OrderProducts
-                        .Select(op => new ProductPresentationQuantity { Id = op.ProductPresentationId, Quantity = op.Quantity })
+                        .Select(op => new ProductPresentationQuantity
+                        {
+                            Id = op.ProductPresentationId,
+                            Quantity = op.Quantity
+                        })
                         .ToList();
 
-                    // --- AQUÍ ESTABA EL ERROR: Necesitamos diferenciar ---
+                    // 🔥 Descomponer bundles
+                    var expandedProducts = await _inventoryService.DescomponerBundlesAsync(productsToProcess);
+
                     if (order.Type == OrderType.Return)
                     {
-                        // Si es Devolución, SUMAMOS al stock (sin validar disponibilidad)
-                        var inventarioResponse = await _inventoryService.OrderReturn(productsToProcess, currrentUserEmail, order.Id);
-
+                        var inventarioResponse = await _inventoryService.OrderReturn(expandedProducts, currrentUserEmail, order.Id);
                         if (!inventarioResponse.IsSuccess)
                             _logger.LogError($"Error al reintegrar stock (Devolución {order.Id}): {inventarioResponse.Message}");
                     }
                     else
                     {
-                        // Si es Factura/Remisión, RESTAMOS del stock (Validando disponibilidad)
-                        var inventarioResponse = await _inventoryService.OrderDiscount(productsToProcess, currrentUserEmail, order.Id);
-
+                        var inventarioResponse = await _inventoryService.OrderDiscount(expandedProducts, currrentUserEmail, order.Id);
                         if (!inventarioResponse.IsSuccess)
                         {
-                            // Este es el error que viste en consola
                             _logger.LogError($"Error de inventario (Descuento {order.Id}): {inventarioResponse.Message}");
-                            // IMPORTANTE: Lanzamos excepción para que el CATCH borre la orden si no hay stock
                             throw new Exception(inventarioResponse.Message);
                         }
                     }
@@ -300,45 +301,51 @@ namespace WendlandtVentas.Core.Services
                 // Si no es cotización, "limpiamos" los movimientos previos de los lotes
                 if (order.OrderClassification != 3)
                 {
-                    await _inventoryService.ReverseOrderInventory(order.Id);
-                }
-                // --- 2. PREPARACIÓN DE NUEVOS PRODUCTOS ---
-                var productPresentations = (await _repository.ListAllAsync<ProductPresentation>())
-                    .Where(c => model.ProductPresentationIds.Any(m => m == c.Id));
-
-                var orderProducts = new List<OrderProduct>();
-
-                if (order.InventoryDiscount)
-                {
-                    await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
-                }
-
-                foreach (var productPresentation in productPresentations)
-                {
-                    var i = model.ProductPresentationIds.FindIndex(x => x == productPresentation.Id);
-                    var quantity = model.ProductPresentationQuantities[i];
-                    var isPresent = model.ProductIsPresent[i];
-                    var price = model.ProductPrices[i];
-                    // Buscamos si el producto ya existía en la orden para mantener el objeto o crear uno nuevo
-                    var currentOrderProduct = order.OrderProducts
-                        .FirstOrDefault(o => o.ProductPresentationId == productPresentation.Id && o.Quantity == quantity);
-
-                    if (currentOrderProduct != null)
-                    {
-                        if (currentOrderProduct.Price != price)
+                    // 🔥 Usar los productos VIEJOS de la orden
+                    var oldProducts = order.OrderProducts
+                        .Select(op => new ProductPresentationQuantity
                         {
-                            currentOrderProduct.EditPrice(price);
-                        }
-                        orderProducts.Add(currentOrderProduct);
+                            Id = op.ProductPresentationId,
+                            Quantity = op.Quantity
+                        })
+                        .ToList();
+
+                    var expandedOldProducts = await _inventoryService.DescomponerBundlesAsync(oldProducts);
+
+                    if (order.Type == OrderType.Return)
+                    {
+                        // Si era devolución, revertir descuento (quitar lo que se sumó)
+                        await _inventoryService.OrderDiscount(expandedOldProducts, user.Email, order.Id);
                     }
                     else
                     {
-                        // Si el producto es nuevo, se añade con el precio base o el precio con descuento, según corresponda
+                        // Si era venta, revertir (devolver al stock)
+                        await _inventoryService.OrderReturn(expandedOldProducts, user.Email, order.Id);
+                    }
+                }
+
+                // --- 2. PREPARAR NUEVOS PRODUCTOS ---
+                var productPresentations = (await _repository.ListAllAsync<ProductPresentation>())
+                    .Where(c => model.ProductPresentationIds.Any(m => m == c.Id))
+                    .ToList();
+
+                var orderProducts = new List<OrderProduct>();
+
+                for (int i = 0; i < model.ProductPresentationIds.Count; i++)
+                {
+                    var productPresentation = productPresentations.FirstOrDefault(pp => pp.Id == model.ProductPresentationIds[i]);
+
+                    if (productPresentation != null)
+                    {
+                        var quantity = model.ProductPresentationQuantities[i];
+                        var isPresent = model.ProductIsPresent[i];
+                        var price = model.ProductPrices[i];
+
                         orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price));
                     }
                 }
 
-                // Lógica de Promociones y Direcciones (Se mantiene igual)
+                // --- 3. PROCESAR PROMOCIONES Y DIRECCIONES ---
                 var orderPromotions = new List<OrderPromotion>();
 
                 if (model.Promotions != null)
@@ -380,21 +387,26 @@ namespace WendlandtVentas.Core.Services
                 // --- 4. RE-APLICAR INVENTARIO SEGÚN NUEVOS DATOS ---
                 if (order.OrderClassification != 3)
                 {
-                    var productsToProcess = order.OrderProducts
-                        .Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity })
+                    // 🔥 Usar los NUEVOS productos del modelo
+                    var newProducts = model.ProductPresentationIds
+                        .Select((id, index) => new ProductPresentationQuantity
+                        {
+                            Id = id,
+                            Quantity = model.ProductPresentationQuantities[index]
+                        })
                         .ToList();
+
+                    var expandedNewProducts = await _inventoryService.DescomponerBundlesAsync(newProducts);
 
                     if (order.Type == OrderType.Return)
                     {
-                        // Es devolución: Reingresamos al stock (suma)
-                        await _inventoryService.OrderReturn(productsToProcess, user.Email, order.Id);
+                        // Es devolución: sumar al stock
+                        await _inventoryService.OrderReturn(expandedNewProducts, user.Email, order.Id);
                     }
                     else
                     {
-                        // Es venta: Descontamos por FEFO (resta)
-                        var invRes = await _inventoryService.OrderDiscount(productsToProcess, user.Email, order.Id);
-
-                        // Si al intentar aplicar la nueva cantidad no hay stock suficiente, lanzamos error
+                        // Es venta: descontar del stock
+                        var invRes = await _inventoryService.OrderDiscount(expandedNewProducts, user.Email, order.Id);
                         if (!invRes.IsSuccess) throw new Exception(invRes.Message);
                     }
                 }

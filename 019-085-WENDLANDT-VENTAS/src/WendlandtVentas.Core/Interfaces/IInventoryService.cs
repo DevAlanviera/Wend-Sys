@@ -19,6 +19,8 @@ namespace WendlandtVentas.Core.Interfaces
         Task ProcesarYEnviarReporteMatutinoAsync();
 
         Task<List<FilaReporteInventario>> ObtenerDatosParaReporteExcelAsync();
+
+        Task<List<ProductPresentationQuantity>> DescomponerBundlesAsync(IEnumerable<ProductPresentationQuantity> items);
     }
 
 }
