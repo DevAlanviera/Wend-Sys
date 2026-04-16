@@ -25,6 +25,7 @@ using WendlandtVentas.Infrastructure.Identity;
 using WendlandtVentas.Infrastructure.Services;
 using WendlandtVentas.Infrastructure.Repositories;
 using WendlandtVentas.Web.Libs; 
+using Hangfire;
 
 namespace WendlandtVentas.Web
 {
@@ -152,6 +153,16 @@ namespace WendlandtVentas.Web
             //services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new Info {Title = "My API", Version = "v1"}); });
 
             //return ContainerSetup.InitializeWeb(Assembly.GetExecutingAssembly(), services);
+
+            // 1. Configurar Hangfire para usar tu SQL Server
+            services.AddHangfire(configuration => configuration
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseSqlServerStorage(Configuration.GetConnectionString("CatalogConnection"))); // Usa tu string de conexión
+
+            // 2. Agregar el servidor de Hangfire (el que ejecuta las tareas)
+            services.AddHangfireServer();
         }
 
         public void ConfigureContainer(ContainerBuilder builder)
@@ -197,7 +208,7 @@ namespace WendlandtVentas.Web
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, LinkGenerator linkGenerator)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, LinkGenerator linkGenerator, IRecurringJobManager recurringJobManager)
         {
             if (env.EnvironmentName == "Development")
             {
@@ -247,6 +258,25 @@ namespace WendlandtVentas.Web
                     pattern: "ClientStateAccount/{clientId?}",
                     defaults: new { controller = "ClientStateAccount", action = "Index" });
             });
+
+            app.UseHangfireDashboard("/hangfire");
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+                // ...
+            });
+
+            // Esto activa el panel de control
+            app.UseHangfireDashboard();
+
+            // Esto programa la tarea (3:15 PM hora local)
+            recurringJobManager.AddOrUpdate<IInventoryService>(
+                "Reporte-Inventario-315",
+                service => service.ProcesarYEnviarReporteMatutinoAsync(),
+                "49 22 * * *",
+                new RecurringJobOptions { TimeZone = TimeZoneInfo.Local }
+            );
 
         }
 

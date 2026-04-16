@@ -187,6 +187,39 @@ namespace WendlandtVentas.Core.Services
             {
                 await _repository.AddAsync(order);
 
+                // 1. Preparamos los productos de la orden normal
+                if (order.OrderClassification != 3)
+                {
+                    // Preparar productos a procesar
+                    var productsToProcess = order.OrderProducts
+                        .Select(op => new ProductPresentationQuantity
+                        {
+                            Id = op.ProductPresentationId,
+                            Quantity = op.Quantity
+                        })
+                        .ToList();
+
+                    // 🔥 Descomponer bundles
+                    var expandedProducts = await _inventoryService.DescomponerBundlesAsync(productsToProcess);
+
+                    if (order.Type == OrderType.Return)
+                    {
+                        var inventarioResponse = await _inventoryService.OrderReturn(expandedProducts, currrentUserEmail, order.Id);
+                        if (!inventarioResponse.IsSuccess)
+                            _logger.LogError($"Error al reintegrar stock (Devolución {order.Id}): {inventarioResponse.Message}");
+                    }
+                    else
+                    {
+                        var inventarioResponse = await _inventoryService.OrderDiscount(expandedProducts, currrentUserEmail, order.Id);
+                        if (!inventarioResponse.IsSuccess)
+                        {
+                            _logger.LogError($"Error de inventario (Descuento {order.Id}): {inventarioResponse.Message}");
+                            throw new Exception(inventarioResponse.Message);
+                        }
+                    }
+                }
+                // --- FIN LÓGICA DE INVENTARIO ---
+
                 var orderTypeName = "Pedido";
                 if (model.OrderClassification == 3)
                 {
@@ -204,6 +237,8 @@ namespace WendlandtVentas.Core.Services
                 }
 
                 await _repository.UpdateAsync(order);
+
+               
 
                 if (model.OrderClassification != 3)
                 {
@@ -243,6 +278,23 @@ namespace WendlandtVentas.Core.Services
                 
               }
 
+                if (order.OrderClassification != 3) // No validamos en cotizaciones
+                {
+                    foreach (var item in order.OrderProducts)
+                    {
+                        // Buscamos en la lista que ya trajimos de la DB al inicio del método
+                        var pEnMemoria = productPresentations.FirstOrDefault(x => x.Id == item.ProductPresentationId);
+
+                        if (pEnMemoria != null)
+                        {
+                            // Usamos AWAIT. El código se detendrá aquí un momento hasta que 
+                            // termine de verificar y (si es necesario) enviar el correo.
+                            await _inventoryService.VerificarStockBajoAsync(pEnMemoria);
+                        }
+                    }
+                }
+
+
                 return new Response(true, "Pedido guardado");
 
                 
@@ -281,11 +333,6 @@ namespace WendlandtVentas.Core.Services
                 var dates = GetParsePaymentDate(model.PaymentDate, model.PaymentPromiseDate, model.DeliveryDay);
                 int diasDeCredito = (order.OrderClassification == 3) ? 0 : client.CreditDays;
                 var dueDate = dates.DeliveryDay > DateTime.MinValue ? dates.DeliveryDay.AddDays(client.CreditDays + 1) : order.CreatedAt.ToLocalTime().AddDays(client.CreditDays + 1);
-                var productPresentations = (await _repository.ListAllAsync<ProductPresentation>()).Where(c => model.ProductPresentationIds.Any(m => m == c.Id));
-                var orderProducts = new List<OrderProduct>();
-                var currentOrderProduct = new OrderProduct();
-                var orderPromotions = new List<OrderPromotion>();
-                var orderPromotionsItems = new List<PromotionItemModel>();
 
                 if (model.IsInvoice == OrderType.Invoice && order.OrderClassification != 3)
                 {
@@ -297,12 +344,6 @@ namespace WendlandtVentas.Core.Services
                 if (order.InventoryDiscount && order.OrderClassification != 3)
                 {
                     await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
-                }
-
-                // Dentro del Service (Add/Update)
-                if (model.OrderClassification == 3)
-                {
-                    model.IsInvoice = OrderType.Remission; // Forzamos que sea remisión en el servidor
                 }
 
                 foreach (var productPresentation in productPresentations)
@@ -328,8 +369,12 @@ namespace WendlandtVentas.Core.Services
                     }
                 }
 
+                // --- 3. PROCESAR PROMOCIONES Y DIRECCIONES ---
+                var orderPromotions = new List<OrderPromotion>();
+
                 if (model.Promotions != null)
                 {
+                    var orderPromotionsItems = new List<PromotionItemModel>();
                     foreach (var promotion in model.Promotions)
                     {
                         orderPromotionsItems = orderPromotionsItems.Union(JsonConvert.DeserializeObject<List<PromotionItemModel>>(promotion)).ToList();
@@ -383,17 +428,38 @@ namespace WendlandtVentas.Core.Services
                 // Actualizar la fecha de LastModified antes de guardar la orden
                 await _repository.UpdateAsync(order);
 
-                if (order.InventoryDiscount && order.OrderClassification != 3)
+                if (order.InventoryDiscount)
                 {
-                    await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
+                    // 🔥 Usar los NUEVOS productos del modelo
+                    var newProducts = model.ProductPresentationIds
+                        .Select((id, index) => new ProductPresentationQuantity
+                        {
+                            Id = id,
+                            Quantity = model.ProductPresentationQuantities[index]
+                        })
+                        .ToList();
+
+                    var expandedNewProducts = await _inventoryService.DescomponerBundlesAsync(newProducts);
+
+                    if (order.Type == OrderType.Return)
+                    {
+                        // Es devolución: sumar al stock
+                        await _inventoryService.OrderReturn(expandedNewProducts, user.Email, order.Id);
+                    }
+                    else
+                    {
+                        // Es venta: descontar del stock
+                        var invRes = await _inventoryService.OrderDiscount(expandedNewProducts, user.Email, order.Id);
+                        if (!invRes.IsSuccess) throw new Exception(invRes.Message);
+                    }
                 }
 
                 _cacheService.InvalidateOrderCache();
-                return new Response(true, "Pedido editado");
+                return new Response(true, "Pedido actualizado e inventario recalculado correctamente.");
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Error al editar orden");
+                _logger.LogError(e, $"Error al editar orden {model.Id}");
                 return new Response(false, e.Message);
             }
         }

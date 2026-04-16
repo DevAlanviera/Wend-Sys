@@ -9,12 +9,20 @@ namespace Monobits.Core.Specifications
         {
             AddInclude($"{nameof(Product.ProductPresentations)}.{nameof(ProductPresentation.Movements)}");
             AddInclude($"{nameof(Product.ProductPresentations)}.{nameof(ProductPresentation.Presentation)}");
+            // NUEVO: Incluimos el producto maestro para saber su nombre
+            AddInclude(nameof(Product.InventorySource));
+            // --- ASEGÚRATE DE TENER ESTA LÍNEA TAMBIÉN ---
+            AddInclude(p => p.BundleComponents);
         }
 
         public ProductExtendedSpecification() : base(c => true)
         {
             AddInclude($"{nameof(Product.ProductPresentations)}.{nameof(ProductPresentation.Movements)}");
             AddInclude($"{nameof(Product.ProductPresentations)}.{nameof(ProductPresentation.Presentation)}");
+            // NUEVO: Incluimos el producto maestro para la tabla general
+            AddInclude(nameof(Product.InventorySource));
+            // --- ASEGÚRATE DE TENER ESTA LÍNEA TAMBIÉN ---
+            AddInclude(p => p.BundleComponents);
         }
     }
 }

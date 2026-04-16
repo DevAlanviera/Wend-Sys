@@ -3,6 +3,7 @@
     public class ProductTableModel
     {
         public int Id { get; set; }
+        public bool IsDeleted { get; set; } 
         public string Name { get; set; }
         public string Distinction { get; set; }
         public string Season { get; set; }
@@ -37,6 +38,13 @@
         public string PriceSmallCanSix { get; set; }
         public string PriceUsdSmallCanSix { get; set; }
         public string WeightSmallCanSix { get; set; }
+
+
+        //Unificacion de inventario
+        // Propiedades para la unificación
+        public int? InventorySourceId { get; set; }
+        public string InventorySourceName { get; set; }
+        public bool IsVariant { get; set; }
 
 
     }

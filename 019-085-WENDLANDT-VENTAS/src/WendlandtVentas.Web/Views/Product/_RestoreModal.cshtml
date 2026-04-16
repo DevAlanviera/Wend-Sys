@@ -1,0 +1,71 @@
+﻿@model WendlandtVentas.Core.Entities.Product
+
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Confirmar Restauración</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        @* Agregamos method="post" para que el framework genere el token de validación *@
+        <form id="form-restore-product" method="post">
+            @* Genera el token de seguridad para evitar errores 400/415 *@
+            @Html.AntiForgeryToken()
+
+            <div class="modal-body">
+                @* Forzamos el id="Id" para que el JS lo encuentre sin fallas *@
+                <input type="hidden" asp-for="Id" id="Id" />
+
+                <p>¿Estás seguro de que deseas restaurar el producto <strong>@Model.Name</strong>?</p>
+                <p class="text-muted small">Al confirmar, el producto volverá a aparecer en las listas de inventario activo.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                @* type="submit" disparará el evento $(document).on('submit', ...) *@
+                <button type="submit" class="btn btn-success">Confirmar Restauración</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+        // Usamos $(document) para que funcione con contenido cargado por AJAX
+      // Usamos $(document) para asegurarnos de atrapar el form aunque se cargue por AJAX
+    $(document).on('submit', '#form-restore-product', function (e) {
+        // BLOQUEO DE RECARGA: Esto debe ser lo primero
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        console.log("¡Evento atrapado! La página NO debería recargarse ahora.");
+
+        var $form = $(this);
+        var id = $form.find("#Id").val();
+
+        monoloading("show");
+
+        $.ajax({
+            url: "@Url.Action("Restore")",
+            type: "POST",
+            data: { id: id, confirm: true },
+            success: function (res) {
+                monoloading("hide");
+                console.log("Servidor respondió:", res);
+                if (res.status == 'ok') {
+                    monotoast(res.body);
+                    // COMENTA esta línea temporalmente para ver los logs sin que se refresque
+                    // window.location.reload();
+                } else {
+                    monotoast(res.body);
+                }
+            },
+            error: function (xhr) {
+                monoloading("hide");
+                console.error("Error en el servidor:", xhr.responseText);
+                alert("Error: " + xhr.status); // El alert detiene todo para que puedas leer
+            }
+        });
+
+        return false; // Refuerzo extra para evitar el submit tradicional
+    });
+</script>

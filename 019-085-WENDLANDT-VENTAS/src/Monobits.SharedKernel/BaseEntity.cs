@@ -15,5 +15,10 @@ namespace Monobits.SharedKernel
         {
             IsDeleted = isDeleted;
         }
+        // 🔥 Agregar este método
+        public void Restore()
+        {
+            IsDeleted = false;
+        }
     }
 }

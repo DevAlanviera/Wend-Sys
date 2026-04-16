@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Monobits.Core.Specifications;
 using Monobits.SharedKernel.Interfaces;
 using Newtonsoft.Json;
 using OpenXmlPowerTools;
@@ -429,6 +430,16 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
+
+        [HttpGet]
+        public async Task<IActionResult> GetProductStock(int id)
+        {
+            // Usamos el servicio de inventario para sumar el stock de los lotes activos
+            // Asegúrate de inyectar IInventoryService en el constructor del controlador
+            var stock = await _inventoryService.GetAvailableStock(id);
+            return Json(new { stock = stock });
+        }
+
         [ResponseCache(Duration = 300)]
         [HttpGet]
         public async Task<IActionResult> SearchProductsAjax(
@@ -493,6 +504,7 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(new { results = new List<object>(), pagination = new { more = false } });
             }
         }
+
 
         private async Task<IActionResult> ValidateClientRFCAsync(int clientId)
         {
@@ -871,6 +883,8 @@ namespace WendlandtVentas.Web.Controllers
 
             return View("AddEdit", model);
         }
+
+
 
         [Authorize(Roles = "Administrator, AdministratorCommercial, Sales, Billing, BillingAssistant, Storekeeper")]
         [HttpPost]
@@ -1576,6 +1590,115 @@ namespace WendlandtVentas.Web.Controllers
             }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> CheckBundleStock(int productId, int quantityRequested)
+        {
+            const int BOTELLA_PRESENTATION_ID = 3;
+
+            try
+            {
+                var product = await _repository.GetQueryable<Product>()
+                    .Include(p => p.BundleComponents)
+                        .ThenInclude(bc => bc.ComponentProduct)
+                    .FirstOrDefaultAsync(p => p.Id == productId && !p.IsDeleted);
+
+                if (product == null)
+                    return Json(new { hasStock = false, message = "Producto no encontrado" });
+
+                if (!product.IsBundle)
+                    return Json(new { hasStock = false, message = "El producto no es un paquete válido" });
+
+                if (product.BundleComponents == null || !product.BundleComponents.Any())
+                    return Json(new { hasStock = false, message = "El paquete no tiene componentes configurados" });
+
+                foreach (var bundleComp in product.BundleComponents)
+                {
+                    if (bundleComp.ComponentProduct == null)
+                    {
+                        return Json(new
+                        {
+                            hasStock = false,
+                            message = $"Componente no encontrado para el paquete {product.Name}"
+                        });
+                    }
+
+                    int neededPerPack = bundleComp.Quantity;
+                    int totalNeeded = neededPerPack * quantityRequested;
+                    string componentName = bundleComp.ComponentProduct.Name;
+
+                    var currentStock = await _repository.GetQueryable<Batch>()
+                        .Include(b => b.ProductPresentation)
+                        .Where(b => !b.IsDeleted &&
+                                   b.IsActive &&
+                                   b.CurrentQuantity > 0 &&
+                                   b.ProductPresentation.ProductId == bundleComp.ComponentProductId &&
+                                   b.ProductPresentation.PresentationId == BOTELLA_PRESENTATION_ID)
+                        .SumAsync(b => (int?)b.CurrentQuantity) ?? 0;
+
+                    if (currentStock < totalNeeded)
+                    {
+                        int maxPacksPossible = 0;
+                        if (neededPerPack > 0 && currentStock > 0)
+                        {
+                            maxPacksPossible = currentStock / neededPerPack;
+                        }
+
+                        string packMessage = maxPacksPossible > 0
+                            ? $" (Alcanza para {maxPacksPossible} paquetes)"
+                            : " (No alcanza para ningún paquete completo)";
+
+                        return Json(new
+                        {
+                            hasStock = false,
+                            message = $"Stock insuficiente de {componentName}. " +
+                                      $"Requieres {totalNeeded} unidades pero solo tienes {currentStock}.{packMessage}"
+                        });
+                    }
+                }
+
+                return Json(new { hasStock = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    hasStock = false,
+                    message = $"Error al validar stock del paquete: {ex.Message}"
+                });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetProductInfo(int presentationId, string currencyType)
+        {
+            try
+            {
+                // Consulta optimizada usando Join implícito
+                var result = await _repository.GetQueryable<ProductPresentation>()
+                    .Where(pp => pp.Id == presentationId && !pp.IsDeleted)
+                    .Select(pp => new
+                    {
+                        price = (currencyType == "USD") ? pp.PriceUsd : pp.Price,
+                        productId = pp.ProductId,
+                        isBundle = pp.Product != null && pp.Product.IsBundle,
+                        productName = pp.Product != null ? pp.Product.Name : "",
+                        presentationName = pp.Presentation != null ? pp.Presentation.Name : "",
+                        liters = pp.Presentation != null ? pp.Presentation.Liters : 0
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (result == null)
+                    return Json(new { price = 0, productId = 0, isBundle = false });
+
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetProductInfo");
+                return Json(new { price = 0, productId = 0, isBundle = false });
+            }
+        }
+
         #region AJAX
 
         [HttpPost]
@@ -1622,6 +1745,51 @@ namespace WendlandtVentas.Web.Controllers
                 _logger.LogError(e, "Error en OrderController --> CheckPromotions");
             }
             return Json(promotionsResponse);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DebugBundleInfo(int productId)
+        {
+            const int BOTELLA_PRESENTATION_ID = 3; // ID de "Botella"
+
+            var product = await _repository.GetQueryable<Product>()
+                .Include(p => p.BundleComponents)
+                    .ThenInclude(bc => bc.ComponentProduct)
+                .FirstOrDefaultAsync(p => p.Id == productId && !p.IsDeleted);
+
+            if (product == null)
+                return Json(new { error = "Producto no encontrado" });
+
+            var componentsList = new List<object>();
+
+            foreach (var bc in product.BundleComponents)
+            {
+                // Calcular stock usando Batches (misma lógica del inventario)
+                var stock = await _repository.GetQueryable<Batch>()
+                    .Where(b => !b.IsDeleted &&
+                               b.IsActive &&
+                               b.CurrentQuantity > 0 &&
+                               b.ProductPresentation.ProductId == bc.ComponentProductId &&
+                               b.ProductPresentation.PresentationId == BOTELLA_PRESENTATION_ID)
+                    .SumAsync(b => b.CurrentQuantity);
+
+                componentsList.Add(new
+                {
+                    componentName = bc.ComponentProduct?.Name,
+                    quantityNeeded = bc.Quantity,
+                    stockDisponible = stock,
+                    suficiente = stock >= bc.Quantity
+                });
+            }
+
+            var result = new
+            {
+                bundleName = product.Name,
+                isBundle = product.IsBundle,
+                components = componentsList
+            };
+
+            return Json(result);
         }
         #endregion
     }

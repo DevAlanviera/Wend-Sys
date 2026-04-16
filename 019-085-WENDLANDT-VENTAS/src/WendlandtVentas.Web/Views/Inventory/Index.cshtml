@@ -19,27 +19,58 @@
     <h6>Filtros</h6>
     <form>
         <div class="row">
+            @{
+                // Definimos los filtros de exclusión
+                var excludedKeywords = new[] { "N.A.L.", "NAL.", "NAL", "FG", "F.G." };
+
+                // Filtramos las listas una sola vez para usarlas abajo
+                var filteredProducts = Model.Products
+                .Where(p => !excludedKeywords.Any(key => p.Text.Contains(key, StringComparison.OrdinalIgnoreCase)));
+
+                var filteredPresentations = Model.Presentations
+                .Where(p => !excludedKeywords.Any(key => p.Text.Contains(key, StringComparison.OrdinalIgnoreCase)));
+            }
+
             <div class="col-3">
                 <div class="form-group">
                     <label asp-for="ProductId"></label>
-                    @Html.DropDownListFor(m => m.ProductId, Model.Products, "Todos", new { @class = "form-control" })
+                    @Html.DropDownListFor(m => m.ProductId, filteredProducts, "Todos", new { @class = "form-control" })
                 </div>
             </div>
+
             <div class="col-3">
                 <div class="form-group">
                     <label asp-for="PresentationId"></label>
-                    @Html.DropDownListFor(m => m.PresentationId, Model.Presentations, "Todas", new { @class = "form-control" })
+                    @Html.DropDownListFor(m => m.PresentationId, filteredPresentations, "Todas", new { @class = "form-control" })
                 </div>
             </div>
-            <div class="col-2 pt-3">
+
+            <div class="col-3 pt-3">
                 <button type="submit" class="btn btn-primary mt-3">Buscar</button>
+                    @* Botón de Descargar *@
+                <a asp-action="DescargarReportePlantilla"
+                   class="btn btn-success mt-3"
+                   title="Descargar Inventario">
+                    <i class="fa fa-download"></i>
+                </a>
                 <a asp-action="Index" class="btn btn-secondary mt-3">Limpiar</a>
             </div>
         </div>
     </form>
 </section>
+@{
+    // Cambiamos el objeto para que coincida con lo que Syncfusion espera
+    var ordenInventario = new List<object> {
+        new { field = "SortPriority", direction = "Ascending" }, // 1 para B.C., 2 para el resto
+        new { field = "name", direction = "Ascending" }
+    };
+}
 <div class="datatable-container">
-    <ejs-grid id="Grid" class="datatable" locale="es-MX" allowGrouping="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+    <ejs-grid id="Grid" class="datatable" dataBound="onDataBound" detailTemplate="#batchDetailTemplate" locale="es-MX" allowGrouping="true" allowPaging="true" allowSorting="true" toolbar="@(new List<string>() {"Search"})">
+
+        @* Pasamos la lista genérica. El Grid es lo suficientemente inteligente para entenderla *@
+        <e-grid-sortSettings columns="ordenInventario"></e-grid-sortSettings>
+
         <e-grid-pagesettings pageCount="25"></e-grid-pagesettings>
         <e-grid-aggregates>
             <e-grid-aggregate>
@@ -49,9 +80,11 @@
             </e-grid-aggregate>
         </e-grid-aggregates>
         <e-data-manager url="@targetUrl" adaptor="UrlAdaptor"></e-data-manager>
-        <e-grid-searchsettings fields="@(new[] { "Name", "PresentationLiters" })"></e-grid-searchsettings>
+        <e-grid-searchsettings fields="@(new[] { "Name", "Presentation" })"></e-grid-searchsettings>
         <e-grid-groupsettings showGroupedColumn="false" showDropArea="false" columns="@(new string[] {"name"})"></e-grid-groupsettings>
         <e-grid-columns>
+            <e-grid-column field="SortPriority" visible="false"></e-grid-column>Y
+
             <e-grid-column field="name" headerText="Nombre" width="300"></e-grid-column>
             <e-grid-column field="presentation" headerText="Presentación" width="200"></e-grid-column>
             <e-grid-column field="liters" headerText="Litros" format="N2" width="100" textAlign="Right" headerTextAlign="Left"></e-grid-column>
@@ -71,6 +104,78 @@
 }
 
 @section Scripts{
+    <script>
+                $(document).on('click', '.btn-modal-action', function (e) {
+            var $btn = $(this);
+            var modalId = $btn.attr('href');
+            var baseUrl = $(modalId).data('url');
+
+            var id = $btn.attr('data-id');
+            var bId = $btn.attr('data-batch-id'); // <--- USAR .attr() es más seguro
+
+            console.log("DEBUG: Enviando ID:", id, "BatchId:", bId);
+
+            var urlConParametros = baseUrl + "?id=" + id;
+
+            // Validamos que bId tenga un número real
+            if (bId && bId !== "undefined" && bId !== "") {
+                urlConParametros += "&batchId=" + bId;
+            }
+
+            $(modalId).load(urlConParametros, function () {
+                $(modalId).modal('show');
+            });
+        });
+    </script>
+    <script>
+                           $(document).ready(function () {
+            // Usamos 'off' antes de 'on' para no duplicar el evento
+            $(document).off('submit', '.forma-ajax--modal').on('submit', '.forma-ajax--modal', function (e) {
+
+                // --- ESTO ES LO MÁS IMPORTANTE ---
+                e.preventDefault(); // Detiene el salto a la pantalla negra
+                e.stopImmediatePropagation();
+
+                var $form = $(this);
+                var $modal = $form.closest('.modal');
+                var $btn = $form.find('button[type="submit"]');
+
+                $btn.attr('disabled', 'disabled').html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    type: 'POST',
+                    data: $form.serialize(),
+                    success: function (response) {
+                        if (response.status === "ok") {
+                            // 1. Cerramos el modal
+                            $modal.modal('hide');
+
+                            // 2. Notificación (si usas toastr o similar)
+                            console.log("Éxito:", response.body);
+
+                            // 3. REFRESCAR EL GRID DE SYNCFUSION
+                            // 'Grid' debe ser el ID que le pusiste a tu <ejs-grid>
+                            var gridObj = document.getElementById("Grid").ej2_instances[0];
+                            if (gridObj) {
+                                gridObj.refresh();
+                            }
+                        } else {
+                            alert("Error: " + response.body);
+                            $btn.removeAttr('disabled').text('Guardar');
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error("Error en el servidor", xhr.responseText);
+                        alert("Ocurrió un error al procesar la solicitud.");
+                        $btn.removeAttr('disabled').text('Guardar');
+                    }
+                });
+
+                return false; // Refuerzo para no navegar
+            });
+        });
+    </script>
     <script id="adminActionButtons" type="text/x-template">
         <div>
             <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
@@ -91,6 +196,59 @@
             <a href="/Movement?productPresentationId=${id}" title="Ver movimientos" class="tip btn btn-light" style="width:70px">${stock}</a>
         </div>
     </script>
+    <script id="batchDetailTemplate" type="text/x-template">
+        <div class="p-3 bg-light border-rounded">
+            <h6 class="mb-2"><i class="fa fa-boxes mr-2"></i>Desglose de Lotes Disponibles</h6>
+            <table class="table table-sm table-bordered bg-white">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Lote</th>
+                        <th>Existencia</th>
+                        <th>Caducidad</th>
+                        <th>Estado</th>
+                        <th class="text-right" width="100">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${for(batch of batches)}
+                        <tr>
+                            <td>
+                                ${batch.batchNumber}
+                            </td>
+                            <td>${batch.currentQuantity}</td>
+                            <td>${batch.expiryDateFormatted}</td>
+                            <td>
+                                <span class="badge ${batch.statusColor}">
+                                    ${batch.statusText}
+                                </span>
+                            </td>
+                            <td class="text-right">
+                            @* Botón de Entrada específico para el Lote *@
+                            <a href="#inModal"
+                               data-id="${id}"
+                               data-batch-id="${batch.id}"
+                               title="Agregar entrada a este lote"
+                               class="tip btn btn-sm btn-outline-success btn-modal-action">
+                                <i class="fa fa-fw fa-inbox-in"></i>
+                            </a>
+                        </td>
+                        </tr>
+                    ${/for}
+                </tbody>
+            </table>
+        </div>
+    </script>
+    <script>
+        function onDataBound(args) {
+            // Obtenemos los datos que acaban de cargar en el Grid
+            var gridData = this.getCurrentViewRecords();
+
+           
+            gridData.forEach(function(row) {
+            });
+        }
+    </script>
+    
 }
 
 

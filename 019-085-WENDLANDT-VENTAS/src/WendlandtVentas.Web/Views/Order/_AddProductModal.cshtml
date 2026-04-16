@@ -1,5 +1,5 @@
 ﻿@model WendlandtVentas.Web.Models.OrderViewModels.OrderAddProductViewModel
-
+@using WendlandtVentas.Core.Entities.Enums
 <div class="modal-dialog" role="document">
     <form id="form-addProduct" class="modal-content">
         <div class="modal-header">
@@ -57,6 +57,7 @@
         </div>
     </form>
 </div>
+<<<<<<< HEAD
 
 <script>
     $(document).ready(function () {
@@ -153,7 +154,112 @@
     });
 </script>
 
+=======
+>>>>>>> inventory
 <!--<script>
+                                 $(document).ready(function () {
+                                     let stockDisponibleLocal = 0;
+                                     let esPaqueteLocal = false;
+                                     let currentProductId = 0;
+
+                                     // Clasificación (Cotización = 3)
+                                     const classificationId = $('#OrderClassification').val();
+
+                                     function esTipoDevolucion() {
+                                         var tipoSeleccionado = $("input[name='OrderType']:checked").val();
+                                         var valorReturnEsperado = "@WendlandtVentas.Core.Entities.Enums.OrderType.Return.ToString()";
+                                         return (tipoSeleccionado === valorReturnEsperado);
+                                     }
+
+                                     // --- FUNCIÓN MAESTRA: Decide qué validar y cómo ---
+                                     function validarIntegral() {
+                                         const cantidad = parseInt($("#Quantity").val()) || 0;
+                                         const $btnSave = $('#form-addProduct button[type="submit"]');
+
+                                         if (cantidad <= 0) {
+                                             $(".modal-errors").html('<div class="alert alert-warning py-1">Ingresa una cantidad válida.</div>');
+                                             $btnSave.prop('disabled', true);
+                                             return;
+                                         }
+
+                                         // Si es Devolución o Cotización, no restringimos stock
+                                         if (esTipoDevolucion() || classificationId == 3) {
+                                             $(".modal-errors").html('<div class="alert alert-info py-1">Modo ' + (classificationId == 3 ? 'Cotización' : 'Devolución') + ': Sin restricciones.</div>');
+                                             $btnSave.prop('disabled', false);
+                                             stockDisponibleLocal = 999999;
+                                             return;
+                                         }
+
+                                         if (esPaqueteLocal) {
+                                             // VALIDACIÓN DE BUNDLE (Componentes)
+                                             $.get("/Order/CheckBundleStock", { productId: currentProductId, quantityRequested: cantidad })
+                                                 .done(function (res) {
+                                                     if (res.hasStock) {
+                                                         $(".modal-errors").html('<div class="alert alert-success py-1">✅ Componentes disponibles.</div>');
+                                                         stockDisponibleLocal = 999999;
+                                                         $btnSave.prop('disabled', false);
+                                                     } else {
+                                                         $(".modal-errors").html('<div class="alert alert-warning py-1">⚠️ ' + res.message + '</div>');
+                                                         stockDisponibleLocal = 0;
+                                                         $btnSave.prop('disabled', true);
+                                                     }
+                                                 });
+                                         } else {
+                                             // VALIDACIÓN NORMAL (Stock físico)
+                                             $.get("/Order/GetProductStock", { id: currentProductId })
+                                                 .done(function (response) {
+                                                     stockDisponibleLocal = response.stock;
+                                                     if (cantidad > stockDisponibleLocal) {
+                                                         $(".modal-errors").html('<div class="alert alert-danger py-1">⚠️ Stock insuficiente. Disponible: ' + stockDisponibleLocal + '</div>');
+                                                         $btnSave.prop('disabled', true);
+                                                     } else {
+                                                         $(".modal-errors").html('<div class="alert alert-info py-1">Stock disponible: <b>' + stockDisponibleLocal + '</b></div>');
+                                                         $btnSave.prop('disabled', false);
+                                                     }
+                                                 });
+                                         }
+                                     }
+
+                                     // --- EVENTOS ---
+
+                                     // 1. Al seleccionar producto
+                                     $(document).on("change", "#ProductPresentationId", function () {
+                                         var val = $(this).val();
+                                         if (!val) return;
+
+                                         var parts = val.split("-");
+                                         currentProductId = parts[0];
+                                         var presentationId = parts[1] || parts[0];
+
+                                         $(".modal-errors").html('<div class="text-muted small">Verificando...</div>');
+
+                                         $.get("/Order/GetProductDetails", { id: presentationId, currencyType: $("#CurrencyType").val() })
+                                             .done(function (data) {
+                                                 $("#Price").val(data.price);
+                                                 esPaqueteLocal = data.isBundle; // Aquí guardamos el tipo
+                                                 validarIntegral(); // Validamos de inmediato
+                                             });
+                                     });
+
+                                     // 2. Al escribir cantidad (Validación en tiempo real)
+                                     $(document).on("input", "#Quantity", function () {
+                                         validarIntegral();
+                                     });
+
+                                     // 3. Al intentar guardar
+                                     $("#form-addProduct").on("submit", function (e) {
+                                         const cantidad = parseInt($("#Quantity").val());
+                                         if (esTipoDevolucion() || classificationId == 3) return true;
+
+                                         if (cantidad > stockDisponibleLocal) {
+                                             e.preventDefault();
+                                             return false;
+                                         }
+                                     });
+                                 });
+</script>
+
+<script>
     $(document).on("change", "#ProductPresentationId", function () {
         var value = $(this).val();
         var id = value.split("-")[0];

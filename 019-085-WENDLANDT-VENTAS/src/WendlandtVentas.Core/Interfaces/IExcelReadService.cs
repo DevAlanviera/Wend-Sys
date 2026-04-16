@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using WendlandtVentas.Core.DTO;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Models.OrderViewModels;
 
@@ -14,5 +15,7 @@ namespace WendlandtVentas.Core.Interfaces
         Task<string> FillData(string path, OrderDetailsViewModel model);
 
        Task<byte[]> FillDataAndReturnPdfAsync(string path, Order order);
+
+        byte[] GenerarReporteInventario(List<FilaReporteInventario> datos);
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using WendlandtVentas.Core.DTO;
 
 namespace WendlandtVentas.Core.Interfaces
 {

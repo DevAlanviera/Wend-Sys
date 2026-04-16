@@ -17,6 +17,7 @@ namespace WendlandtVentas.Core.Specifications.ProductPresentationSpecifications
             AddInclude(c => c.Product);
             AddInclude(c => c.Presentation);
             AddInclude(c => c.Movements);
+            AddInclude(x => x.Batches);
         }
     }
 }
