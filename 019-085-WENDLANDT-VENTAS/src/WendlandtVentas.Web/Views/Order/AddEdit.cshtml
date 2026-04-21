@@ -404,6 +404,14 @@
             let currentProductId = 0;
             let currentPresentationId = 0;
 
+            const classificationId = $('#OrderClassification').val();
+
+            function esTipoDevolucion() {
+            const tipoSeleccionado = $('input[name="OrderType"]:checked').val();
+            const valorReturnEsperado = "@WendlandtVentas.Core.Entities.Enums.OrderType.Return.ToString()";
+            return (tipoSeleccionado === valorReturnEsperado);
+        }
+
             // Abrir modal y configurar Select2 usando caché si existe
             $("#addProduct").on("click", function () {
                 const currencyType = $('#CurrencyType').val();
@@ -464,6 +472,14 @@
                     $btnSave.prop('disabled', true);
                     return;
                 }
+
+                // 🔥 NUEVO: Si es Cotización (classificationId == 3) o Devolución, NO validar stock
+            if (esTipoDevolucion() || classificationId == 3) {
+                const mensaje = classificationId == 3 ? 'Cotización' : 'Devolución';
+                $(".modal-errors").html('');
+                $btnSave.prop('disabled', false);
+                return;
+            }
 
                 if (esBundleGlobal) {
                     // Validar stock del bundle

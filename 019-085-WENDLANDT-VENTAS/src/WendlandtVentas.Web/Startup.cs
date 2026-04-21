@@ -270,11 +270,11 @@ namespace WendlandtVentas.Web
             // Esto activa el panel de control
             app.UseHangfireDashboard();
 
-            // Esto programa la tarea (3:15 PM hora local)
+            // Lunes a viernes a las 9:00 AM
             recurringJobManager.AddOrUpdate<IInventoryService>(
-                "Reporte-Inventario-315",
+                "Reporte-Inventario-9am",
                 service => service.ProcesarYEnviarReporteMatutinoAsync(),
-                "49 22 * * *",
+                "0 9 * * 1,2,3,4,5",  // 🔥 0 minutos, hora 9, cualquier día, lunes a viernes
                 new RecurringJobOptions { TimeZone = TimeZoneInfo.Local }
             );
 

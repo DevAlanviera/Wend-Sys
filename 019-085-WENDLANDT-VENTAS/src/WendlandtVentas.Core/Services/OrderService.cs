@@ -106,7 +106,7 @@ namespace WendlandtVentas.Core.Services
             {
                 model.IsInvoice = OrderType.Remission;
             }
-            Console.WriteLine("TIPO DE ORDEN: " + model.IsInvoice + " \n \n \n \n \n \n \n \n \n \n \n");
+          
 
             foreach (var productPresentation in productPresentations)
             {
@@ -329,10 +329,13 @@ namespace WendlandtVentas.Core.Services
                 var order = await _repository.GetAsync(new OrderExtendedSpecification(model.Id));
 
                 int idABuscar = (order.OrderClassification == 3) ? 9999 : model.ClientId;
-                var client = await _repository.GetByIdAsync<Client>(idABuscar);
+
+                var client = await _repository.GetByIdAsync<Client>(model.ClientId);
                 var dates = GetParsePaymentDate(model.PaymentDate, model.PaymentPromiseDate, model.DeliveryDay);
                 int diasDeCredito = (order.OrderClassification == 3) ? 0 : client.CreditDays;
                 var dueDate = dates.DeliveryDay > DateTime.MinValue ? dates.DeliveryDay.AddDays(client.CreditDays + 1) : order.CreatedAt.ToLocalTime().AddDays(client.CreditDays + 1);
+                var currentOrderProduct = new OrderProduct();
+
 
                 if (model.IsInvoice == OrderType.Invoice && order.OrderClassification != 3)
                 {
@@ -341,30 +344,56 @@ namespace WendlandtVentas.Core.Services
                         return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
                 }
 
-                if (order.InventoryDiscount && order.OrderClassification != 3)
+                // --- 1. BLOQUE DE REVERSA (SOLO PEDIDOS REALES) ---
+                // Si no es cotización, "limpiamos" los movimientos previos de los lotes
+                if (order.OrderClassification != 3)
                 {
-                    await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), user.Email, order.Id);
-                }
-
-                foreach (var productPresentation in productPresentations)
-                {
-                    var i = model.ProductPresentationIds.FindIndex(x => x == productPresentation.Id);
-                    var quantity = model.ProductPresentationQuantities[i];
-                    var isPresent = model.ProductIsPresent[i];
-                    var price = model.ProductPrices[i];
-                    currentOrderProduct = order.OrderProducts.Where(o => o.ProductPresentation == productPresentation &&
-                                                                         o.Quantity == quantity).SingleOrDefault();
-                    if (currentOrderProduct != null)
-                    {
-                        if (currentOrderProduct.Price != price)
+                    // 🔥 Usar los productos VIEJOS de la orden
+                    var oldProducts = order.OrderProducts
+                        .Select(op => new ProductPresentationQuantity
                         {
-                            currentOrderProduct.EditPrice(price);
-                        }
-                        orderProducts.Add(currentOrderProduct);
+                            Id = op.ProductPresentationId,
+                            Quantity = op.Quantity
+                        })
+                        .ToList();
+
+                    var expandedOldProducts = await _inventoryService.DescomponerBundlesAsync(oldProducts);
+
+                    if (order.Type == OrderType.Return)
+                    {
+                        // Si era devolución, revertir descuento (quitar lo que se sumó)
+                        await _inventoryService.OrderDiscount(expandedOldProducts, user.Email, order.Id);
                     }
                     else
                     {
-                        // Si el producto es nuevo, se añade con el precio base o el precio con descuento, según corresponda
+                        // Si era venta, revertir (devolver al stock)
+                        await _inventoryService.OrderReturn(expandedOldProducts, user.Email, order.Id);
+                    }
+                }
+
+                if (model.OrderClassification == 3)
+                {
+                    model.IsInvoice = OrderType.Remission; // Forzamos que sea remisión en el servidor
+                }
+
+
+                // --- 2. PREPARAR NUEVOS PRODUCTOS ---
+                var productPresentations = (await _repository.ListAllAsync<ProductPresentation>())
+                    .Where(c => model.ProductPresentationIds.Any(m => m == c.Id))
+                    .ToList();
+
+                var orderProducts = new List<OrderProduct>();
+
+                for (int i = 0; i < model.ProductPresentationIds.Count; i++)
+                {
+                    var productPresentation = productPresentations.FirstOrDefault(pp => pp.Id == model.ProductPresentationIds[i]);
+
+                    if (productPresentation != null)
+                    {
+                        var quantity = model.ProductPresentationQuantities[i];
+                        var isPresent = model.ProductIsPresent[i];
+                        var price = model.ProductPrices[i];
+
                         orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price));
                     }
                 }
@@ -392,8 +421,6 @@ namespace WendlandtVentas.Core.Services
                         model.AddressName = address.Name;
                     }
                 }
-                // NOTA: Si es Clasificación 3, model.Address ya trae el texto manual 
-                // gracias al cambio que hicimos en el HTML (name="ManualAddress" o name="Address")
 
                 // 4. Determinar Nombre y Dirección Final para el método Edit
                 string nombreParaGuardar = (order.OrderClassification == 3)
@@ -412,12 +439,13 @@ namespace WendlandtVentas.Core.Services
                     direccionFinal = address?.AddressLocation ?? model.Address;
                 }
 
-                    // Asignar los nuevos valores al pedido
-                    order.ProntoPago = model.ProntoPago;
-                order.Edit(model.InvoiceCode, model.IsInvoice, order.OrderStatus, model.Paid,
+
+                // Asignar los nuevos valores al pedido
+                order.ProntoPago = model.ProntoPago;
+                order.Edit(model.InvoiceCode, model.IsInvoice, OrderStatus.New, model.Paid,
                     dates.PaymentPromiseDate.ToUniversalTime(), dates.PaymentDate.ToUniversalTime(),
-                    idABuscar, model.Comment, model.Delivery, model.DeliverySpecification,
-                    orderProducts, orderPromotions, direccionFinal, nombreParaGuardar,
+                    model.ClientId, model.Comment, model.Delivery, model.DeliverySpecification,
+                    orderProducts, orderPromotions, model.Address, model.AddressName,
                     dates.DeliveryDay.ToUniversalTime(), dueDate.ToUniversalTime(), model.PayType, model.CurrencyType);
 
                 if (model.IsInvoice == OrderType.Return)
@@ -428,9 +456,11 @@ namespace WendlandtVentas.Core.Services
                 // Actualizar la fecha de LastModified antes de guardar la orden
                 await _repository.UpdateAsync(order);
 
-                if (order.InventoryDiscount)
+                // --- 4. RE-APLICAR INVENTARIO SEGÚN NUEVOS DATOS ---
+                // --- 4. RE-APLICAR INVENTARIO SEGÚN NUEVOS DATOS ---
+                // 🔥 Cambiar condición: Siempre aplicar si hay productos y no es cotización
+                if (order.OrderClassification != 3 && model.ProductPresentationIds != null && model.ProductPresentationIds.Any())
                 {
-                    // 🔥 Usar los NUEVOS productos del modelo
                     var newProducts = model.ProductPresentationIds
                         .Select((id, index) => new ProductPresentationQuantity
                         {
@@ -441,7 +471,8 @@ namespace WendlandtVentas.Core.Services
 
                     var expandedNewProducts = await _inventoryService.DescomponerBundlesAsync(newProducts);
 
-                    if (order.Type == OrderType.Return)
+                    // 🔥 Usar el NUEVO tipo del modelo, no el order.Type (que aún no se actualizó)
+                    if (model.IsInvoice == OrderType.Return)
                     {
                         // Es devolución: sumar al stock
                         await _inventoryService.OrderReturn(expandedNewProducts, user.Email, order.Id);

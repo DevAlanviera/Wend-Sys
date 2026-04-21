@@ -402,13 +402,31 @@ namespace WendlandtVentas.Core.Services
             </html>";
 
             // Enviamos a un correo configurado (ej. almacen@wendlandt.com)
-            return await _emailSender.SendEmailAsync(
-                 //email: "raul.medina@wendlandt.com.mx, francisco.hernandez@wendlandt.com.mx, nestor.camacho@wendlandt.com.mx", // Aquí podrías usar una configuración global
-                 email: "a.cordova.viera@gmail.com",
-                subject: asunto,
-                message: mensaje,
-                perfil: "Email" // Usamos el perfil que ya tienes configurado
-            );
+            var destinatarios = new[]
+            {
+                "raul.medina@wendlandt.com.mx",
+                "francisco.hernandez@wendlandt.com.mx",
+                "nestor.camacho@wendlandt.com.mx"
+            };
+
+            bool todosExitosos = true;
+
+            foreach (var destinatario in destinatarios)
+            {
+                var resultado = await _emailSender.SendEmailAsync(
+                    email: destinatario,
+                    subject: asunto,
+                    message: mensaje,
+                    perfil: "Email"
+                );
+
+                if (!resultado)
+                {
+                    _logger.LogWarning($"No se pudo enviar correo de alerta a {destinatario}");
+                    todosExitosos = false;
+                }
+            }
+            return todosExitosos;
         }
 
         public async Task<List<FilaReporteInventario>> ObtenerDatosParaReporteExcelAsync()
@@ -477,7 +495,7 @@ namespace WendlandtVentas.Core.Services
                 var destinatarios = new List<string> { "a.cordova.viera@gmail.com" };
 
                 await _emailSender.SendEmailAsync(
-                 email: "a.cordova.viera@gmail.com",
+                 email: "francisco.hernandez@wendlandt.com.mx",
                  subject: $"📦 Reporte de Inventario Físico - {fechaStr}",
                  message: "Buen día, adjunto el reporte de inventario generado automáticamente a las 9:00 AM.",
                  file: null,
@@ -492,19 +510,6 @@ namespace WendlandtVentas.Core.Services
             {
                 _logger.LogError(ex, "Error crítico al procesar el reporte de inventario de las 9:00 AM.");
             }
-        }
-
-        // En tu InventoryService
-        public async Task<int> GetAvailableStock(int productPresentationId)
-        {
-            // Buscamos el último movimiento registrado para esta presentación que no esté borrado
-            var lastMovement = await _repository.GetQueryable<Movement>()
-                .Where(m => m.ProductPresentationId == productPresentationId && !m.IsDeleted)
-                .OrderByDescending(m => m.Id) // El ID más alto es el más reciente
-                .Select(m => new { m.QuantityCurrent }) // Solo traemos la columna necesaria
-                .FirstOrDefaultAsync();
-
-            return lastMovement?.QuantityCurrent ?? 0;
         }
 
     }
