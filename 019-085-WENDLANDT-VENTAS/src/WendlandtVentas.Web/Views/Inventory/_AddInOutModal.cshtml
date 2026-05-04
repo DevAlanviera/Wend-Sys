@@ -17,23 +17,29 @@
             @* --- SECCIÓN DE LOTE (Diferenciada) --- *@
             @if (Model.IsAdjustment || (string)ViewData["Action"] == "Out")
             {
-                <div class="form-group">
-                    <label>Seleccionar Lote</label> <b class="text-danger">*</b>
-                    @* Usamos el operador null-coalescing ?? para asegurar una lista vacía si viene nulo *@
-                    @Html.DropDownListFor(m => m.BatchId,
-                    Model.AvailableBatches ?? new List<SelectListItem>(),
-                                "Seleccione un lote disponible",
-                                new { @class = "form-control", id = "batchSelector" })
-                <span asp-validation-for="BatchId" class="text-danger"></span>
-            </div>
-            <!-- 🔥 AGREGAR: Campo para mostrar el número de lote seleccionado -->
-            <div class="form-group" id="batchNumberContainer" style="display:none;">
-                <label>Número de Lote</label>
-                <input type="text" id="displayBatchNumber" class="form-control" readonly />
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Seleccionar Lote</label> <b class="text-danger">*</b>
+                        @Html.DropDownListFor(m => m.BatchId,
+                        Model.AvailableBatches ?? new List<SelectListItem>(),
+                                        "Seleccione un lote disponible",
+                                        new { @class = "form-control", id = "batchSelector" })
+                    <span asp-validation-for="BatchId" class="text-danger"></span>
+                </div>
+                <div class="form-group col-md-6">
+                    <label asp-for="BatchNumber">Número de Lote</label>
+                    <input asp-for="BatchNumber" class="form-control" id="batchNumberInput" placeholder="Número de lote" />
+                    <small class="text-muted">Puedes editar el número de lote si es necesario</small>
+                    <span asp-validation-for="BatchNumber" class="text-danger"></span>
+                </div>
             </div>
 
-            <input type="hidden" name="BatchNumber" value="N/A" />
-            }
+            <!-- Mostrar stock actual del lote seleccionado -->
+            <div class="form-group" id="currentStockContainer" style="display:none;">
+                <label>Stock Actual del Lote</label>
+                <input type="text" id="currentStockInfo" class="form-control" readonly />
+            </div>
+                        }
             else
             {
                 @* Si el BatchId tiene valor, es una entrada a lote existente *@
@@ -122,26 +128,23 @@
         });
 
         // Prevenir doble submit
-        $('form.modal-content').on('submit', function(e) {
-            if (isSubmitting) {
-                e.preventDefault();
-                console.log('Prevenido envío duplicado');
-                return false;
-            }
+            $('form.modal-content').on('submit', function(e) {
+        // 🔥 Prevenir si ya se está procesando
+        if ($(this).data('processing') === true) {
+            e.preventDefault();
+            console.log('Formulario ya está siendo procesado');
+            return false;
+        }
 
-            isSubmitting = true;
-            var $btn = $(this).find('button[type="submit"]');
-            var textoOriginal = $btn.html();
+        // Marcar como procesando
+        $(this).data('processing', true);
 
-            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
+        var $btn = $(this).find('button[type="submit"]');
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
 
-            // Resetear después de 5 segundos (máximo)
-            setTimeout(function() {
-                isSubmitting = false;
-                $btn.prop('disabled', false).html(textoOriginal);
-            }, 5000);
-
-            return true;
+        // Liberar después de completar o si hay error
+        // Nota: Necesitas liberar en el success/error de la petición
+        return true;
         });
 
         // Lógica de autocompletado para Ajuste o Salida
@@ -149,12 +152,21 @@
             var batchId = $(this).val();
             if (batchId) {
                 $('input[name="BatchId"]').val(batchId);
-                console.log('BatchId seleccionado:', batchId);
-                console.log('BatchId oculto actualizado:', $('input[name="BatchId"]').val());
 
                 $.get('/Inventory/GetBatchDetails/' + batchId, function(data) {
                     console.log('Datos del lote:', data);
 
+                    // Guardar batch number original
+                    originalBatchNumber = data.batchNumber;
+
+                    // Mostrar batch number en el campo editable
+                    $('#batchNumberInput').val(data.batchNumber);
+
+                    // Mostrar stock actual
+                    $('#currentStockInfo').val(data.currentQuantity + ' unidades');
+                    $('#currentStockContainer').show();
+
+                    // Para ajuste: cargar cantidad actual
                     @if (Model.IsAdjustment)
                     {
                             <text>$('#inputQuantity').val(data.currentQuantity);</text>
@@ -165,16 +177,40 @@
                             <text>$('#inputQuantity').attr('placeholder', 'Cantidad a retirar (Stock: ' + data.currentQuantity + ')');</text>
                     }
 
-                    if(data.expiryDate) {
+                    // Cargar fecha de caducidad
+                    if (data.expiryDate) {
                         var date = new Date(data.expiryDate);
                         $('#inputExpiry').datepicker('setDate', date);
                     }
                 });
             } else {
+                // Limpiar cuando no hay selección
                 $('input[name="BatchId"]').val('');
+                $('#batchNumberInput').val('');
+                originalBatchNumber = '';
+                $('#currentStockContainer').hide();
                 $('#inputQuantity').val('');
                 $('#inputExpiry').val('');
             }
+        });
+
+        // Prevenir doble submit
+        $('#inOutForm').on('submit', function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
+
+            isSubmitting = true;
+            var $btn = $(this).find('button[type="submit"]');
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
+
+            setTimeout(function() {
+                isSubmitting = false;
+                $btn.prop('disabled', false).html('Guardar');
+            }, 5000);
+
+            return true;
         });
 
         // Resetear flag cuando el modal se cierra
@@ -183,5 +219,18 @@
             var $btn = $(this).find('button[type="submit"]');
             $btn.prop('disabled', false).html('Guardar');
         });
+
+            $('#batchNumberInput').on('input', function() {
+        var newBatchNumber = $(this).val();
+        var selectedBatchId = $('#batchSelector').val();
+
+        if (selectedBatchId && newBatchNumber) {
+            
+            // Puedes mostrar un mensaje indicando que se cambiará el nombre
+            $('#batchInfoContainer').append('<small class="text-warning">⚠️ El número de lote será actualizado</small>');
+        }
+    });
+
+
     });
 </script>

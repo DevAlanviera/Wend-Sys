@@ -7,6 +7,7 @@ using Syncfusion.XlsIO;
 using Syncfusion.XlsIORenderer;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -128,8 +129,44 @@ namespace WendlandtVentas.Infrastructure.Services
                 {
                     case 3:
 
-                            // --- LÓGICA PARA COTIZACIÓN REMISION ---
-                            worksheet.Range["E3"].Text = model.OrderClassificationCode.ToString();
+                        // Unificar rango B34:G35
+                        var rangoMensaje = worksheet.Range["B34:G35"];
+                        rangoMensaje.Merge();
+
+                        // Texto del mensaje
+                        string mensaje = $"Su cotización {model.OrderClassificationCode} se encuentra disponible para su revisión, " +
+                                         "por favor revisa que los productos, cantidades, presentaciones, así que como todos tus datos, " +
+                                         "estén correctos ya que una vez que nos confirmes lo procesaremos lo más rápido posible " +
+                                         "por lo que no podremos cambiar nada.";
+
+                        rangoMensaje.Text = mensaje;
+
+                        // 3. ACTIVAR EL AJUSTE DE TEXTO (WrapText) - Esto es lo que te falta
+                        rangoMensaje.CellStyle.WrapText = true;
+
+                        // 4. ALINEACIÓN (Opcional, pero recomendado para estética)
+                        rangoMensaje.CellStyle.VerticalAlignment = ExcelVAlign.VAlignCenter; // Centra el texto verticalmente
+                        rangoMensaje.CellStyle.HorizontalAlignment = ExcelHAlign.HAlignLeft;  // Alinea a la izquierda
+
+                        // 5. AJUSTAR ALTURA DE LAS FILAS
+                        // Como combinaste la fila 34 y 35, asegúrate de darles altura suficiente a ambas 
+                        // o al menos a la principal si el texto es muy largo.
+                       // worksheet.Rows[33].RowHeight = 40; // Fila 34 (índice 33 en Syncfusion)
+                       // worksheet.Rows[34].RowHeight = 40; // Fila 35 (índice 34 en Syncfusion)
+
+                        // Escribir el mensaje en la celda B34 (la celda superior izquierda del rango unificado)
+                        worksheet.Range["B34"].Text = mensaje;
+
+
+                        worksheet.Range["H36"].Text = nombreCliente; // o model.ProspectName
+
+
+                        // ✅ Ajustar altura de la fila
+                        //worksheet.Rows[34].RowHeight = 25;
+
+
+                        // --- LÓGICA PARA COTIZACIÓN REMISION ---
+                        worksheet.Range["E3"].Text = model.OrderClassificationCode.ToString();
 
                             // En cotización solemos usar SubTotal o Total sin impuestos detallados
                             var amountQuote = model.RealAmount.HasValue ? model.RealAmount.Value.ToString("C2") : model.SubTotal;
@@ -582,7 +619,12 @@ namespace WendlandtVentas.Infrastructure.Services
             using (var workbook = new XLWorkbook(templatePath))
             {
                 var ws = workbook.Worksheet(1);
-                ws.Cell("C3").Value = DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy");
+               
+
+                // 🔥 Reemplazar la fecha en la celda C3 con el formato deseado
+                var culture = new CultureInfo("es-MX");
+                string fechaFormateada = DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy", culture);
+                ws.Cell("B3").Value = fechaFormateada;
 
                 // 1. SEPARAR LISTAS
                 var productosLinea = datos.Where(x => !x.EsTemporada).OrderBy(x => x.Cerveza).ToList();
