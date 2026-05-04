@@ -111,6 +111,9 @@
 
 <script>
     $(function () {
+        // Flag para prevenir envíos múltiples
+        var isSubmitting = false;
+
         // Inicializar selector de fecha
         $(".date-picker-lotes").datepicker({
             autoclose: true,
@@ -118,41 +121,67 @@
             theme: 'bootstrap4'
         });
 
-        // Lógica de autocompletado solo para Ajuste o Salida
-            $('#batchSelector').on('change', function() {
-        var batchId = $(this).val();
-        if (batchId) {
-            // 🔥 IMPORTANTE: Actualizar el campo oculto BatchId
-            $('input[name="BatchId"]').val(batchId);
-            // O si tiene id específico: $('#BatchId').val(batchId);
+        // Prevenir doble submit
+        $('form.modal-content').on('submit', function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                console.log('Prevenido envío duplicado');
+                return false;
+            }
 
-            console.log('BatchId seleccionado:', batchId);
-            console.log('BatchId oculto actualizado:', $('input[name="BatchId"]').val());
+            isSubmitting = true;
+            var $btn = $(this).find('button[type="submit"]');
+            var textoOriginal = $btn.html();
 
-            $.get('/Inventory/GetBatchDetails/' + batchId, function(data) {
-                console.log('Datos del lote:', data);
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
 
-                @if (Model.IsAdjustment)
-                {
-                        <text>$('#inputQuantity').val(data.currentQuantity);</text>
-                }
-                else
-                {
-                        <text>$('#inputQuantity').val('');</text>
-                        <text>$('#inputQuantity').attr('placeholder', 'Cantidad a retirar (Stock: ' + data.currentQuantity + ')');</text>
-                }
+            // Resetear después de 5 segundos (máximo)
+            setTimeout(function() {
+                isSubmitting = false;
+                $btn.prop('disabled', false).html(textoOriginal);
+            }, 5000);
 
-                if(data.expiryDate) {
-                    var date = new Date(data.expiryDate);
-                    $('#inputExpiry').datepicker('setDate', date);
-                }
-            });
-        } else {
-            // Limpiar cuando no hay selección
-            $('input[name="BatchId"]').val('');
-            $('#inputQuantity').val('');
-            $('#inputExpiry').val('');
-        }
-    });
+            return true;
+        });
+
+        // Lógica de autocompletado para Ajuste o Salida
+        $('#batchSelector').on('change', function() {
+            var batchId = $(this).val();
+            if (batchId) {
+                $('input[name="BatchId"]').val(batchId);
+                console.log('BatchId seleccionado:', batchId);
+                console.log('BatchId oculto actualizado:', $('input[name="BatchId"]').val());
+
+                $.get('/Inventory/GetBatchDetails/' + batchId, function(data) {
+                    console.log('Datos del lote:', data);
+
+                    @if (Model.IsAdjustment)
+                    {
+                            <text>$('#inputQuantity').val(data.currentQuantity);</text>
+                    }
+                    else
+                    {
+                            <text>$('#inputQuantity').val('');</text>
+                            <text>$('#inputQuantity').attr('placeholder', 'Cantidad a retirar (Stock: ' + data.currentQuantity + ')');</text>
+                    }
+
+                    if(data.expiryDate) {
+                        var date = new Date(data.expiryDate);
+                        $('#inputExpiry').datepicker('setDate', date);
+                    }
+                });
+            } else {
+                $('input[name="BatchId"]').val('');
+                $('#inputQuantity').val('');
+                $('#inputExpiry').val('');
+            }
+        });
+
+        // Resetear flag cuando el modal se cierra
+        $('.modal').on('hidden.bs.modal', function() {
+            isSubmitting = false;
+            var $btn = $(this).find('button[type="submit"]');
+            $btn.prop('disabled', false).html('Guardar');
+        });
     });
 </script>

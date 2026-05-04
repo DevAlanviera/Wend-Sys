@@ -200,6 +200,11 @@
             }
         }
 
+        // Detectar cambios en el campo Name
+    $('#Name').on('input', function() {
+        checkForVariantKeywords();
+    });
+
         $('#IsBundle').on('change', toggleMode);
         $('#BundleTargetQty').on('change', function() {
             $('#target-label').text($(this).val());
@@ -316,7 +321,55 @@
             });
         });
 
+        // 🔥 FUNCIÓN PARA CARGAR INVENTORY SOURCE EN EDICIÓN
+        function loadExistingInventorySource() {
+            const existingInventorySourceId = $('#InventorySourceId').val();
+            const isEditMode = $('#Id').val() && $('#Id').val() !== '0';
+
+            if (isEditMode && existingInventorySourceId && existingInventorySourceId !== '') {
+                $('#sectionInventorySource').show();
+                if ($('.modal-errors').length) {
+                    $('.modal-errors').html('<div class="alert alert-info py-1">🔗 Producto variante vinculado a producto B.C.</div>');
+                }
+                return true;
+            }
+            return false;
+        }
+
         // DISPARO INICIAL (Crucial para Edit)
         toggleMode();
+
+        // 🔥 NUEVO: Ejecutar validación de variante al cargar (para edición)
+        setTimeout(function() {
+            checkForVariantKeywords();
+            loadExistingInventorySource(); // Si creas esta función
+        }, 100);
     });
+
+
+            function checkForVariantKeywords() {
+        const name = $('#Name').val() || '';
+        const distinction = $('.radio-distinction:checked').val();
+
+        // Palabras clave que indican que es una variante
+        const variantKeywords = ['f.g.', 'fg', 'n.a.l.', 'nal', 'f.g', 'fg.', 'nal.'];
+
+        const hasVariantKeyword = variantKeywords.some(keyword =>
+            name.toLowerCase().includes(keyword)
+        );
+
+        // Si el nombre contiene palabra clave Y no es un producto B.C. explícito
+        const isVariant = hasVariantKeyword && !name.toLowerCase().includes('b.c.');
+
+        if (isVariant) {
+            $('#sectionInventorySource').fadeIn();
+            $('#InventorySourceId').prop('required', true);
+            $('#InventorySourceId').attr('data-required', 'true');
+        } else {
+            $('#sectionInventorySource').fadeOut();
+            $('#InventorySourceId').prop('required', false);
+            $('#InventorySourceId').removeAttr('data-required');
+            $('#InventorySourceId').val('');
+        }
+    }
 </script>

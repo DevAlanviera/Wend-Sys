@@ -405,15 +405,6 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> Adjustment(InOutViewModel model)
         {
 
-            // 🔥 DEBUG: Ver qué está llegando
-            System.Diagnostics.Debug.WriteLine($"=== Adjustment CALLED ===");
-            System.Diagnostics.Debug.WriteLine($"BatchId: {model.BatchId}");
-            System.Diagnostics.Debug.WriteLine($"IsAdjustment: {model.IsAdjustment}");
-            System.Diagnostics.Debug.WriteLine($"Quantity: {model.Quantity}");
-            System.Diagnostics.Debug.WriteLine($"ProductPresentationId: {model.ProductPresentationId}");
-            System.Diagnostics.Debug.WriteLine($"ExpiryDate: {model.ExpiryDate}");
-            System.Diagnostics.Debug.WriteLine($"\n \n \n \n \n \n \n \n ");
-            System.Diagnostics.Debug.WriteLine($"\n \n \n \n \n \n \n \n ");
 
             if (!ModelState.IsValid) {
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);

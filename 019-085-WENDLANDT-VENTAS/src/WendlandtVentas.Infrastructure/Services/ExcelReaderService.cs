@@ -624,9 +624,12 @@ namespace WendlandtVentas.Infrastructure.Services
         // Método auxiliar para no repetir código de celdas
         private void EscribirFilaExcel(IXLWorksheet ws, int row, FilaReporteInventario item)
         {
+            // Transformar botellas a cajas + sueltas
+            var (cajas, sueltas) = CalcularCajasYSueltas(item.BotellaSuelta);
+            ws.Cell("C3").Value = DateTime.Now.ToString("dd/MM/yyyy");
             ws.Cell(row, 1).Value = item.Cerveza;
-            ws.Cell(row, 2).Value = item.CajaBotella > 0 ? item.CajaBotella : (object)null;
-            ws.Cell(row, 3).Value = item.BotellaSuelta > 0 ? item.BotellaSuelta : (object)null;
+            ws.Cell(row, 2).Value = cajas > 0 ? cajas : (object)null;
+            ws.Cell(row, 3).Value = sueltas > 0 ? sueltas : (object)null;
             ws.Cell(row, 4).Value = item.LataSuelta > 0 ? item.LataSuelta : (object)null;
             ws.Cell(row, 5).Value = item.Sesentas > 0 ? item.Sesentas : (object)null;
             ws.Cell(row, 6).Value = item.VeintesSteel > 0 ? item.VeintesSteel : (object)null;
@@ -634,8 +637,15 @@ namespace WendlandtVentas.Infrastructure.Services
             ws.Cell(row, 8).Value = item.Lote;
             ws.Cell(row, 9).Value = item.Caducidad;
 
-            // Borde de la A a la I (1 a 9)
             ws.Range(row, 1, row, 9).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
+
+        // Método auxiliar para calcular cajas y sueltas
+        private (int cajas, int sueltas) CalcularCajasYSueltas(int totalBotellas)
+        {
+            int cajas = totalBotellas / 24;
+            int sueltas = totalBotellas % 24;
+            return (cajas, sueltas);
         }
     }
 }

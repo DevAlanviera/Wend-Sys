@@ -388,7 +388,7 @@ namespace WendlandtVentas.Core.Services
             var mensaje = $@"
             <html>
                 <body>
-                    <h2 style='color: #d9534f;'>Notificación de Stock Crítico</h2>
+                    <h2 style='color: #d9534f;'>Notificación de Stock Mínimo</h2>
                     <p>El siguiente producto ha alcanzado su nivel mínimo de inventario:</p>
                     <ul>
                         <li><strong>Producto:</strong> {p.Product.Name}</li>
@@ -406,7 +406,10 @@ namespace WendlandtVentas.Core.Services
             {
                 "raul.medina@wendlandt.com.mx",
                 "francisco.hernandez@wendlandt.com.mx",
-                "nestor.camacho@wendlandt.com.mx"
+                "nestor.camacho@wendlandt.com.mx",
+                "eugenio@wendlandt.com.mx",
+                "diana@wendlandt.com.mx",
+                "alex@wendlandt.com.mx"
             };
 
             bool todosExitosos = true;
@@ -492,19 +495,66 @@ namespace WendlandtVentas.Core.Services
 
                 // 3. Configurar destinatarios y enviar
                 string fechaStr = DateTime.Now.ToString("dd/MM/yyyy");
-                var destinatarios = new List<string> { "a.cordova.viera@gmail.com" };
+                var destinatarios = new[]
+                {
+                    "raul.medina@wendlandt.com.mx",
+                    "brewpub@wendlandt.com.mx",
+                    "tastingroommexicali@wendlandt.com.mx",
+                    "tastingroomsauzal@wendlandt.com.mx",
+                    "tastingroomtijuana@wendlandt.com.mx",
+                    "almacen@wendlandt.com.mx",
+                    "alex@wendlandt.com.mx",
+                    "francisco.hernandez@wendlandt.com.mx",
+                    "nestor.camacho@wendlandt.com.mx",
+                    "cobranza@wendlandt.com.mx",
+                    "mantenimiento@wendlandt.com.mx",
+                    "diana@wendlandt.com.mx",
+                    "eugenio@wendlandt.com.mx",
+                    "ben.matz@wendlandt.com.mx",
+                    "celso@wendlandt.com.mx",
+                    "xico@wendlandt.com.mx",
+                    "hazael.moreno@wendlandt.com.mx",
+                    "aaron.monzon@wendlandt.com.mx",
+                    "valeria@wendlandt.com.mx",
+                    "peninsula@wendlandt.com.mx",
+                    "capital.humano@wendlandt.com.mx",
+                    "gamaliel.alvarez@wendlandt.com.mx",
+                    "ventas.mexicali@wendlandt.com.mx",
+                    "ventas.ensenada@wendlandt.com.mx"
+                };
 
-                await _emailSender.SendEmailAsync(
-                 email: "francisco.hernandez@wendlandt.com.mx",
-                 subject: $"📦 Reporte de Inventario Físico - {fechaStr}",
-                 message: "Buen día, adjunto el reporte de inventario generado automáticamente a las 9:00 AM.",
-                 file: null,
-                 attachmentBytes: excelBytes,
-                 attachmentName: $"Inventario_{DateTime.Now:yyyyMMdd}.xlsx",
-                 perfil: "Email" // O el perfil que uses para estos envíos
-                );
+                string asunto = $"📦 Reporte de Inventario Físico - {fechaStr}";
+                string mensaje = "Buen día, se adjunta el reporte de inventario generado automáticamente a las 9:00 AM.";
 
-                _logger.LogInformation("Reporte matutino enviado exitosamente.");
+                bool todosExitosos = true;
+
+                foreach (var destinatario in destinatarios)
+                {
+                    var resultado = await _emailSender.SendEmailAsync(
+                        email: destinatario,
+                        subject: asunto,
+                        message: mensaje,
+                        file: null,
+                        attachmentBytes: excelBytes,
+                        attachmentName: $"Inventario_{DateTime.Now:yyyyMMdd}.xlsx",
+                        perfil: "Email"
+                    );
+
+                    if (!resultado)
+                    {
+                        _logger.LogWarning($"No se pudo enviar reporte de inventario a {destinatario}");
+                        todosExitosos = false;
+                    }
+                }
+
+                if (todosExitosos)
+                {
+                    _logger.LogInformation($"Reporte de inventario enviado a {destinatarios.Length} destinatarios");
+                }
+                else
+                {
+                    _logger.LogWarning($"Reporte de inventario enviado con errores a algunos destinatarios");
+                }
             }
             catch (Exception ex)
             {

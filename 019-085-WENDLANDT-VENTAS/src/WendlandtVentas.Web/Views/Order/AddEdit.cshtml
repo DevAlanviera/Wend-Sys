@@ -444,7 +444,7 @@
                                 currencyType: $('#CurrencyType').val()
                             })
                             .done(function (response) {
-                                console.log("🎯 Respuesta de GetProductInfo:", response);
+                               // console.log("🎯 Respuesta de GetProductInfo:", response);
                                 $("#Price").val(response.price);
                                 currentProductId = response.productId;
                                 esBundleGlobal = response.isBundle;
@@ -504,11 +504,15 @@
                     });
                 } else {
                     // Validación para producto normal
-                   
+                   // Validación para producto normal
+                   // console.log("🍺 Producto normal - PresentationId:", currentPresentationId);
+    
+                    // 🔥 También mostrar el nombre del producto para saber si es variante
+                   // console.log("🍺 Nombre del producto:", $("#ProductSelect option:selected").text());
 
                     $.get("@Url.Action("GetProductStock", "Order")", { id: currentPresentationId })
                     .done(function (response) {
-                        console.log("🍺 Stock disponible:", response.stock);
+                        //console.log("🍺 Stock disponible:", response.stock);
 
                         if (cantidad > response.stock) {
                             $(".modal-errors").html('<div class="alert alert-danger py-1">⚠️ Stock insuficiente. Disponible: ' + response.stock + '</div>');
@@ -592,7 +596,7 @@
             }
 
                     const isQuote = $('#OrderClassification').val() == 3;
-        console.log( $('#OrderClassification').val());
+        //console.log( $('#OrderClassification').val());
         if (!isQuote) {
             // Si NO es cotización, aplicamos la validación estricta de RFC
             const hasValidRFC = await checkClientRFCAsync();
@@ -915,7 +919,7 @@
             }else {
                 // Validar el nombre del prospecto manualmente ya que ClientId se ignora
                 var ProspectName = $('input[name="ProspectName"]').val();
-                console.log(ProspectName);
+                //console.log(ProspectName);
                 if (!ProspectName || ProspectName.trim() === "") {
                     isValid = false;
                     error = "Es necesario escribir el nombre del prospecto.";

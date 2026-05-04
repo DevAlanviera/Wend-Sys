@@ -1072,21 +1072,21 @@ namespace WendlandtVentas.Web.Controllers
 
                 await _repository.UpdateAsync(order);
 
-                // Manejo de inventario
-                var messageDiscountInventory = string.Empty;
-                if (!order.InventoryDiscount && model.Status != OrderStatus.Cancelled)
-                {
-                    var response = await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
-                    order.ToggleInventoryDiscount();
-                    await _repository.UpdateAsync(order);
-                    messageDiscountInventory = response.Message;
-                }
-                else if (order.InventoryDiscount && model.Status == OrderStatus.Cancelled)
-                {
-                    var response = await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
-                    order.ToggleInventoryDiscount();
-                    await _repository.UpdateAsync(order);
-                }
+                // Manejo de inventario - COMENTADO PARA NO MOVER INVENTARIO
+                // var messageDiscountInventory = string.Empty;
+                // if (!order.InventoryDiscount && model.Status != OrderStatus.Cancelled)
+                // {
+                //     var response = await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
+                //     order.ToggleInventoryDiscount();
+                //     await _repository.UpdateAsync(order);
+                //     messageDiscountInventory = response.Message;
+                // }
+                 if (order.InventoryDiscount && model.Status == OrderStatus.Cancelled)
+                 {
+                     var response = await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
+                     order.ToggleInventoryDiscount();
+                     await _repository.UpdateAsync(order);
+                 }
 
                 if (model.Status == OrderStatus.Paid || model.Status == OrderStatus.PartialPayment)
                 {
