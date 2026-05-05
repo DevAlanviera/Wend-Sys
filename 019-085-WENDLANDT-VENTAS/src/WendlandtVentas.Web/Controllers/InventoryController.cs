@@ -461,22 +461,9 @@ namespace WendlandtVentas.Web.Controllers
                 // 🔥 NUEVO: Verificar si el usuario cambió el nombre del lote
                 if (!string.IsNullOrWhiteSpace(model.BatchNumber) && batch.BatchNumber != model.BatchNumber)
                 {
-                    // Verificar que el nuevo nombre no exista ya en otro lote del mismo producto
-                    var existingBatchWithNewName = await _repository.GetQueryable<Batch>()
-                        .FirstOrDefaultAsync(b => b.ProductPresentationId == model.ProductPresentationId
-                                               && b.BatchNumber == model.BatchNumber
-                                               && b.Id != batch.Id
-                                               && !b.IsDeleted);
-
-                    if (existingBatchWithNewName != null)
-                    {
-                        return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
-                            $"El número de lote '{model.BatchNumber}' ya existe para este producto"));
-                    }
-
-                    // Actualizar el nombre del lote
+                    // ✅ SIMPLEMENTE actualizar el nombre, sin verificar duplicados
                     batch.BatchNumber = model.BatchNumber;
-                    _logger.LogInformation($"Lote {batch.Id} renombrado de '{batch.BatchNumber}' a '{model.BatchNumber}'");
+                    //_logger.LogInformation($"Lote {batch.Id} renombrado de '{batch.BatchNumber}' a '{model.BatchNumber}'");
                 }
 
                 var user = await _userManager.FindByNameAsync(User.Identity.Name);

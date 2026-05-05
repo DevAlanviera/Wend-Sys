@@ -117,43 +117,24 @@
 
 <script>
     $(function () {
-        // Flag para prevenir envíos múltiples
         var isSubmitting = false;
+        var originalBatchNumber = '';  // 🔥 Variable faltante
 
-        // Inicializar selector de fecha
+        // Inicializar datepicker
         $(".date-picker-lotes").datepicker({
             autoclose: true,
             format: 'dd/mm/yyyy',
             theme: 'bootstrap4'
         });
 
-        // Prevenir doble submit
-            $('form.modal-content').on('submit', function(e) {
-        // 🔥 Prevenir si ya se está procesando
-        if ($(this).data('processing') === true) {
-            e.preventDefault();
-            console.log('Formulario ya está siendo procesado');
-            return false;
-        }
-
-        // Marcar como procesando
-        $(this).data('processing', true);
-
-        var $btn = $(this).find('button[type="submit"]');
-        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
-
-        // Liberar después de completar o si hay error
-        // Nota: Necesitas liberar en el success/error de la petición
-        return true;
-        });
-
-        // Lógica de autocompletado para Ajuste o Salida
+        // Lógica de autocompletado para el dropdown de lotes
         $('#batchSelector').on('change', function() {
             var batchId = $(this).val();
             if (batchId) {
+                // Actualizar el campo oculto BatchId
                 $('input[name="BatchId"]').val(batchId);
 
-                $.get('/Inventory/GetBatchDetails/' + batchId, function(data) {
+                $.get('@Url.Action("GetBatchDetails", "Inventory")/' + batchId, function(data) {
                     console.log('Datos del lote:', data);
 
                     // Guardar batch number original
@@ -194,21 +175,35 @@
             }
         });
 
+        // Cuando el usuario edita el número de lote manualmente
+        $('#batchNumberInput').on('input', function() {
+            var newBatchNumber = $(this).val();
+            var selectedBatchId = $('#batchSelector').val();
+
+            if (selectedBatchId && newBatchNumber && newBatchNumber !== originalBatchNumber) {
+                // Mostrar mensaje indicando que se cambiará el nombre
+                var $warning = $('#batchNumberWarning');
+                if ($warning.length === 0) {
+                   
+                } else {
+                    $warning.show();
+                }
+            }
+        });
+
         // Prevenir doble submit
-        $('#inOutForm').on('submit', function(e) {
+        var $form = $('.forma-ajax--modal');
+
+        $form.on('submit', function(e) {
             if (isSubmitting) {
                 e.preventDefault();
+                console.log('Prevenido envío duplicado');
                 return false;
             }
 
             isSubmitting = true;
             var $btn = $(this).find('button[type="submit"]');
             $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
-
-            setTimeout(function() {
-                isSubmitting = false;
-                $btn.prop('disabled', false).html('Guardar');
-            }, 5000);
 
             return true;
         });
@@ -218,19 +213,8 @@
             isSubmitting = false;
             var $btn = $(this).find('button[type="submit"]');
             $btn.prop('disabled', false).html('Guardar');
+            // Limpiar mensajes de advertencia
+            $('#batchNumberWarning').remove();
         });
-
-            $('#batchNumberInput').on('input', function() {
-        var newBatchNumber = $(this).val();
-        var selectedBatchId = $('#batchSelector').val();
-
-        if (selectedBatchId && newBatchNumber) {
-            
-            // Puedes mostrar un mensaje indicando que se cambiará el nombre
-            $('#batchInfoContainer').append('<small class="text-warning">⚠️ El número de lote será actualizado</small>');
-        }
-    });
-
-
     });
 </script>
