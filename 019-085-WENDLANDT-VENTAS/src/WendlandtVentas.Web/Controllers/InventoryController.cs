@@ -10,11 +10,13 @@ using OpenXmlPowerTools.HtmlToWml.CSS;
 using Syncfusion.EJ2.Base;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Interfaces;
+using WendlandtVentas.Core.Services;
 using WendlandtVentas.Core.Specifications; 
 using WendlandtVentas.Core.Specifications.ProductPresentationSpecifications;
 using WendlandtVentas.Infrastructure.Commons;
@@ -36,9 +38,10 @@ namespace WendlandtVentas.Web.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IInventoryService _inventoryService;
         private readonly IMemoryCache _memoryCache;
+        private readonly IClientInventoryReservationService _clientInventoryReservationService;
 
         public InventoryController(IAsyncRepository repository, ILogger<InventoryController> logger, SfGridOperations sfGridOperations, UserManager<ApplicationUser> userManager,
-            IInventoryService inventoryService, IExcelReadService excelReaderService, IMemoryCache memoryCache)
+            IInventoryService inventoryService, IExcelReadService excelReaderService, IMemoryCache memoryCache, IClientInventoryReservationService clientInventoryReservationService)
         {
             _repository = repository;
             _logger = logger;
@@ -47,6 +50,7 @@ namespace WendlandtVentas.Web.Controllers
             _inventoryService = inventoryService;
             _excelReaderService = excelReaderService;
             _memoryCache = memoryCache;
+            _clientInventoryReservationService = clientInventoryReservationService;
         }
 
         public async Task<IActionResult> Index(FilterViewModel model)
@@ -529,5 +533,91 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo realizar el ajuste"));
             }
         }
+
+        //SECCION DE APARTADOS PARA CLIENTE
+        [HttpGet]
+        public async Task<IActionResult> CreateReservation(int productPresentationId)
+        {
+            ViewData["Action"] = nameof(CreateReservation);
+            ViewData["ModalTitle"] = "Apartar inventario para cliente";
+
+            // Obtener información del producto
+            var productPresentation = await _repository.GetAsync(new ProductPresentationExtendedSpecification(productPresentationId));
+            if (productPresentation == null) return NotFound();
+
+            // Obtener stock total disponible (sin apartados)
+            var totalStock = await _inventoryService.GetAvailableStock(productPresentationId);
+
+            // Obtener lista de clientes activos
+            var clients = await _repository.ListAllAsync<Client>();
+            var clientList = clients.Select(c => new SelectListItem
+            {
+                Value = c.Id.ToString(),
+                Text = c.Name
+            }).OrderBy(c => c.Text).ToList();
+
+            var model = new ClientReservationViewModel
+            {
+                ProductPresentationId = productPresentationId,
+                ProductName = productPresentation.Product?.Name ?? "",
+                PresentationName = productPresentation.Presentation?.Name ?? "",
+                Liters = productPresentation.Presentation?.Liters ?? 0,
+                AvailableStock = totalStock,
+                Clients = new SelectList(clientList, "Value", "Text")
+            };
+
+            return PartialView("_AddReservationModal", model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateReservation(ClientReservationViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return Json(AjaxFunctions.GenerateJsonError(string.Join(" | ", errors)));
+            }
+
+            try
+            {
+                // Convertir fecha de expiración si se proporcionó
+                DateTime? expirationDate = null;
+                if (!string.IsNullOrWhiteSpace(model.ExpirationDate))
+                {
+                    expirationDate = DateTime.ParseExact(model.ExpirationDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+                }
+
+                var response = await _clientInventoryReservationService.CreateReservationAsync(
+                    model.ClientId,
+                    model.ProductPresentationId,
+                    model.ReservedQuantity,
+                    model.Notes,
+                    User.Identity.Name
+                );
+
+                if (response.IsSuccess)
+                {
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, response.Message));
+                }
+                else
+                {
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, response.Message));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear apartado");
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo crear el apartado"));
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailableStockForClient(int clientId, int productPresentationId)
+        {
+            var availableStock = await _clientInventoryReservationService.GetAvailableStockForClientAsync(clientId, productPresentationId);
+            return Json(new { availableStock = availableStock });
+        }
+
     }
 }

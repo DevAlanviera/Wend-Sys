@@ -50,6 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Models\NewFolder\" />
     <Folder Include="scripts\" />
     <Folder Include="Services\" />
     <Folder Include="wwwroot\lib\coreui\js\" />

@@ -101,9 +101,39 @@
     </div>
     <div class="modal" id="adjustmentModal" tabindex="-1" role="dialog" aria-labelledby="adjustmentModal-label" data-url="@Url.Action("Adjustment")">
     </div>
+    <div class="modal modal-focus-first" id="reservationModal" tabindex="-1" role="dialog" aria-labelledby="reservationModal-label" data-url="@Url.Action("CreateReservation")">
+    </div>
 }
 
 @section Scripts{
+    <script>
+    // Manejador para el botón de apartado
+    $(document).ready(function() {
+        $(document).on('click', '.btn-reservation-modal', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var productPresentationId = $(this).data('product-presentation-id');
+            var $modal = $('#reservationModal');
+            var url = $modal.data('url');
+            
+            console.log("DEBUG: Apartar - ProductPresentationId:", productPresentationId);
+            
+            if (!productPresentationId) {
+                console.error('No se encontró product-presentation-id');
+                return;
+            }
+            
+            $.get(url, { productPresentationId: productPresentationId }, function(data) {
+                $modal.html(data);
+                $modal.modal('show');
+            }).fail(function(error) {
+                console.error('Error al cargar modal de apartado:', error);
+                alert('Error al cargar el formulario de apartado');
+            });
+        });
+    });
+</script>
     <script>
                 $(document).on('click', '.btn-modal-action', function (e) {
             var $btn = $(this);
@@ -181,6 +211,9 @@
             <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
             <a href="#outModal" data-id="${id}" title="Agregar salida" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-out text-danger"></i></a>
             <a href="#adjustmentModal" data-id="${id}" title="Realizar ajuste" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-pen"></i></a>
+            <a type="button" data-product-presentation-id="${id}" title="Apartar inventario" class="tip btn btn-sm btn-light mr-2 btn-reservation-modal">
+            <i class="fa fa-fw fa-tag text-info"></i>
+        </a>
         </div>
     </script>
 
@@ -188,6 +221,7 @@
     <script id="userActionButtons" type="text/x-template">
         <div>
             <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
+
         </div>
     </script>
 
