@@ -86,7 +86,7 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Entity<Bitacora>(ConfigureExecution);
             builder.Entity<PrecioEspecial>(ConfigureExecution);
             builder.Entity<ProductBundleComponent>(ConfigureExecution);
-            builder.Entity<ClientInventoryReservation>();
+            builder.Entity<ClientInventoryReservation>(ConfigureClientInventoryReservation);
         }
 
         private void ConfigureExecution(EntityTypeBuilder<PrecioEspecial> builder)
@@ -129,11 +129,16 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.ToTable("ClientInventoryReservations");
             builder.HasKey(r => r.Id);
 
-            // Relaciones
-            builder.HasOne(r => r.Client).WithMany().HasForeignKey(r => r.ClientId).OnDelete(DeleteBehavior.Restrict);
-            builder.HasOne(r => r.ProductPresentation).WithMany().HasForeignKey(r => r.ProductPresentationId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(r => r.Client)
+                .WithMany()
+                .HasForeignKey(r => r.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Propiedades
+            builder.HasOne(r => r.ProductPresentation)
+                .WithMany()
+                .HasForeignKey(r => r.ProductPresentationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.Property(r => r.ClientId).IsRequired();
             builder.Property(r => r.ProductPresentationId).IsRequired();
             builder.Property(r => r.ReservedQuantity).IsRequired();
@@ -142,17 +147,7 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Property(r => r.CreatedBy).IsRequired().HasMaxLength(256);
             builder.Property(r => r.UpdatedBy).HasMaxLength(256);
             builder.Property(r => r.Notes).HasMaxLength(500);
-            builder.Property(r => r.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
-            builder.Property(r => r.UpdatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
-            builder.Property(r => r.IsDeleted).IsRequired().HasDefaultValue(false);
 
-            // Índices
-            builder.HasIndex(r => r.ClientId).HasName("IX_ClientInventoryReservations_ClientId");
-            builder.HasIndex(r => r.ProductPresentationId).HasName("IX_ClientInventoryReservations_ProductPresentationId");
-            builder.HasIndex(r => new { r.ClientId, r.Status, r.CreatedAt }).HasName("IX_ClientInventoryReservations_FIFO");
-            builder.HasIndex(r => new { r.Status, r.IsDeleted }).HasName("IX_ClientInventoryReservations_Active");
-
-            // Filtro
             builder.HasQueryFilter(r => !r.IsDeleted);
         }
 

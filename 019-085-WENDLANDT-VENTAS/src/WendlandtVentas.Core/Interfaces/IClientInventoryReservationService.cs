@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using WendlandtVentas.Web.Models.InventoryViewModels;
 
 namespace WendlandtVentas.Core.Interfaces
 {
@@ -14,5 +15,12 @@ namespace WendlandtVentas.Core.Interfaces
         Task<int> GetAvailableStockForClientAsync(int clientId, int productPresentationId);
         Task<int> GetTotalAvailableStockAsync(int productPresentationId);
         Task<Response> CancelReservationAsync(int reservationId, string cancelledBy);
+
+        Task<List<ClientInventoryReservation>> GetActiveReservationsByProductAsync(int productPresentationId);
+
+        Task<Response> EditReservationAsync(int reservationId, int newQuantity, string notes, string updatedBy);
+
+        Task<ClientInventoryReservation> GetActiveReservationsByClientAndProductAsync(int clientId, int productPresentationId);
+
     }
 }

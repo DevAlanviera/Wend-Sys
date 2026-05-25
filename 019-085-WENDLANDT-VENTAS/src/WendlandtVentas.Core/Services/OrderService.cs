@@ -42,12 +42,13 @@ namespace WendlandtVentas.Core.Services
         private readonly IEmailSender _emailSender;
         private readonly IExcelReadService _excelReaderService;
         private readonly IBitacoraService _bitacoraService;
+        private readonly IClientInventoryReservationService _clientInventoryReservationService;
 
         public OrderService(UserManager<ApplicationUser> userManager,
             IAsyncRepository repository, INotificationService notificationService,
             IBitacoraService bitacoraService,
             IInventoryService inventoryService, ILogger<OrderService> logger,
-            CacheService cacheService, IEmailSender emailSender, IExcelReadService excelReaderService)
+            CacheService cacheService, IEmailSender emailSender, IExcelReadService excelReaderService, IClientInventoryReservationService clientInventoryReservationService)
         {
             _userManager = userManager;
             _repository = repository;
@@ -58,6 +59,7 @@ namespace WendlandtVentas.Core.Services
             _cacheService = cacheService;
             _emailSender = emailSender;
             _excelReaderService = excelReaderService;
+            _clientInventoryReservationService = clientInventoryReservationService;
         }
 
 
@@ -96,7 +98,7 @@ namespace WendlandtVentas.Core.Services
             // Validación final de RFC (redundante por seguridad)
             if (model.IsInvoice == OrderType.Invoice && model.OrderClassification != 3)
             {
-               
+
                 if (client == null || string.IsNullOrEmpty(client.RFC))
                     return new Response(false, "No se puede facturar: el cliente no tiene RFC registrado.");
             }
@@ -106,7 +108,7 @@ namespace WendlandtVentas.Core.Services
             {
                 model.IsInvoice = OrderType.Remission;
             }
-          
+
 
             foreach (var productPresentation in productPresentations)
             {
@@ -120,7 +122,7 @@ namespace WendlandtVentas.Core.Services
                 var isPresent = model.ProductIsPresent[i];
                 var price = model.ProductPrices[i];
 
-               
+
 
                 orderProducts.Add(new OrderProduct(productPresentation, quantity, isPresent, price));
             }
@@ -190,17 +192,57 @@ namespace WendlandtVentas.Core.Services
                 // 1. Preparamos los productos de la orden normal
                 if (order.OrderClassification != 3)
                 {
-                    // Preparar productos a procesar
-                    var productsToProcess = order.OrderProducts
-                        .Select(op => new ProductPresentationQuantity
-                        {
-                            Id = op.ProductPresentationId,
-                            Quantity = op.Quantity
-                        })
-                        .ToList();
+                    // 🔥 NUEVO: Procesar apartados del cliente
+                    var productsForInventory = new List<ProductPresentationQuantity>();
 
-                    // 🔥 Descomponer bundles
-                    var expandedProducts = await _inventoryService.DescomponerBundlesAsync(productsToProcess);
+                    foreach (var orderProduct in order.OrderProducts)
+                    {
+                        // Verificar si el cliente tiene apartado activo para este producto
+                        var reservation = await _clientInventoryReservationService.GetActiveReservationsByClientAndProductAsync(
+                            order.ClientId,
+                            orderProduct.ProductPresentationId);
+
+                        if (reservation != null && reservation.AvailableQuantity > 0)
+                        {
+                            // Cuánto podemos tomar del apartado
+                            var takeFromReservation = Math.Min(orderProduct.Quantity, reservation.AvailableQuantity);
+                            var remaining = orderProduct.Quantity - takeFromReservation;
+
+                            if (takeFromReservation > 0)
+                            {
+                                // Usar del apartado
+                                await _clientInventoryReservationService.UseReservationAsync(
+                                    order.ClientId,
+                                    orderProduct.ProductPresentationId,
+                                    takeFromReservation,
+                                    order.Id.ToString());
+
+                                _logger.LogInformation($"Cliente {order.ClientId} usó {takeFromReservation} unidades de su apartado para el producto {orderProduct.ProductPresentationId}");
+                            }
+
+                            // Lo que falta se descuenta de stock normal
+                            if (remaining > 0)
+                            {
+                                productsForInventory.Add(new ProductPresentationQuantity
+                                {
+                                    Id = orderProduct.ProductPresentationId,
+                                    Quantity = remaining
+                                });
+                            }
+                        }
+                        else
+                        {
+                            // No tiene apartado, descontar todo de stock normal
+                            productsForInventory.Add(new ProductPresentationQuantity
+                            {
+                                Id = orderProduct.ProductPresentationId,
+                                Quantity = orderProduct.Quantity
+                            });
+                        }
+                    }
+
+                    // 🔥 Descomponer bundles para los productos que van a inventario
+                    var expandedProducts = await _inventoryService.DescomponerBundlesAsync(productsForInventory);
 
                     if (order.Type == OrderType.Return)
                     {
@@ -238,7 +280,7 @@ namespace WendlandtVentas.Core.Services
 
                 await _repository.UpdateAsync(order);
 
-               
+
 
                 if (model.OrderClassification != 3)
                 {
@@ -250,7 +292,7 @@ namespace WendlandtVentas.Core.Services
                 }
                 var bitacora = new Bitacora(order.Id, user.Name, $"Crear {orderTypeName.ToLower()}");
                 await _bitacoraService.AddAsync(bitacora);
-                
+
                 _cacheService.InvalidateOrderCache();
                 // string mensaje = (client.Channel == Entities.Enums.Channel.Distributor)
                 // ? "Confirmado: Es un Distribuidor"
@@ -258,13 +300,13 @@ namespace WendlandtVentas.Core.Services
                 // 
                 if (client.Channel == Entities.Enums.Channel.Distributor && model.OrderClassification != 3)
                 {
-                   
+
                     try
                     {
                         // 1. Generar PDF del pedido usando ExcelReaderService
                         var pdfBytes = await _excelReaderService.FillDataAndReturnPdfAsync("wwwroot/resources", order);
 
-                       
+
                         // 2.3 Enviar correo al cliente con el PDF adjunto
                         var enviado = await EnviarEstadoCuentaAsync(order.Id, clienteEmail, pdfBytes);
 
@@ -275,8 +317,8 @@ namespace WendlandtVentas.Core.Services
                     {
                         _logger.LogError(ex, "Error al generar PDF o enviar correo para el pedido {OrderId}", order.Id);
                     }
-                
-              }
+
+                }
 
                 if (order.OrderClassification != 3) // No validamos en cotizaciones
                 {
@@ -294,10 +336,7 @@ namespace WendlandtVentas.Core.Services
                     }
                 }
 
-
                 return new Response(true, "Pedido guardado");
-
-                
             }
             catch (Exception e)
             {
@@ -306,6 +345,7 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, e.Message);
             }
         }
+            
 
         private async Task<int> GenerarSiguienteFolio(int classificationId)
         {

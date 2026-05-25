@@ -467,6 +467,11 @@
                 const cantidad = parseInt($("#Quantity").val()) || 0;
                 const $btnSave = $('#form-addProduct button[type="submit"]');
 
+                const clientId = $('#ClientId').val();
+
+                 console.log("ClientId seleccionado:", clientId); // Para depurar
+                
+
                 if (cantidad <= 0) {
                     $(".modal-errors").html('<div class="alert alert-warning py-1">Ingresa una cantidad válida.</div>');
                     $btnSave.prop('disabled', true);
@@ -510,10 +515,10 @@
                     // 🔥 También mostrar el nombre del producto para saber si es variante
                    // console.log("🍺 Nombre del producto:", $("#ProductSelect option:selected").text());
 
-                    $.get("@Url.Action("GetProductStock", "Order")", { id: currentPresentationId })
+                   $.get("@Url.Action("GetProductStock", "Order")", { id: currentPresentationId, clientId: clientId })
                     .done(function (response) {
                         //console.log("🍺 Stock disponible:", response.stock);
-
+                         console.log("Stock recibido:", response.stock);
                         if (cantidad > response.stock) {
                             $(".modal-errors").html('<div class="alert alert-danger py-1">⚠️ Stock insuficiente. Disponible: ' + response.stock + '</div>');
                             $btnSave.prop('disabled', true);

@@ -1,7 +1,11 @@
 ﻿@model WendlandtVentas.Web.Models.InventoryViewModels.ClientReservationViewModel
 
 <div class="modal-dialog modal-lg" role="document">
-    <form asp-action="CreateReservation" asp-antiforgery="true" class="modal-content forma-ajax--modal" id="reservationForm">
+  <form method="post" 
+      action="@Url.Action("CreateReservation", "Inventory")"  
+      asp-antiforgery="true" 
+      class="modal-content forma-ajax--modal" 
+      id="reservationForm">
         <div class="modal-header bg-black text-dark">
             <h5 class="modal-title">
                 <i class="fa fa-tag"></i> Apartar inventario para cliente
@@ -74,12 +78,23 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-modal-action">
-                <i class="fa fa-save"></i> Crear apartado
-            </button>
+           <button type="button" id="btnCreateReservation" class="btn" style="background-color: #6f42c1; border-color: #6f42c1; color: white;">
+    <i class="fa fa-save"></i> Crear apartado
+</button>
         </div>
     </form>
 </div>
+
+<script>
+    $(function() {
+        // Forzar el envío del formulario al hacer clic en el botón
+        $('#btnCreateReservation').on('click', function(e) {
+            e.preventDefault();
+            console.log('Botón clickeado, enviando formulario...');
+            $('#reservationForm').submit();
+        });
+    });
+</script>
 
 <script>
     $(function () {
@@ -127,6 +142,8 @@
         $('#reservationForm').on('submit', function(e) {
             var quantity = parseInt($('#reservedQuantity').val());
             var maxAvailable = parseInt($('#availableStock').text());
+
+            console.log('Formulario enviado');
             
             if (isNaN(quantity) || quantity <= 0) {
                 e.preventDefault();

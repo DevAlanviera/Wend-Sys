@@ -44,6 +44,52 @@ namespace WendlandtVentas.Core.Services
             return physicalStock - otherReservationsSum;
         }
 
+        public async Task<Response> EditReservationAsync(int reservationId, int newQuantity, string notes, string updatedBy)
+        {
+            try
+            {
+                var reservation = await _repository.GetByIdAsync<ClientInventoryReservation>(reservationId);
+                if (reservation == null)
+                    return new Response(false, "Apartado no encontrado");
+
+                if (reservation.Status != "Active")
+                    return new Response(false, $"No se puede editar un apartado con estado '{reservation.Status}'");
+
+                // Verificar que la nueva cantidad no exceda el stock disponible
+                var usedQuantity = reservation.UsedQuantity;
+                if (newQuantity < usedQuantity)
+                    return new Response(false, $"No se puede reducir a menos de lo ya usado ({usedQuantity})");
+
+                // Calcular stock disponible para este cliente (incluyendo este apartado)
+                var physicalStock = await _inventoryService.GetAvailableStock(reservation.ProductPresentationId);
+                var otherReservations = await _repository.ListAsync(
+                    new ClientInventoryReservationExcludeClientSpecification(reservation.ProductPresentationId, reservation.ClientId));
+                var otherReservationsSum = otherReservations.Sum(r => r.AvailableQuantity);
+
+                var availableForClient = physicalStock - otherReservationsSum;
+                var additionalNeeded = newQuantity - reservation.ReservedQuantity;
+
+                if (additionalNeeded > 0 && additionalNeeded > availableForClient)
+                    return new Response(false, $"No hay suficiente stock. Disponible: {availableForClient}, Necesitas {additionalNeeded} adicionales");
+
+                reservation.ReservedQuantity = newQuantity;
+                reservation.Notes = notes;
+                reservation.UpdatedAt = DateTime.Now;
+                reservation.UpdatedBy = updatedBy;
+
+                await _repository.UpdateAsync(reservation);
+
+                _logger.LogInformation($"Apartado {reservationId} editado: Cantidad de {reservation.ReservedQuantity} a {newQuantity}");
+
+                return new Response(true, "Apartado editado correctamente");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar apartado");
+                return new Response(false, "Error al editar apartado");
+            }
+        }
+
         public async Task<Response> CreateReservationAsync(int clientId, int productPresentationId, int quantity, string notes, string createdBy)
         {
             try
@@ -162,5 +208,35 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, "Error al cancelar apartado");
             }
         }
+
+        public async Task<List<ClientInventoryReservation>> GetActiveReservationsByProductAsync(int productPresentationId)
+        {
+            var spec = new ClientInventoryReservationByProductSpecification(productPresentationId);
+            var reservations = await _repository.ListAsync(spec);
+
+            // Log para verificar si Client está cargado
+            foreach (var r in reservations)
+            {
+                Console.WriteLine($"Reservation {r.Id}: Client is {(r.Client == null ? "NULL" : r.Client.Name)}");
+            }
+
+            Console.WriteLine($"GetActiveReservationsByProductAsync - ProductPresentationId: {productPresentationId}, Total: {reservations.Count}");
+
+            var active = reservations
+                .Where(r => r.Status == "Active" && !r.IsDeleted && r.AvailableQuantity > 0)
+                .ToList();
+
+            Console.WriteLine($"  Active only: {active.Count}");
+
+            return active;
+        }
+
+        public async Task<ClientInventoryReservation> GetActiveReservationsByClientAndProductAsync(int clientId, int productPresentationId)
+        {
+            var spec = new ClientInventoryReservationByClientSpecification(clientId, productPresentationId);
+            var reservations = await _repository.ListAsync(spec);
+            return reservations.FirstOrDefault(r => r.Status == "Active" && !r.IsDeleted && r.AvailableQuantity > 0);
+        }
+
     }
 }
