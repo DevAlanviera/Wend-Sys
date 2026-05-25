@@ -59,6 +59,7 @@
                 <div id="container-filter">
                     <form>
                         @Html.HiddenFor(c => c.ClientSelected)
+                         <input type="hidden" name="classificationId" value="@classificationId" />
                         <div class="row">
                             <div class="col-4">
                                 <div class="form-group">
@@ -130,7 +131,9 @@
                         </div>
                         <div class="text-center">
                             <button type="submit" class="btn btn-primary mt-3">Buscar</button>
-                            <a asp-action="Index" asp-route-productPresentationId="@Model.StateId" class="btn btn-secondary mt-3">Limpiar</a>
+                            <a asp-action="Index" 
+   asp-route-classificationId="@classificationId" 
+   class="btn btn-secondary mt-3">Limpiar</a>
                         </div>
                     </form>
                 </div>
