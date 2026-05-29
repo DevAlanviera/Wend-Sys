@@ -150,7 +150,7 @@ namespace WendlandtVentas.Web.Controllers
                 IsAdjustment = false,
                 Quantity = 0,
                 Comment = string.Empty,
-                ExpiryDate = DateTime.Now, // Fecha por defecto para entradas nuevas
+                ExpiryDate = null, // Fecha por defecto para entradas nuevas
                 AvailableBatches = new List<SelectListItem>() // Lista vacía para que el Dropdown de la vista no sea null
             };
 
@@ -202,23 +202,34 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Adjustment(int id)
+        public async Task<IActionResult> Adjustment(int id, int? batchId)
         {
             ViewData["Action"] = nameof(Adjustment);
             ViewData["ModalTitle"] = "Realizar ajuste de inventario";
 
             var batches = await _repository.ListAsync(new BatchSpecification(id));
 
+            // Determinar el batch seleccionado (si viene batchId, usarlo; si no, ninguno)
+            Batch selectedBatch = null;
+            if (batchId.HasValue)
+            {
+                selectedBatch = batches.FirstOrDefault(b => b.Id == batchId.Value);
+            }
+
             var model = new InOutViewModel()
             {
                 ProductPresentationId = id,
+                BatchNumber = selectedBatch?.BatchNumber,  // 🔥 Para editar el nombre
+                BatchId = selectedBatch?.Id,               // ID del batch seleccionado
                 IsAdjustment = true,
                 AvailableBatches = batches.Select(b => new SelectListItem
                 {
                     Value = b.Id.ToString(),
-                    Text = $"{b.BatchNumber} - Actual: {b.CurrentQuantity}"
+                    Text = $"{b.BatchNumber} - Actual: {b.CurrentQuantity}",
+                    Selected = batchId.HasValue && b.Id == batchId.Value
                 }).ToList()
             };
+
 
             return PartialView("_AddInOutModal", model);
         }
@@ -404,14 +415,11 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Adjustment(InOutViewModel model)
         {
-
-
-            if (!ModelState.IsValid) {
+            // Validación del ModelState
+            if (!ModelState.IsValid)
+            {
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                 var errorMessage = string.Join(" | ", errors);
-                // ESTO VA A APARECER EN TU ALERTA ROJA
-
-                // 🔥 Log específico para ver el error real
                 _logger.LogError($"ModelState inválido: {errorMessage}");
                 return Json(AjaxFunctions.GenerateJsonError("ERROR REAL: " + errorMessage));
             }
@@ -425,7 +433,6 @@ namespace WendlandtVentas.Web.Controllers
                 if (!model.BatchId.HasValue)
                     return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "Debe seleccionar un lote para ajustar"));
 
-
                 var productPresentation = await _repository.GetAsync(new ProductPresentationExtendedSpecification(model.ProductPresentationId));
                 if (productPresentation == null) return NotFound();
 
@@ -433,23 +440,44 @@ namespace WendlandtVentas.Web.Controllers
                 var batch = await _repository.GetByIdAsync<Batch>(model.BatchId.Value);
                 if (batch == null) return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "El lote seleccionado no existe"));
 
+                // 🔥 NUEVO: Verificar si el usuario cambió el nombre del lote
+                if (!string.IsNullOrWhiteSpace(model.BatchNumber) && batch.BatchNumber != model.BatchNumber)
+                {
+                    // ✅ SIMPLEMENTE actualizar el nombre, sin verificar duplicados
+                    batch.BatchNumber = model.BatchNumber;
+                    //_logger.LogInformation($"Lote {batch.Id} renombrado de '{batch.BatchNumber}' a '{model.BatchNumber}'");
+                }
+
                 var user = await _userManager.FindByNameAsync(User.Identity.Name);
 
                 // 3. Lógica de Inventario:
                 // Calculamos la diferencia (Delta) para el movimiento histórico
-                // Si el lote tiene 100 y el usuario pone 80, el movimiento es de -20.
                 int difference = model.Quantity - batch.CurrentQuantity;
-                var quantityGlobalCurrent = productPresentation.Movements.Where(c => !c.IsDeleted)?.LastOrDefault()?.QuantityCurrent ?? 0;
 
+                // Obtener el quantity global actual (del último movimiento de la presentación)
+                var quantityGlobalCurrent = productPresentation.Movements
+                    .Where(c => !c.IsDeleted)
+                    .OrderByDescending(c => c.CreatedAt)
+                    .FirstOrDefault()?.QuantityCurrent ?? 0;
 
                 // 4. Actualizar el Lote físicamente
+                int oldQuantity = batch.CurrentQuantity;
                 batch.CurrentQuantity = model.Quantity;
-                batch.ExpiryDate = model.ExpiryDate ?? batch.ExpiryDate;
+
+                if (model.ExpiryDate.HasValue)
+                {
+                    batch.ExpiryDate = model.ExpiryDate.Value;
+                }
+
                 batch.UpdatedAt = DateTime.Now;
 
                 if (batch.CurrentQuantity <= 0)
                 {
                     batch.IsActive = false;
+                }
+                else
+                {
+                    batch.IsActive = true;
                 }
 
                 await _repository.UpdateAsync(batch);
@@ -457,11 +485,13 @@ namespace WendlandtVentas.Web.Controllers
                 // 5. Crear el movimiento SOLO si hubo un cambio real en la cantidad
                 if (difference != 0)
                 {
+                    Operation operation = difference > 0 ? Operation.In : Operation.Out;
+
                     var newMov = new Movement(
                         model.ProductPresentationId,
-                        difference,
-                        Operation.Adjustment,
-                        quantityGlobalCurrent,
+                        Math.Abs(difference),  // Siempre positivo
+                        operation,              // 🔥 Usar la operación correcta
+                        quantityGlobalCurrent + difference, // Nuevo stock actual
                         model.Comment,
                         user.Id,
                         batch.Id
@@ -470,7 +500,6 @@ namespace WendlandtVentas.Web.Controllers
                 }
                 else if (model.Comment != null)
                 {
-                    // Opcional: Registrar un log simple si solo cambió la fecha pero hay un comentario
                     _logger.LogInformation($"Se actualizó la fecha del lote {batch.Id} sin cambios en cantidad.");
                 }
 
@@ -478,7 +507,7 @@ namespace WendlandtVentas.Web.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogInformation($"Error: {e.Message}");
+                _logger.LogError(e, $"Error al realizar ajuste: {e.Message}");
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo realizar el ajuste"));
             }
         }
