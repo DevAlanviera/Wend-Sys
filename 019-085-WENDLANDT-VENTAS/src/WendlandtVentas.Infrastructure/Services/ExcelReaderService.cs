@@ -582,7 +582,7 @@ namespace WendlandtVentas.Infrastructure.Services
             using (var workbook = new XLWorkbook(templatePath))
             {
                 var ws = workbook.Worksheet(1);
-                ws.Cell("C3").Value = DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy");
+                ws.Cell("B3").Value = DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy");
 
                 // 1. SEPARAR LISTAS
                 var productosLinea = datos.Where(x => !x.EsTemporada).OrderBy(x => x.Cerveza).ToList();
