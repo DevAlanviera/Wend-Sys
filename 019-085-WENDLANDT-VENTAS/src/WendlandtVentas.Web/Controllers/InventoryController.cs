@@ -253,6 +253,12 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> In(InOutViewModel model)
         {
 
+            _logger.LogWarning($"=== IN POST ===");
+            _logger.LogWarning($"ProductPresentationId: {model.ProductPresentationId}");
+            _logger.LogWarning($"BatchNumber: {model.BatchNumber}");
+            _logger.LogWarning($"Quantity: {model.Quantity}");
+
+
             // 1. Validación manual: El BatchNumber es obligatorio solo para Entradas
             if (string.IsNullOrWhiteSpace(model.BatchNumber))
             {
@@ -280,8 +286,11 @@ namespace WendlandtVentas.Web.Controllers
 
                 var batch = await _repository.GetAsync<Batch>(new BatchSpecification(model.ProductPresentationId, model.BatchNumber));
 
+                _logger.LogWarning($"Batch encontrado: {(batch != null ? $"Id: {batch.Id}" : "NULL")}");
+
                 if (batch == null)
                 {
+                    _logger.LogWarning("Creando NUEVO batch...");
                     // 2. Si no existe, creamos el nuevo lote
                     batch = new Batch
                     {
@@ -296,6 +305,8 @@ namespace WendlandtVentas.Web.Controllers
                 }
                 else
                 {
+                    _logger.LogWarning($"Actualizando batch EXISTENTE - Id: {batch.Id}");
+
                     // 3. Si ya existe, actualizamos la cantidad actual
                     batch.CurrentQuantity += model.Quantity;
                     await _repository.UpdateAsync(batch);

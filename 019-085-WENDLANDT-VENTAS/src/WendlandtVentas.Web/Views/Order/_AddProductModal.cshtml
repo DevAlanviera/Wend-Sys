@@ -58,7 +58,45 @@
     </form>
 </div>
 
+<script>
+    $(document).ready(function () {
+        let isSubmitting = false;  // 🔥 Flag para prevenir doble clic
 
+        // ... tu código existente ...
+
+        // 🔥 MODIFICAR EL MANEJADOR DE SUBMIT
+        $("#form-addProduct").on("submit", function (e) {
+            // Prevenir si ya se está enviando
+            if (isSubmitting) {
+                e.preventDefault();
+                console.log('Prevenido envío duplicado');
+                return false;
+            }
+
+            // ... tus validaciones existentes ...
+
+            // Marcar como enviando y deshabilitar botón
+            isSubmitting = true;
+            var $btn = $('#form-addProduct button[type="submit"]');
+            var textoOriginal = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
+
+            // Resetear después de 5 segundos (por si algo falla)
+            setTimeout(function() {
+                isSubmitting = false;
+                $btn.prop('disabled', false).html(textoOriginal);
+            }, 5000);
+
+            return true;
+        });
+
+        // Resetear flag cuando el modal se cierra
+        $('#form-addProduct').closest('.modal').on('hidden.bs.modal', function() {
+            isSubmitting = false;
+            $('#form-addProduct button[type="submit"]').prop('disabled', false).html('Guardar');
+        });
+    });
+</script>
 <!--<script>
     $(document).ready(function () {
         let stockDisponible = 0;

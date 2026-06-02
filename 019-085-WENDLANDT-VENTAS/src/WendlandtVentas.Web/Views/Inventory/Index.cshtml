@@ -105,28 +105,42 @@
 
 @section Scripts{
     <script>
-                $(document).on('click', '.btn-modal-action', function (e) {
-            var $btn = $(this);
-            var modalId = $btn.attr('href');
-            var baseUrl = $(modalId).data('url');
+    // 🔥 Usar off antes de on para evitar duplicados
+    $(document).off('click', '.btn-modal-action').on('click', '.btn-modal-action', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var $btn = $(this);
+        
+        // 🔥 Prevenir doble clic
+        if ($btn.data('processing')) {
+            console.log('Ignorando clic duplicado en:', $btn.attr('href'));
+            return;
+        }
+        $btn.data('processing', true);
+        
+        var modalId = $btn.attr('href');
+        var baseUrl = $(modalId).data('url');
+        var id = $btn.attr('data-id');
+        var bId = $btn.attr('data-batch-id');
 
-            var id = $btn.attr('data-id');
-            var bId = $btn.attr('data-batch-id'); // <--- USAR .attr() es más seguro
+        console.log("DEBUG: Enviando ID:", id, "BatchId:", bId);
 
-            console.log("DEBUG: Enviando ID:", id, "BatchId:", bId);
+        var urlConParametros = baseUrl + "?id=" + id;
 
-            var urlConParametros = baseUrl + "?id=" + id;
+        if (bId && bId !== "undefined" && bId !== "") {
+            urlConParametros += "&batchId=" + bId;
+        }
 
-            // Validamos que bId tenga un número real
-            if (bId && bId !== "undefined" && bId !== "") {
-                urlConParametros += "&batchId=" + bId;
-            }
-
-            $(modalId).load(urlConParametros, function () {
-                $(modalId).modal('show');
-            });
+        $(modalId).load(urlConParametros, function () {
+            $(modalId).modal('show');
+            // 🔥 Resetear después de 500ms
+            setTimeout(function() {
+                $btn.data('processing', false);
+            }, 500);
         });
-    </script>
+    });
+</script>
     <script>
                            $(document).ready(function () {
             // Usamos 'off' antes de 'on' para no duplicar el evento
@@ -151,8 +165,7 @@
                             // 1. Cerramos el modal
                             $modal.modal('hide');
 
-                            // 2. Notificación (si usas toastr o similar)
-                            console.log("Éxito:", response.body);
+                          
 
                             // 3. REFRESCAR EL GRID DE SYNCFUSION
                             // 'Grid' debe ser el ID que le pusiste a tu <ejs-grid>
