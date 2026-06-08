@@ -268,7 +268,7 @@ namespace WendlandtVentas.Web
             });
 
             // Esto activa el panel de control
-            app.UseHangfireDashboard();
+            /*app.UseHangfireDashboard();
 
             // Lunes a viernes a las 9:00 AM
             recurringJobManager.AddOrUpdate<IInventoryService>(
@@ -276,7 +276,7 @@ namespace WendlandtVentas.Web
                 service => service.ProcesarYEnviarReporteMatutinoAsync(),
                 "0 9 * * 1,2,3,4,5",  // 🔥 0 minutos, hora 9, cualquier día, lunes a viernes
                 new RecurringJobOptions { TimeZone = TimeZoneInfo.Local }
-            );
+            );*/
 
         }
 
