@@ -566,7 +566,9 @@ namespace WendlandtVentas.Web.Controllers
             if (productPresentation == null) return NotFound();
 
             // Obtener stock total disponible (sin apartados)
-            var totalStock = await _inventoryService.GetAvailableStock(id);
+           // var totalStock = await _inventoryService.GetAvailableStock(id);
+
+            var availableStock = await _clientInventoryReservationService.GetAvailableStockForClientAsync(0, id);
 
             // Obtener lista de clientes activos
             var clients = await _repository.ListAllAsync<Client>();
@@ -582,7 +584,7 @@ namespace WendlandtVentas.Web.Controllers
                 ProductName = productPresentation.Product?.Name ?? "",
                 PresentationName = productPresentation.Presentation?.Name ?? "",
                 Liters = productPresentation.Presentation?.Liters ?? 0,
-                AvailableStock = totalStock,
+                AvailableStock = availableStock,
                 Clients = new SelectList(clientList, "Value", "Text")
             };
 
@@ -593,8 +595,8 @@ namespace WendlandtVentas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateReservation(ClientReservationViewModel model)
         {
-            Console.WriteLine("ENVIANDO CODIGOO");
-            _logger.LogWarning($"CreateReservation POST llamado - ClientId: {model.ClientId}, ProductId: {model.ProductPresentationId}, Quantity: {model.ReservedQuantity}");
+            //Console.WriteLine("ENVIANDO CODIGOO");
+            //_logger.LogWarning($"CreateReservation POST llamado - ClientId: {model.ClientId}, ProductId: {model.ProductPresentationId}, Quantity: {model.ReservedQuantity}");
 
             if (!ModelState.IsValid)
             {

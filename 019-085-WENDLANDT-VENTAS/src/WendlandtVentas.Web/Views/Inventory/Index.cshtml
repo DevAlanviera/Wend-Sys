@@ -111,6 +111,27 @@
 
 @section Scripts{
     <script>
+        $(document).on('click', '.btn-create-reservation', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    var productId = $(this).data('product-id');
+    var $modal = $('#reservationModal');
+    var url = '@Url.Action("CreateReservation", "Inventory")';  // /Inventory/CreateReservation
+    
+    console.log("Abriendo apartado - ProductId:", productId);
+    console.log("URL:", url + "?id=" + productId);
+    
+    $.get(url, { id: productId }, function(data) {
+        $modal.html(data);
+        $modal.modal('show');
+    }).fail(function(xhr) {
+        console.error("Error:", xhr.status, xhr.statusText);
+        alert('Error al cargar el formulario de apartado. Código: ' + xhr.status);
+    });
+});
+    </script>
+    <script>
         // Funciones auxiliares
         function getTotalReserved(reservations) {
             if (!reservations || reservations.length === 0) return 0;
@@ -210,7 +231,7 @@ function loadReservations(productId, rowData) {
                 console.log("ID:", id);
                 console.log("URL final:", urlConParametros);
 
-                console.log('URL llamada:', '/Inventory/GetAvailableStockForClient?clientId=' + clientId + '&productPresentationId=' + productId);
+                //console.log('URL llamada:', '/Inventory/GetAvailableStockForClient?clientId=' + clientId + '&productPresentationId=' + productId);
 
                 if (bId && bId !== "undefined" && bId !== "") {
                     urlConParametros += "&batchId=" + bId;
@@ -302,7 +323,9 @@ function loadReservations(productId, rowData) {
             <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
             <a href="#outModal" data-id="${id}" title="Agregar salida" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-out text-danger"></i></a>
             <a href="#adjustmentModal" data-id="${id}" title="Realizar ajuste" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-pen"></i></a>
-            <a href="#reservationModal" data-id="${id}" title="Apartar inventario" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-tag text-info"></i></a>
+           <button type="button" data-product-id="${id}" class="tip btn btn-sm btn-light mr-2 btn-create-reservation">
+            <i class="fa fa-fw fa-tag text-info"></i>
+        </button>
         </div>
     </script>
 
