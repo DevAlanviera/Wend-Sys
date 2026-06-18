@@ -14,6 +14,9 @@ namespace WendlandtVentas.Web.Models.TableModels
 
         // Cambiamos 'object' por una lista real
         public List<BatchRowModel> Batches { get; set; } = new List<BatchRowModel>();
+
+        // Nueva propiedad para apartados
+        public List<ReservationRowModel> Reservations { get; set; } = new List<ReservationRowModel>();
     }
 
     public class BatchRowModel
@@ -24,5 +27,18 @@ namespace WendlandtVentas.Web.Models.TableModels
         public string ExpiryDateFormatted { get; set; }
         public string StatusText { get; set; }
         public string StatusColor { get; set; }
+    }
+
+    public class ReservationRowModel
+    {
+        public int Id { get; set; }
+        public string ClientName { get; set; }
+        public int ReservedQuantity { get; set; }
+        public int UsedQuantity { get; set; }
+        public int AvailableQuantity { get; set; }
+        public string Status { get; set; }
+        public string StatusText { get; set; }
+        public string StatusColor { get; set; }
+        public string ExpirationDate { get; set; }
     }
 }

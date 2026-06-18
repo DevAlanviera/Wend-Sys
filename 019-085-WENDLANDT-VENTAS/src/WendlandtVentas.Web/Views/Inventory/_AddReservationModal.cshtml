@@ -1,0 +1,168 @@
+﻿@model WendlandtVentas.Web.Models.InventoryViewModels.ClientReservationViewModel
+
+<div class="modal-dialog modal-lg" role="document">
+  <form method="post" 
+      action="@Url.Action("CreateReservation", "Inventory")"  
+      asp-antiforgery="true" 
+      class="modal-content forma-ajax--modal" 
+      id="reservationForm">
+        <div class="modal-header bg-black text-dark">
+            <h5 class="modal-title">
+                <i class="fa fa-tag"></i> Apartar inventario para cliente
+            </h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            @Html.HiddenFor(m => m.ProductPresentationId)
+            @Html.HiddenFor(m => m.ProductName)
+            @Html.HiddenFor(m => m.PresentationName)
+            
+            <p class="text-muted small">
+                Campos marcados con asterisco son requeridos.
+            </p>
+
+            <!-- Información del producto -->
+            <div class="alert alert-info">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Producto:</strong> @Model.ProductName
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Presentación:</strong> @Model.PresentationName (@Model.Liters L)
+                    </div>
+                </div>
+                <hr class="my-2" />
+                <div class="row">
+                    <div class="col-md-12">
+                        <strong>Stock disponible sin apartar:</strong> 
+                        <span id="availableStock" class="badge badge-success badge-pill">@Model.AvailableStock</span> unidades
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selección de cliente -->
+            <div class="form-group">
+                <label asp-for="ClientId" class="required"></label>
+                <select asp-for="ClientId" asp-items="Model.Clients" class="form-control select2" id="clientSelector">
+                    <option value="">-- Seleccione un cliente --</option>
+                </select>
+                <span asp-validation-for="ClientId" class="text-danger"></span>
+            </div>
+
+            <!-- Cantidad a apartar -->
+            <div class="form-group">
+                <label asp-for="ReservedQuantity" class="required"></label>
+                <input asp-for="ReservedQuantity" class="form-control" id="reservedQuantity" type="number" min="1" value="1" />
+                <span asp-validation-for="ReservedQuantity" class="text-danger"></span>
+                <small class="text-muted" id="maxQuantityHint"></small>
+            </div>
+
+            <!-- Fecha de expiración (opcional) -->
+            <div class="form-group">
+                <label asp-for="ExpirationDate"></label>
+                <input asp-for="ExpirationDate" type="text" class="form-control date-picker" id="expirationDate" autocomplete="off" />
+                <small class="text-muted">Si no se especifica, el apartado no expira.</small>
+                <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+            </div>
+
+            <!-- Notas -->
+            <div class="form-group">
+                <label asp-for="Notes"></label>
+                <textarea asp-for="Notes" class="form-control" rows="2" placeholder="Ej: Apartado especial para evento, o para cliente frecuente..."></textarea>
+                <span asp-validation-for="Notes" class="text-danger"></span>
+            </div>
+
+            <div class="modal-errores text-danger"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+           <button type="button" id="btnCreateReservation" class="btn" style="background-color: #6f42c1; border-color: #6f42c1; color: white;">
+    <i class="fa fa-save"></i> Crear apartado
+</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    $(function() {
+        // Forzar el envío del formulario al hacer clic en el botón
+        $('#btnCreateReservation').on('click', function(e) {
+            e.preventDefault();
+            console.log('Botón clickeado, enviando formulario...');
+            $('#reservationForm').submit();
+        });
+    });
+</script>
+
+<script>
+    $(function () {
+        // Inicializar datepicker
+        $('.date-picker').datepicker({
+            autoclose: true,
+            format: 'dd/mm/yyyy',
+            theme: 'bootstrap4'
+        });
+
+        // Inicializar Select2 para cliente
+        $('#clientSelector').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Seleccione un cliente',
+            dropdownParent: $('#reservationForm')
+        });
+
+        // Validar cantidad máxima cuando cambia el cliente
+        $('#clientSelector').on('change', function() {
+            var clientId = $(this).val();
+            var productPresentationId = $('#ProductPresentationId').val();
+            
+            if (clientId) {
+                $.get('@Url.Action("GetAvailableStockForClient", "Inventory")', {
+                    clientId: clientId,
+                    productPresentationId: productPresentationId
+                }, function(data) {
+                    var maxAvailable = data.availableStock;
+                    $('#availableStock').text(maxAvailable);
+                    $('#reservedQuantity').attr('max', maxAvailable);
+                    
+                    if (maxAvailable > 0) {
+                        $('#maxQuantityHint').html('Máximo disponible para este cliente: <strong>' + maxAvailable + '</strong> unidades');
+                    } else {
+                        $('#maxQuantityHint').html('<span class="text-danger">No hay stock disponible para este cliente</span>');
+                    }
+                });
+            } else {
+                $('#reservedQuantity').removeAttr('max');
+                $('#maxQuantityHint').html('');
+            }
+        });
+
+        // Validar antes de enviar
+        $('#reservationForm').on('submit', function(e) {
+            var quantity = parseInt($('#reservedQuantity').val());
+            var maxAvailable = parseInt($('#availableStock').text());
+
+            console.log('Formulario enviado');
+            
+            if (isNaN(quantity) || quantity <= 0) {
+                e.preventDefault();
+                $('.modal-errores').html('<div class="alert alert-danger">Ingrese una cantidad válida.</div>');
+                return false;
+            }
+            
+            if (quantity > maxAvailable) {
+                e.preventDefault();
+                $('.modal-errores').html('<div class="alert alert-danger">La cantidad (' + quantity + ') supera el stock disponible (' + maxAvailable + ').</div>');
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Limpiar mensajes al abrir el modal
+        $('#reservationForm').closest('.modal').on('shown.bs.modal', function() {
+            $('.modal-errores').html('');
+        });
+    });
+</script>

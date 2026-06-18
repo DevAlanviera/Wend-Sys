@@ -73,6 +73,7 @@ namespace WendlandtVentas.Web.Controllers
         private readonly IBitacoraService _bitacoraService;
         private readonly IBitacoraRepository _bitacoraRepository;
         private readonly IEmailSender _emailSender;
+        private readonly IClientInventoryReservationService _clientInventoryReservationService;
 
         public OrderController(IAsyncRepository repository,
             ILogger<ProductController> logger,
@@ -88,7 +89,8 @@ namespace WendlandtVentas.Web.Controllers
             AppDbContext dbContext,
             IMemoryCache memoryCache,
             CacheService cacheService,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            IClientInventoryReservationService clientInventoryReservationService)
         {
             _repository = repository;
             _logger = logger;
@@ -105,6 +107,7 @@ namespace WendlandtVentas.Web.Controllers
             _memoryCache = memoryCache;
             _cacheService = cacheService;
             _emailSender = emailSender;
+            _clientInventoryReservationService = clientInventoryReservationService;
         }
 
         public class CachedDataResult
@@ -547,10 +550,16 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetProductStock(int id)
+        public async Task<IActionResult> GetProductStock(int id, int clientId = 0)
         {
-            // Usamos el servicio de inventario para sumar el stock de los lotes activos
-            // Asegúrate de inyectar IInventoryService en el constructor del controlador
+            // Si hay un cliente seleccionado, calcular stock disponible considerando apartados
+            if (clientId > 0)
+            {
+                var availableStock = await _clientInventoryReservationService.GetAvailableStockForClientAsync(clientId, id);
+                return Json(new { stock = availableStock });
+            }
+
+            // Si no hay cliente, usar stock físico total
             var stock = await _inventoryService.GetAvailableStock(id);
             return Json(new { stock = stock });
         }

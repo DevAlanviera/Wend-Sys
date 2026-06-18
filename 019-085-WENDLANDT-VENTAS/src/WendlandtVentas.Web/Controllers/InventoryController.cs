@@ -2,17 +2,22 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Monobits.SharedKernel.Interfaces;
+using OpenXmlPowerTools;
 using OpenXmlPowerTools.HtmlToWml.CSS;
 using Syncfusion.EJ2.Base;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Entities.Enums;
 using WendlandtVentas.Core.Interfaces;
+using WendlandtVentas.Core.Services;
 using WendlandtVentas.Core.Specifications; 
 using WendlandtVentas.Core.Specifications.ProductPresentationSpecifications;
 using WendlandtVentas.Infrastructure.Commons;
@@ -33,9 +38,11 @@ namespace WendlandtVentas.Web.Controllers
         private readonly SfGridOperations _sfGridOperations;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IInventoryService _inventoryService;
+        private readonly IMemoryCache _memoryCache;
+        private readonly IClientInventoryReservationService _clientInventoryReservationService;
 
         public InventoryController(IAsyncRepository repository, ILogger<InventoryController> logger, SfGridOperations sfGridOperations, UserManager<ApplicationUser> userManager,
-            IInventoryService inventoryService, IExcelReadService excelReaderService)
+            IInventoryService inventoryService, IExcelReadService excelReaderService, IMemoryCache memoryCache, IClientInventoryReservationService clientInventoryReservationService)
         {
             _repository = repository;
             _logger = logger;
@@ -43,6 +50,8 @@ namespace WendlandtVentas.Web.Controllers
             _userManager = userManager;
             _inventoryService = inventoryService;
             _excelReaderService = excelReaderService;
+            _memoryCache = memoryCache;
+            _clientInventoryReservationService = clientInventoryReservationService;
         }
 
         public async Task<IActionResult> Index(FilterViewModel model)
@@ -77,10 +86,10 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm, FilterViewModel model)
         {
             var filters = new Dictionary<string, int?>
-     {
-         { nameof(model.ProductId), model.ProductId },
-         { nameof(model.PresentationId), model.PresentationId }
-     };
+    {
+        { nameof(model.ProductId), model.ProductId },
+        { nameof(model.PresentationId), model.PresentationId }
+    };
 
             // Obtenemos los datos con los lotes incluidos
             var data = await _repository.ListExistingAsync<ProductPresentation>(new ListByFiltersProductPresentationSpecification(filters));
@@ -88,45 +97,64 @@ namespace WendlandtVentas.Web.Controllers
             // Definimos las palabras a excluir
             var excludedKeywords = new[] { "N.A.L.", "NAL.", "NAL", "FG", "F.G." };
 
-            var dataSource = data
-                .Select(c =>
+            var dataSource = new List<InventoryTableModel>();
+
+            foreach (var c in data)
+            {
+                var activeBatches = c.Batches
+                    .Where(b => b.IsActive && !b.IsDeleted && b.CurrentQuantity > 0)
+                    .OrderBy(b => b.ExpiryDate)
+                    .ToList();
+
+                int realStock = activeBatches.Sum(b => b.CurrentQuantity);
+
+                // 🔥 Obtener apartados activos
+                var activeReservations = await _clientInventoryReservationService.GetActiveReservationsByProductAsync(c.Id);
+
+                // 🔥 LOG para verificar que hay reservaciones
+                Console.WriteLine($"Producto: {c.Product.Name}, Reservations encontradas: {activeReservations.Count}");
+
+                dataSource.Add(new InventoryTableModel
                 {
-                    var activeBatches = c.Batches
-                        .Where(b => b.IsActive && !b.IsDeleted && b.CurrentQuantity > 0)
-                        .OrderBy(b => b.ExpiryDate)
-                        .ToList();
-
-                    int realStock = activeBatches.Sum(b => b.CurrentQuantity);
-
-                    return new InventoryTableModel
+                    Id = c.Id,
+                    Name = c.Product.Name,
+                    Presentation = $"{c.Presentation.Name} {c.Presentation.Liters.FormatCommasNullableTwoDecimals()} lts.",
+                    Liters = (double)c.Presentation.Liters * realStock,
+                    Stock = realStock.ToString(),
+                    SortPriority = c.Product.Name.StartsWith("B.C.", StringComparison.OrdinalIgnoreCase) ? 1 : 2,
+                    Batches = activeBatches.Select(b => new BatchRowModel
                     {
-                        Id = c.Id,
-                        Name = c.Product.Name,
-                        Presentation = $"{c.Presentation.Name} {c.Presentation.Liters.FormatCommasNullableTwoDecimals()} lts.",
-                        Liters = (double)c.Presentation.Liters * realStock,
-                        Stock = realStock.ToString(),
+                        Id = b.Id,
+                        BatchNumber = b.BatchNumber,
+                        CurrentQuantity = b.CurrentQuantity,
+                        ExpiryDateFormatted = b.ExpiryDate.ToString("dd/MM/yyyy"),
+                        StatusText = b.ExpiryDate < DateTime.Now ? "Vencido" : "En buen estado",
+                        StatusColor = b.ExpiryDate < DateTime.Now ? "badge-danger" : "badge-success"
+                    }).ToList(),
+                    // 🔥 IMPORTANTE: Asignar las reservaciones
+                    Reservations = activeReservations.Select(r => new ReservationRowModel
+                    {
+                        Id = r.Id,
+                        ClientName = r.Client?.Name ?? "Cliente",
+                        ReservedQuantity = r.ReservedQuantity,
+                        UsedQuantity = r.UsedQuantity,
+                        AvailableQuantity = r.AvailableQuantity,
+                        Status = r.Status,
+                        StatusText = r.Status == "Active" ? "Activo" : (r.Status == "Completed" ? "Completado" : "Cancelado"),
+                        StatusColor = r.Status == "Active" ? "badge-success" : (r.Status == "Completed" ? "badge-info" : "badge-danger"),
+                        ExpirationDate = r.ExpirationDate?.ToString("dd/MM/yyyy") ?? "N/A"
+                    }).ToList()
+                });
+            }
 
-                        // --- NUEVA PROPIEDAD DE ORDEN ---
-                        // 1 para cervezas de línea (B.C.), 2 para el resto
-                        SortPriority = c.Product.Name.StartsWith("B.C.", StringComparison.OrdinalIgnoreCase) ? 1 : 2,
-
-                        Batches = activeBatches.Select(b => new BatchRowModel
-                        {
-                            Id = b.Id,
-                            BatchNumber = b.BatchNumber,
-                            CurrentQuantity = b.CurrentQuantity,
-                            ExpiryDateFormatted = b.ExpiryDate.ToString("dd/MM/yyyy"),
-                            StatusText = b.ExpiryDate < DateTime.Now ? "Vencido" : "En buen estado",
-                            StatusColor = b.ExpiryDate < DateTime.Now ? "badge-danger" : "badge-success"
-                        }).ToList()
-                    };
-                })
-                // --- APLICAMOS EXCLUSIÓN ---
+            // Aplicar exclusión y ordenamiento
+            dataSource = dataSource
                 .Where(i => !excludedKeywords.Any(key => i.Name.Contains(key, StringComparison.OrdinalIgnoreCase)))
-                // --- APLICAMOS ORDEN DE LÍNEA ---
                 .OrderBy(i => i.SortPriority)
                 .ThenBy(i => i.Name)
                 .ToList();
+
+           
 
             var dataResult = _sfGridOperations.FilterDataSource(dataSource, dm);
 
@@ -253,11 +281,19 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> In(InOutViewModel model)
         {
 
-            _logger.LogWarning($"=== IN POST ===");
-            _logger.LogWarning($"ProductPresentationId: {model.ProductPresentationId}");
-            _logger.LogWarning($"BatchNumber: {model.BatchNumber}");
-            _logger.LogWarning($"Quantity: {model.Quantity}");
+            
 
+            // 🔥 Verificar si ya se procesó este batch recientemente
+            var tokenKey = $"Batch_{model.ProductPresentationId}_{model.BatchNumber}";
+
+            if (_memoryCache.TryGetValue(tokenKey, out _))
+            {
+                _logger.LogWarning($"Batch duplicado detectado: {model.BatchNumber}");
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Entrada ya procesada"));
+            }
+
+            // Guardar en caché por 10 segundos
+            _memoryCache.Set(tokenKey, true, TimeSpan.FromSeconds(10));
 
             // 1. Validación manual: El BatchNumber es obligatorio solo para Entradas
             if (string.IsNullOrWhiteSpace(model.BatchNumber))
@@ -522,5 +558,161 @@ namespace WendlandtVentas.Web.Controllers
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo realizar el ajuste"));
             }
         }
+
+        //SECCION DE APARTADOS PARA CLIENTE
+        [HttpGet]
+        public async Task<IActionResult> CreateReservation([FromQuery] int id)
+        {
+            ViewData["Action"] = nameof(CreateReservation);
+            ViewData["ModalTitle"] = "Apartar inventario para cliente";
+
+            // Obtener información del producto
+            var productPresentation = await _repository.GetAsync(new ProductPresentationExtendedSpecification(id));
+            if (productPresentation == null) return NotFound();
+
+            // Obtener stock total disponible (sin apartados)
+           // var totalStock = await _inventoryService.GetAvailableStock(id);
+
+            var availableStock = await _clientInventoryReservationService.GetAvailableStockForClientAsync(0, id);
+
+            // Obtener lista de clientes activos
+            var clients = await _repository.ListAllAsync<Client>();
+            var clientList = clients.Select(c => new SelectListItem
+            {
+                Value = c.Id.ToString(),
+                Text = c.Name
+            }).OrderBy(c => c.Text).ToList();
+
+            var model = new ClientReservationViewModel
+            {
+                ProductPresentationId = id,
+                ProductName = productPresentation.Product?.Name ?? "",
+                PresentationName = productPresentation.Presentation?.Name ?? "",
+                Liters = productPresentation.Presentation?.Liters ?? 0,
+                AvailableStock = availableStock,
+                Clients = new SelectList(clientList, "Value", "Text")
+            };
+
+            return PartialView("_AddReservationModal", model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateReservation(ClientReservationViewModel model)
+        {
+            //Console.WriteLine("ENVIANDO CODIGOO");
+            //_logger.LogWarning($"CreateReservation POST llamado - ClientId: {model.ClientId}, ProductId: {model.ProductPresentationId}, Quantity: {model.ReservedQuantity}");
+
+            if (!ModelState.IsValid)
+            {
+                Console.WriteLine("MODELO INVALIDO");
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return Json(AjaxFunctions.GenerateJsonError(string.Join(" | ", errors)));
+            }
+
+            try
+            {
+                // Convertir fecha de expiración si se proporcionó
+                DateTime? expirationDate = null;
+                if (!string.IsNullOrWhiteSpace(model.ExpirationDate))
+                {
+                    expirationDate = DateTime.ParseExact(model.ExpirationDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+                }
+
+                var response = await _clientInventoryReservationService.CreateReservationAsync(
+                    model.ClientId,
+                    model.ProductPresentationId,
+                    model.ReservedQuantity,
+                    model.Notes,
+                    User.Identity.Name
+                );
+
+                if (response.IsSuccess)
+                {
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, response.Message));
+                }
+                else
+                {
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, response.Message));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear apartado");
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo crear el apartado"));
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailableStockForClient(int clientId, int productPresentationId)
+        {
+            var availableStock = await _clientInventoryReservationService.GetAvailableStockForClientAsync(clientId, productPresentationId);
+            return Json(new { availableStock = availableStock });
+        }
+
+        [HttpGet]
+        public IActionResult DeleteReservation(string id) // o int id, según tu modelo
+        {
+            // Configuramos las variables que tu _DeleteModal espera
+            ViewData["Action"] = "CancelReservation"; // El método POST que hará el borrado
+            ViewData["ModalTitle"] = "Cancelar apartado";
+            ViewData["ModalDescription"] = "este apartado. El stock volverá a estar disponible";
+
+            // Retornamos la vista compartida pasándole el ID como modelo
+            return PartialView("Shared/_DeleteModal", id);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditReservation(int reservationId)
+        {
+            ViewData["Action"] = nameof(EditReservation);
+            ViewData["ModalTitle"] = "Editar apartado";
+
+            var reservation = await _repository.GetByIdAsync<ClientInventoryReservation>(reservationId);
+            if (reservation == null) return NotFound();
+
+            var client = await _repository.GetByIdAsync<Client>(reservation.ClientId);
+            var productPresentation = await _repository.GetByIdAsync<ProductPresentation>(reservation.ProductPresentationId);
+            var presentation = await _repository.GetByIdAsync<Presentation>(productPresentation.PresentationId);
+            var product = await _repository.GetByIdAsync<Product>(productPresentation.ProductId);
+
+            var model = new EditReservationViewModel
+            {
+                Id = reservation.Id,
+                ClientName = client?.Name ?? "Cliente",
+                ProductName = product?.Name ?? "",
+                PresentationName = presentation?.Name ?? "",
+                ReservedQuantity = reservation.ReservedQuantity,
+                UsedQuantity = reservation.UsedQuantity,
+                Notes = reservation.Notes
+            };
+
+            return PartialView("_EditReservationModal", model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditReservation(EditReservationViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return Json(AjaxFunctions.GenerateJsonError("Datos inválidos"));
+
+            try
+            {
+                var response = await _clientInventoryReservationService.EditReservationAsync(
+                    model.Id, model.ReservedQuantity, model.Notes, User.Identity.Name);
+
+                if (response.IsSuccess)
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, response.Message));
+                else
+                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, response.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar apartado");
+                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "No se pudo editar el apartado"));
+            }
+        }
+
     }
 }

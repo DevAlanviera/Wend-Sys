@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WendlandtVentas.Core.Entities;
 using WendlandtVentas.Core.Interfaces;
+using WendlandtVentas.Web.Models.InventoryViewModels;
 using WendlandtVentas.Web.Models.ProductViewModels;
 
 
@@ -62,6 +63,8 @@ namespace WendlandtVentas.Infrastructure.Data
         public DbSet<Batch> Batches { get; set; }
 
         public DbSet<ProductBundleComponent> ProductBundleComponents { get; set; }
+
+        public DbSet<ClientInventoryReservation> ClientInventoryReservations { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
 
@@ -83,6 +86,7 @@ namespace WendlandtVentas.Infrastructure.Data
             builder.Entity<Bitacora>(ConfigureExecution);
             builder.Entity<PrecioEspecial>(ConfigureExecution);
             builder.Entity<ProductBundleComponent>(ConfigureExecution);
+            builder.Entity<ClientInventoryReservation>(ConfigureClientInventoryReservation);
         }
 
         private void ConfigureExecution(EntityTypeBuilder<PrecioEspecial> builder)
@@ -119,6 +123,32 @@ namespace WendlandtVentas.Infrastructure.Data
                 .IsRequired();
             builder.Property(c => c.CreditDays)
                 .HasDefaultValue(15);
+        }
+        private void ConfigureClientInventoryReservation(EntityTypeBuilder<ClientInventoryReservation> builder)
+        {
+            builder.ToTable("ClientInventoryReservations");
+            builder.HasKey(r => r.Id);
+
+            builder.HasOne(r => r.Client)
+                .WithMany()
+                .HasForeignKey(r => r.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(r => r.ProductPresentation)
+                .WithMany()
+                .HasForeignKey(r => r.ProductPresentationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Property(r => r.ClientId).IsRequired();
+            builder.Property(r => r.ProductPresentationId).IsRequired();
+            builder.Property(r => r.ReservedQuantity).IsRequired();
+            builder.Property(r => r.UsedQuantity).IsRequired().HasDefaultValue(0);
+            builder.Property(r => r.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Active");
+            builder.Property(r => r.CreatedBy).IsRequired().HasMaxLength(256);
+            builder.Property(r => r.UpdatedBy).HasMaxLength(256);
+            builder.Property(r => r.Notes).HasMaxLength(500);
+
+            builder.HasQueryFilter(r => !r.IsDeleted);
         }
 
 

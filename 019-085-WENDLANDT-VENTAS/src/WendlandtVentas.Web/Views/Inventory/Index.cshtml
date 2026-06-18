@@ -101,28 +101,127 @@
     </div>
     <div class="modal" id="adjustmentModal" tabindex="-1" role="dialog" aria-labelledby="adjustmentModal-label" data-url="@Url.Action("Adjustment")">
     </div>
+    <div class="modal modal-focus-first" id="reservationModal" tabindex="-1" role="dialog" aria-labelledby="reservationModal-label" data-url="@Url.Action("CreateReservation")">
+    </div>
+    <div class="modal modal-focus-first" id="editReservationModal" tabindex="-1" role="dialog" aria-labelledby="editReservationModal-label" data-url="@Url.Action("EditReservation")">
+    </div>
+    <div class="modal modal-focus-first" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModal-label" data-url="@Url.Action("DeleteReservation")">
+    </div>
 }
 
 @section Scripts{
     <script>
-    // 🔥 Usar off antes de on para evitar duplicados
-    $(document).off('click', '.btn-modal-action').on('click', '.btn-modal-action', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        var $btn = $(this);
-        
-        // 🔥 Prevenir doble clic
-        if ($btn.data('processing')) {
-            console.log('Ignorando clic duplicado en:', $btn.attr('href'));
-            return;
+        $(document).on('click', '.btn-create-reservation', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    var productId = $(this).data('product-id');
+    var $modal = $('#reservationModal');
+    var url = '@Url.Action("CreateReservation", "Inventory")';  // /Inventory/CreateReservation
+    
+    console.log("Abriendo apartado - ProductId:", productId);
+    console.log("URL:", url + "?id=" + productId);
+    
+    $.get(url, { id: productId }, function(data) {
+        $modal.html(data);
+        $modal.modal('show');
+    }).fail(function(xhr) {
+        console.error("Error:", xhr.status, xhr.statusText);
+        alert('Error al cargar el formulario de apartado. Código: ' + xhr.status);
+    });
+});
+    </script>
+    <script>
+        // Funciones auxiliares
+        function getTotalReserved(reservations) {
+            if (!reservations || reservations.length === 0) return 0;
+            var total = 0;
+            for (var i = 0; i < reservations.length; i++) {
+                total += reservations[i].reservedQuantity - reservations[i].usedQuantity;
+            }
+            return total;
         }
-        $btn.data('processing', true);
+
+        // Función corregida para cargar reservaciones (con botón de Editar)
+function loadReservations(productId, rowData) {
+    var tbody = $('#reservationsBody_' + productId);
+    if (tbody.length) {
+        if (rowData && rowData.reservations && rowData.reservations.length > 0) {
+            var html = '';
+            for (var i = 0; i < rowData.reservations.length; i++) {
+                var r = rowData.reservations[i];
+                html += '<tr>' +
+                    '<td>' + (r.clientName || 'Cliente') + '</td>' +
+                    '<td>' + r.reservedQuantity + '</td>' +
+                    '<td>' + r.usedQuantity + '</td>' +
+                    '<td><strong class="text-primary">' + r.availableQuantity + '</strong></td>' +
+                    '<td>' + (r.expirationDate || 'N/A') + '</td>' +
+                    '<td><span class="badge ' + (r.statusColor || 'badge-success') + '">' + (r.statusText || 'Activo') + '</span></td>' +
+                    // Dentro de loadReservations, donde construyes el HTML, reemplaza el <td> de acciones por este:
+
+                    '<td class="text-right">' +
+                    // 🔥 NUEVO BOTÓN DE EDITAR: Clase y data-attributes específicos 🔥
+                    '<button type="button" data-reservation-id="' + r.id + '" title="Editar apartado" class="tip btn btn-sm btn-outline-primary btn-edit-reservation-modal">' +
+                    '<i class="fa fa-fw fa-edit"></i>' +
+                    '</button> ' +
+                    // BOTÓN DE CANCELAR
+                    // BOTÓN DE CANCELAR (Ahora usa el modal compartido)
+                    '<a href="#deleteModal" data-id="' + r.id + '" title="Cancelar apartado" class="tip btn btn-sm btn-outline-danger btn-modal-action">' +
+                    '<i class="fa fa-fw fa-trash"></i>' +
+                    '</a>' +
+                    '</td>' +
+                    '</tr>';
+            }
+            tbody.html(html);
+        } else {
+            tbody.html('<tr><td colspan="7" class="text-center text-muted">No hay apartados activos para este producto</td></tr>');
+        }
+    }
+}
+
         
-        var modalId = $btn.attr('href');
-        var baseUrl = $(modalId).data('url');
-        var id = $btn.attr('data-id');
-        var bId = $btn.attr('data-batch-id');
+        function onDataBound(args) {
+            var gridData = this.getCurrentViewRecords();
+            gridData.forEach(function(row) {
+            });
+        }
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            // Manejador para el botón de modal apartado
+            $(document).on('click', '.btn-reservation-modal', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                var productPresentationId = $(this).data('product-presentation-id');
+                var $modal = $('#reservationModal');
+                var url = $modal.data('url');
+                
+                if (!productPresentationId) {
+                    console.error('No se encontró product-presentation-id');
+                    return;
+                }
+                
+                $.get(url, { productPresentationId: productPresentationId }, function(data) {
+                    $modal.html(data);
+                    $modal.modal('show');
+                }).fail(function(error) {
+                    alert('Error al cargar el formulario de apartado');
+                });
+            });
+
+            // Manejador genérico de botones modales
+           $(document).on('click', '.btn-modal-action', function (e) {
+                // 🔥 ESTO ES VITAL PARA QUE NO FALLE EL ENLACE 🔥
+                e.preventDefault(); 
+                e.stopPropagation();  
+                
+                var $btn = $(this);
+                var modalId = $btn.attr('href');
+                var baseUrl = $(modalId).data('url');
+                var id = $btn.attr('data-id');
+                var bId = $btn.attr('data-batch-id'); 
 
         console.log("DEBUG: Enviando ID:", id, "BatchId:", bId);
 
@@ -145,9 +244,7 @@
                            $(document).ready(function () {
             // Usamos 'off' antes de 'on' para no duplicar el evento
             $(document).off('submit', '.forma-ajax--modal').on('submit', '.forma-ajax--modal', function (e) {
-
-                // --- ESTO ES LO MÁS IMPORTANTE ---
-                e.preventDefault(); // Detiene el salto a la pantalla negra
+                e.preventDefault(); 
                 e.stopImmediatePropagation();
 
                 var $form = $(this);
@@ -162,7 +259,6 @@
                     data: $form.serialize(),
                     success: function (response) {
                         if (response.status === "ok") {
-                            // 1. Cerramos el modal
                             $modal.modal('hide');
 
                           
@@ -179,25 +275,65 @@
                         }
                     },
                     error: function (xhr) {
-                        console.error("Error en el servidor", xhr.responseText);
                         alert("Ocurrió un error al procesar la solicitud.");
                         $btn.removeAttr('disabled').text('Guardar');
                     }
                 });
-
-                return false; // Refuerzo para no navegar
+                return false; 
             });
+
+            // Manejador específico para EDITAR Reservación
+            $(document).on('click', '.btn-edit-reservation-modal', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                var reservationId = $(this).data('reservation-id');
+                var $modal = $('#editReservationModal');
+                var url = $modal.data('url');
+                
+                if (!reservationId) {
+                    console.error('No se encontró reservation-id');
+                    return;
+                }
+                
+                // 🔥 Aquí enviamos explícitamente reservationId para que C# no se caiga 🔥
+                $.get(url, { reservationId: reservationId }, function(data) {
+                    $modal.html(data);
+                    $modal.modal('show');
+                }).fail(function(xhr) {
+                    console.error(xhr.responseText);
+                    alert('Error al cargar el formulario de edición.');
+                });
+            });
+
+            // Evento cuando se expande un detalle del grid de Syncfusion
+            var grid = document.getElementById("Grid").ej2_instances[0];
+            if (grid) {
+                grid.detailDataBound = function(args) {
+                    var rowData = args.data;
+                    if (rowData && rowData.id) {
+                        setTimeout(function() {
+                            // Pasamos args.data completo en lugar de recalcular el índice, es mucho más seguro.
+                            loadReservations(rowData.id, rowData);
+                        }, 50);
+                    }
+                };
+            }
         });
     </script>
+
+    <!-- TUS TEMPLATES ORIGINALES (Mantenidos intactos) -->
     <script id="adminActionButtons" type="text/x-template">
         <div>
             <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
             <a href="#outModal" data-id="${id}" title="Agregar salida" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-out text-danger"></i></a>
             <a href="#adjustmentModal" data-id="${id}" title="Realizar ajuste" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-pen"></i></a>
+           <button type="button" data-product-id="${id}" class="tip btn btn-sm btn-light mr-2 btn-create-reservation">
+            <i class="fa fa-fw fa-tag text-info"></i>
+        </button>
         </div>
     </script>
 
-    @* Versión para Usuarios normales (Solo entrada) *@
     <script id="userActionButtons" type="text/x-template">
         <div>
             <a href="#inModal" data-id="${id}" title="Agregar entrada" class="tip btn btn-sm btn-light mr-2 btn-modal-action"><i class="fa fa-fw fa-inbox-in text-success"></i></a>
@@ -209,59 +345,34 @@
             <a href="/Movement?productPresentationId=${id}" title="Ver movimientos" class="tip btn btn-light" style="width:70px">${stock}</a>
         </div>
     </script>
+
     <script id="batchDetailTemplate" type="text/x-template">
         <div class="p-3 bg-light border-rounded">
-            <h6 class="mb-2"><i class="fa fa-boxes mr-2"></i>Desglose de Lotes Disponibles</h6>
-            <table class="table table-sm table-bordered bg-white">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>Lote</th>
-                        <th>Existencia</th>
-                        <th>Caducidad</th>
-                        <th>Estado</th>
-                        <th class="text-right" width="100">Acciones</th>
-                    </tr>
-                </thead>
+            <!-- Lotes -->
+            <h6><i class="fa fa-boxes mr-2"></i>Desglose de Lotes Disponibles</h6>
+            <table class="table table-sm table-bordered">
+                <thead><tr><th>Lote</th><th>Existencia</th><th>Caducidad</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
-                    ${for(batch of batches)}
-                        <tr>
-                            <td>
-                                ${batch.batchNumber}
-                            </td>
-                            <td>${batch.currentQuantity}</td>
-                            <td>${batch.expiryDateFormatted}</td>
-                            <td>
-                                <span class="badge ${batch.statusColor}">
-                                    ${batch.statusText}
-                                </span>
-                            </td>
-                            <td class="text-right">
-                            @* Botón de Entrada específico para el Lote *@
-                            <a href="#inModal"
-                               data-id="${id}"
-                               data-batch-id="${batch.id}"
-                               title="Agregar entrada a este lote"
-                               class="tip btn btn-sm btn-outline-success btn-modal-action">
-                                <i class="fa fa-fw fa-inbox-in"></i>
-                            </a>
-                        </td>
-                        </tr>
-                    ${/for}
+                    ${if(batches && batches.length)}
+                        ${for(batch of batches)}
+                            <tr><td>${batch.batchNumber}</td><td>${batch.currentQuantity}</td><td>${batch.expiryDateFormatted}</td>
+                            <td><span class="badge ${batch.statusColor}">${batch.statusText}</span></td>
+                            <td><a href="#inModal" data-id="${id}" data-batch-id="${batch.id}" class="btn btn-sm btn-outline-success btn-modal-action"><i class="fa fa-inbox-in"></i></a></td></tr>
+                        ${/for}
+                    ${else}<tr><td colspan="5">No hay lotes</td></tr>${/if}
                 </tbody>
             </table>
+
+            <!-- Apartados -->
+            <h6 class="mt-3"><i class="fa fa-tag mr-2"></i>Apartados por Cliente</h6>
+            <table class="table table-sm table-bordered">
+                <thead><tr><th>Cliente</th><th>Apartado</th><th>Usado</th><th>Disponible</th><th>Vence</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <tbody id="reservationsBody_${id}"><tr><td colspan="7">Cargando...</td></tr></tbody>
+            </table>
+            
+      
         </div>
     </script>
-    <script>
-        function onDataBound(args) {
-            // Obtenemos los datos que acaban de cargar en el Grid
-            var gridData = this.getCurrentViewRecords();
-
-           
-            gridData.forEach(function(row) {
-            });
-        }
-    </script>
-    
 }
 
 
