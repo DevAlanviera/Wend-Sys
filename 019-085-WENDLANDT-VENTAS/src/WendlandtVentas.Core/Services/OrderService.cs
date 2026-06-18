@@ -193,11 +193,12 @@ namespace WendlandtVentas.Core.Services
                 if (order.OrderClassification != 3)
                 {
                     // 🔥 NUEVO: Procesar apartados del cliente
+                    // 🔥 NUEVO: Procesar apartados del cliente
                     var productsForInventory = new List<ProductPresentationQuantity>();
 
                     foreach (var orderProduct in order.OrderProducts)
                     {
-                        // Verificar si el cliente tiene apartado activo para este producto
+                        // 1. Verificar si el cliente tiene apartado activo para este producto
                         var reservation = await _clientInventoryReservationService.GetActiveReservationsByClientAndProductAsync(
                             order.ClientId,
                             orderProduct.ProductPresentationId);
@@ -210,7 +211,7 @@ namespace WendlandtVentas.Core.Services
 
                             if (takeFromReservation > 0)
                             {
-                                // Usar del apartado
+                                // 🔥 USAR DEL APARTADO
                                 await _clientInventoryReservationService.UseReservationAsync(
                                     order.ClientId,
                                     orderProduct.ProductPresentationId,
@@ -220,15 +221,12 @@ namespace WendlandtVentas.Core.Services
                                 _logger.LogInformation($"Cliente {order.ClientId} usó {takeFromReservation} unidades de su apartado para el producto {orderProduct.ProductPresentationId}");
                             }
 
-                            // Lo que falta se descuenta de stock normal
-                            if (remaining > 0)
+                            // 🔥 CRUCIAL: Agregar TODA la cantidad del pedido al inventario, no solo lo que falta
+                            productsForInventory.Add(new ProductPresentationQuantity
                             {
-                                productsForInventory.Add(new ProductPresentationQuantity
-                                {
-                                    Id = orderProduct.ProductPresentationId,
-                                    Quantity = remaining
-                                });
-                            }
+                                Id = orderProduct.ProductPresentationId,
+                                Quantity = orderProduct.Quantity  // ✅ TODO, no solo remaining
+                            });
                         }
                         else
                         {
@@ -241,8 +239,15 @@ namespace WendlandtVentas.Core.Services
                         }
                     }
 
-                    // 🔥 Descomponer bundles para los productos que van a inventario
+                    // 🔥 Descomponer bundles y descontar TODO del inventario
                     var expandedProducts = await _inventoryService.DescomponerBundlesAsync(productsForInventory);
+
+                    // 🔥 LOG para verificar
+                    _logger.LogWarning($"=== Productos a descontar en inventario ===");
+                    foreach (var item in expandedProducts)
+                    {
+                        _logger.LogWarning($"ProductPresentationId: {item.Id}, Quantity: {item.Quantity}");
+                    }
 
                     if (order.Type == OrderType.Return)
                     {
@@ -259,10 +264,9 @@ namespace WendlandtVentas.Core.Services
                             throw new Exception(inventarioResponse.Message);
                         }
                     }
-                }
-                // --- FIN LÓGICA DE INVENTARIO ---
+                    // --- FIN LÓGICA DE INVENTARIO ---
 
-                var orderTypeName = "Pedido";
+                    var orderTypeName = "Pedido";
                 if (model.OrderClassification == 3)
                 {
                     orderTypeName = "Cotización";

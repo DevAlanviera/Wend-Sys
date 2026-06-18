@@ -201,22 +201,7 @@
         });
 
         // Prevenir doble submit
-        var $form = $('.forma-ajax--modal');
-
-        $form.on('submit', function(e) {
-            if (isSubmitting) {
-                e.preventDefault();
-                console.log('Prevenido envío duplicado');
-                return false;
-            }
-
-            isSubmitting = true;
-            var $btn = $(this).find('button[type="submit"]');
-            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
-
-            return true;
-        });
-
+       
         // Resetear flag cuando el modal se cierra
         $('.modal').on('hidden.bs.modal', function() {
             isSubmitting = false;
