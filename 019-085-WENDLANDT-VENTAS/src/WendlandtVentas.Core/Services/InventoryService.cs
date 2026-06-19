@@ -42,9 +42,13 @@ namespace WendlandtVentas.Core.Services
                 var user = await _userManager.FindByNameAsync(email);
                 var movements = new List<Movement>();
 
+                _logger.LogWarning($"=== ORDER DISCOUNT INICIADO ===");
+                _logger.LogWarning($"Orden: {orderId}, Productos: {productsPresentations.Count()}");
+
+
                 foreach (var item in productsPresentations)
                 {
-
+                    _logger.LogWarning($"  - ProductPresentationId: {item.Id}, Quantity: {item.Quantity}");
                     // 1. Obtenemos los datos básicos de la presentación que se quiere vender
                     // Usamos GetQueryable para traer el Product e InventorySourceId sin una Spec nueva
                     var current = await _repository.GetQueryable<ProductPresentation>()

@@ -198,7 +198,7 @@ namespace WendlandtVentas.Core.Services
 
                     foreach (var orderProduct in order.OrderProducts)
                     {
-                        // 1. Verificar si el cliente tiene apartado activo para este producto
+                        // Verificar si el cliente tiene apartado activo para este producto
                         var reservation = await _clientInventoryReservationService.GetActiveReservationsByClientAndProductAsync(
                             order.ClientId,
                             orderProduct.ProductPresentationId);
@@ -211,17 +211,17 @@ namespace WendlandtVentas.Core.Services
 
                             if (takeFromReservation > 0)
                             {
-                                // 🔥 USAR DEL APARTADO
+                                // Usar del apartado
                                 await _clientInventoryReservationService.UseReservationAsync(
                                     order.ClientId,
                                     orderProduct.ProductPresentationId,
                                     takeFromReservation,
                                     order.Id.ToString());
 
-                                _logger.LogInformation($"Cliente {order.ClientId} usó {takeFromReservation} unidades de su apartado para el producto {orderProduct.ProductPresentationId}");
+                                _logger.LogInformation($"Cliente {order.ClientId} usó {takeFromReservation} unidades de su apartado");
                             }
 
-                            // 🔥 CRUCIAL: Agregar TODA la cantidad del pedido al inventario, no solo lo que falta
+                            // 🔥 CRUCIAL: Descontar TODA la cantidad del pedido del inventario
                             productsForInventory.Add(new ProductPresentationQuantity
                             {
                                 Id = orderProduct.ProductPresentationId,
@@ -239,15 +239,8 @@ namespace WendlandtVentas.Core.Services
                         }
                     }
 
-                    // 🔥 Descomponer bundles y descontar TODO del inventario
+                    // 🔥 Descomponer bundles para los productos que van a inventario
                     var expandedProducts = await _inventoryService.DescomponerBundlesAsync(productsForInventory);
-
-                    // 🔥 LOG para verificar
-                    _logger.LogWarning($"=== Productos a descontar en inventario ===");
-                    foreach (var item in expandedProducts)
-                    {
-                        _logger.LogWarning($"ProductPresentationId: {item.Id}, Quantity: {item.Quantity}");
-                    }
 
                     if (order.Type == OrderType.Return)
                     {
@@ -264,9 +257,10 @@ namespace WendlandtVentas.Core.Services
                             throw new Exception(inventarioResponse.Message);
                         }
                     }
-                    // --- FIN LÓGICA DE INVENTARIO ---
+                }
+                // --- FIN LÓGICA DE INVENTARIO ---
 
-                    var orderTypeName = "Pedido";
+                var orderTypeName = "Pedido";
                 if (model.OrderClassification == 3)
                 {
                     orderTypeName = "Cotización";
@@ -349,7 +343,7 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, e.Message);
             }
         }
-            
+
 
         private async Task<int> GenerarSiguienteFolio(int classificationId)
         {
