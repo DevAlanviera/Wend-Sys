@@ -22,5 +22,7 @@ namespace WendlandtVentas.Core.Interfaces
 
         Task<ClientInventoryReservation> GetActiveReservationsByClientAndProductAsync(int clientId, int productPresentationId);
 
+        Task<List<ClientInventoryReservation>> GetUsedReservationsByOrderAsync(int orderId, int productPresentationId);
+
     }
 }

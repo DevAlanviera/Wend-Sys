@@ -384,6 +384,7 @@ namespace WendlandtVentas.Core.Services
 
                 // --- 1. BLOQUE DE REVERSA (SOLO PEDIDOS REALES) ---
                 // Si no es cotización, "limpiamos" los movimientos previos de los lotes
+                // --- 1. BLOQUE DE REVERSA (SOLO PEDIDOS REALES) ---
                 if (order.OrderClassification != 3)
                 {
                     // 🔥 Usar los productos VIEJOS de la orden
@@ -395,16 +396,32 @@ namespace WendlandtVentas.Core.Services
                         })
                         .ToList();
 
+                    // 🔥 NUEVO: Revertir apartados usados en la orden vieja
+                    foreach (var oldProduct in oldProducts)
+                    {
+                        // Verificar si el cliente tenía apartado y se usó en esta orden
+                        var usedReservations = await _clientInventoryReservationService.GetUsedReservationsByOrderAsync(order.Id, oldProduct.Id);
+
+                        if (usedReservations.Any())
+                        {
+                            // Revertir el uso del apartado (devolver la cantidad usada)
+                            foreach (var reservation in usedReservations)
+                            {
+                                // Revertir la cantidad usada en el apartado
+                                reservation.UsedQuantity -= reservation.UsedQuantity; // O la cantidad específica usada en esta orden
+                                await _repository.UpdateAsync(reservation);
+                            }
+                        }
+                    }
+
                     var expandedOldProducts = await _inventoryService.DescomponerBundlesAsync(oldProducts);
 
                     if (order.Type == OrderType.Return)
                     {
-                        // Si era devolución, revertir descuento (quitar lo que se sumó)
                         await _inventoryService.OrderDiscount(expandedOldProducts, user.Email, order.Id);
                     }
                     else
                     {
-                        // Si era venta, revertir (devolver al stock)
                         await _inventoryService.OrderReturn(expandedOldProducts, user.Email, order.Id);
                     }
                 }
@@ -499,25 +516,63 @@ namespace WendlandtVentas.Core.Services
                 // 🔥 Cambiar condición: Siempre aplicar si hay productos y no es cotización
                 if (order.OrderClassification != 3 && model.ProductPresentationIds != null && model.ProductPresentationIds.Any())
                 {
-                    var newProducts = model.ProductPresentationIds
-                        .Select((id, index) => new ProductPresentationQuantity
+                    // 🔥 NUEVO: Procesar apartados del cliente
+                    var productsForInventory = new List<ProductPresentationQuantity>();
+
+                    for (int i = 0; i < model.ProductPresentationIds.Count; i++)
+                    {
+                        var productId = model.ProductPresentationIds[i];
+                        var quantity = model.ProductPresentationQuantities[i];
+
+                        // Verificar si el cliente tiene apartado activo para este producto
+                        var reservation = await _clientInventoryReservationService.GetActiveReservationsByClientAndProductAsync(
+                            model.ClientId,
+                            productId);
+
+                        if (reservation != null && reservation.AvailableQuantity > 0)
                         {
-                            Id = id,
-                            Quantity = model.ProductPresentationQuantities[index]
-                        })
-                        .ToList();
+                            // Cuánto podemos tomar del apartado
+                            var takeFromReservation = Math.Min(quantity, reservation.AvailableQuantity);
 
-                    var expandedNewProducts = await _inventoryService.DescomponerBundlesAsync(newProducts);
+                            if (takeFromReservation > 0)
+                            {
+                                // Usar del apartado
+                                await _clientInventoryReservationService.UseReservationAsync(
+                                    model.ClientId,
+                                    productId,
+                                    takeFromReservation,
+                                    order.Id.ToString());
 
-                    // 🔥 Usar el NUEVO tipo del modelo, no el order.Type (que aún no se actualizó)
+                                _logger.LogInformation($"Cliente {model.ClientId} usó {takeFromReservation} unidades de su apartado en la actualización");
+                            }
+
+                            // 🔥 Descontar TODA la cantidad del pedido del inventario
+                            productsForInventory.Add(new ProductPresentationQuantity
+                            {
+                                Id = productId,
+                                Quantity = quantity  // TODO, no solo lo del apartado
+                            });
+                        }
+                        else
+                        {
+                            // No tiene apartado, descontar todo de stock normal
+                            productsForInventory.Add(new ProductPresentationQuantity
+                            {
+                                Id = productId,
+                                Quantity = quantity
+                            });
+                        }
+                    }
+
+                    // 🔥 Descomponer bundles y descontar del inventario
+                    var expandedNewProducts = await _inventoryService.DescomponerBundlesAsync(productsForInventory);
+
                     if (model.IsInvoice == OrderType.Return)
                     {
-                        // Es devolución: sumar al stock
                         await _inventoryService.OrderReturn(expandedNewProducts, user.Email, order.Id);
                     }
                     else
                     {
-                        // Es venta: descontar del stock
                         var invRes = await _inventoryService.OrderDiscount(expandedNewProducts, user.Email, order.Id);
                         if (!invRes.IsSuccess) throw new Exception(invRes.Message);
                     }

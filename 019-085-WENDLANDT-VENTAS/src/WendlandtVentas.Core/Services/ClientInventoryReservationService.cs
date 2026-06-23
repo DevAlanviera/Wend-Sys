@@ -238,5 +238,20 @@ namespace WendlandtVentas.Core.Services
             return reservations.FirstOrDefault(r => r.Status == "Active" && !r.IsDeleted && r.AvailableQuantity > 0);
         }
 
+        public async Task<List<ClientInventoryReservation>> GetUsedReservationsByOrderAsync(int orderId, int productPresentationId)
+        {
+            // Este método debe obtener las reservaciones que fueron usadas en esta orden
+            // Dependiendo de cómo registres el uso de apartados en la orden
+
+            var spec = new ClientInventoryReservationByProductSpecification(productPresentationId);
+            var reservations = await _repository.ListAsync(spec);
+
+            // Filtrar reservaciones que tengan un comentario o referencia a esta orden
+            // Esto depende de cómo hayas implementado el registro del uso
+            return reservations
+                .Where(r => r.UsedQuantity > 0 && r.UpdatedBy?.Contains(orderId.ToString()) == true)
+                .ToList();
+        }
+
     }
 }
