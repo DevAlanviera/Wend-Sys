@@ -320,9 +320,12 @@ namespace WendlandtVentas.Web.Controllers
 
                 var user = await _userManager.FindByNameAsync(User.Identity.Name);
 
-                var batch = await _repository.GetAsync<Batch>(new BatchSpecification(model.ProductPresentationId, model.BatchNumber));
+                var batch = await _repository.GetQueryable<Batch>()
+            .FirstOrDefaultAsync(b => b.ProductPresentationId == model.ProductPresentationId
+                                   && b.BatchNumber == model.BatchNumber
+                                   && !b.IsDeleted);
 
-               
+
 
                 if (batch == null)
                 {
@@ -335,16 +338,28 @@ namespace WendlandtVentas.Web.Controllers
                         ProductPresentationId = model.ProductPresentationId,
                         InitialQuantity = model.Quantity,
                         CurrentQuantity = model.Quantity,
+                        IsActive = true,  // ✅ Siempre activo al crear
                         CreatedAt = DateTime.Now
                     };
                     await _repository.AddAsync(batch);
                 }
+                else if (!batch.IsActive || batch.CurrentQuantity == 0)
+                {
+
+
+                    batch.CurrentQuantity = model.Quantity;  // Asignar nueva cantidad (no sumar)
+                    batch.IsActive = true;                   // Reactivar
+                    batch.ExpiryDate = model.ExpiryDate.Value;
+                    batch.InitialQuantity = model.Quantity;
+                    batch.UpdatedAt = DateTime.Now;
+
+                    await _repository.UpdateAsync(batch);
+                }
                 else
                 {
-                   
-
-                    // 3. Si ya existe, actualizamos la cantidad actual
                     batch.CurrentQuantity += model.Quantity;
+                    batch.ExpiryDate = model.ExpiryDate.Value;  // Actualizar fecha por si acaso
+                    batch.UpdatedAt = DateTime.Now;
                     await _repository.UpdateAsync(batch);
                 }
 

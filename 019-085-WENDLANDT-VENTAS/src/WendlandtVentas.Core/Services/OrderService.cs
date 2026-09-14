@@ -42,7 +42,6 @@ namespace WendlandtVentas.Core.Services
         private readonly IEmailSender _emailSender;
         private readonly IExcelReadService _excelReaderService;
         private readonly IBitacoraService _bitacoraService;
-        private readonly IClientInventoryReservationService _clientInventoryReservationService;
 
         public OrderService(UserManager<ApplicationUser> userManager,
             IAsyncRepository repository, INotificationService notificationService,
@@ -59,7 +58,6 @@ namespace WendlandtVentas.Core.Services
             _cacheService = cacheService;
             _emailSender = emailSender;
             _excelReaderService = excelReaderService;
-            _clientInventoryReservationService = clientInventoryReservationService;
         }
 
 
@@ -189,7 +187,7 @@ namespace WendlandtVentas.Core.Services
             {
                 await _repository.AddAsync(order);
 
-                // 1. Preparamos los productos de la orden normal
+                /*// 1. Preparamos los productos de la orden normal
                 if (order.OrderClassification != 3)
                 {
                     // 🔥 NUEVO: Procesar apartados del cliente
@@ -257,7 +255,7 @@ namespace WendlandtVentas.Core.Services
                             throw new Exception(inventarioResponse.Message);
                         }
                     }
-                }
+                }*/
                 // --- FIN LÓGICA DE INVENTARIO ---
 
                 var orderTypeName = "Pedido";
@@ -280,6 +278,7 @@ namespace WendlandtVentas.Core.Services
 
 
 
+
                 if (model.OrderClassification != 3)
                 {
                     var clientName = client != null ? client.Name : string.Empty;
@@ -291,6 +290,7 @@ namespace WendlandtVentas.Core.Services
                 var bitacora = new Bitacora(order.Id, user.Name, $"Crear {orderTypeName.ToLower()}");
                 await _bitacoraService.AddAsync(bitacora);
 
+
                 _cacheService.InvalidateOrderCache();
                 // string mensaje = (client.Channel == Entities.Enums.Channel.Distributor)
                 // ? "Confirmado: Es un Distribuidor"
@@ -299,10 +299,12 @@ namespace WendlandtVentas.Core.Services
                 if (client.Channel == Entities.Enums.Channel.Distributor && model.OrderClassification != 3)
                 {
 
+
                     try
                     {
                         // 1. Generar PDF del pedido usando ExcelReaderService
                         var pdfBytes = await _excelReaderService.FillDataAndReturnPdfAsync("wwwroot/resources", order);
+
 
 
                         // 2.3 Enviar correo al cliente con el PDF adjunto
@@ -315,6 +317,8 @@ namespace WendlandtVentas.Core.Services
                     {
                         _logger.LogError(ex, "Error al generar PDF o enviar correo para el pedido {OrderId}", order.Id);
                     }
+
+                }
 
                 }
 
@@ -343,6 +347,7 @@ namespace WendlandtVentas.Core.Services
                 return new Response(false, e.Message);
             }
         }
+
 
 
         private async Task<int> GenerarSiguienteFolio(int classificationId)
