@@ -239,24 +239,20 @@ namespace WendlandtVentas.Web.Controllers
             if (clientId <= 0)
                 return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error, "ClienteId no recibido."));
 
-            var filters = new Dictionary<string, string>
+            /*var filters = new Dictionary<string, string>
             {
                 {
                     "ClientId",
                     $"{clientId}"
 
                 },
-                {
-                    "StatusList",
-                    $"{OrderStatus.OnRoute},{OrderStatus.InProcess}"
-                },
                 // 2. Agregamos el filtro de clasificación
                 { "OrderClassification", $"{classificationId}" }
-            };
-            var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
+            };*/
+           // var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
 
-            if (ordersPending.Any())
-                return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
+            //if (ordersPending.Any())
+                //return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
 
             return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Ok, "Cliente verificado."));
         }
@@ -343,13 +339,12 @@ namespace WendlandtVentas.Web.Controllers
                 var filters = new Dictionary<string, string>
                 {
             { nameof(model.ClientId), $"{model.ClientId}" },
-            { "StatusList", $"{OrderStatus.OnRoute},{OrderStatus.InProcess}" },
             { "OrderClassification", $"{model.OrderClassification}" }
                 };
-                var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
+                //var ordersPending = await _repository.ListExistingAsync(new OrdersFiltersSpecification(filters));
 
-                if (ordersPending.Any() && model.Type != OrderType.Return)
-                    return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
+                //if (model.Type != OrderType.Return)
+                    //return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Warning, "Existe un pedido previo sin entregar."));
             }
 
             var client = await GetByIdWithContactsAsync(model.ClientId);
@@ -1072,21 +1067,66 @@ namespace WendlandtVentas.Web.Controllers
 
                 await _repository.UpdateAsync(order);
 
-                // Manejo de inventario - COMENTADO PARA NO MOVER INVENTARIO
-                // var messageDiscountInventory = string.Empty;
-                // if (!order.InventoryDiscount && model.Status != OrderStatus.Cancelled)
-                // {
-                //     var response = await _inventoryService.OrderDiscount(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
-                //     order.ToggleInventoryDiscount();
-                //     await _repository.UpdateAsync(order);
-                //     messageDiscountInventory = response.Message;
-                // }
-                 if (order.InventoryDiscount && model.Status == OrderStatus.Cancelled)
-                 {
-                     var response = await _inventoryService.OrderReturn(order.OrderProducts.Select(c => new ProductPresentationQuantity { Id = c.ProductPresentationId, Quantity = c.Quantity }), User.Identity.Name, order.Id);
-                     order.ToggleInventoryDiscount();
-                     await _repository.UpdateAsync(order);
-                 }
+                // --- MANEJO DE INVENTARIO ---
+                var messageDiscountInventory = string.Empty;
+
+                // 🔥 Descontar inventario cuando el estado cambia a "En ruta" (OnRoute)
+                if (!order.InventoryDiscount && model.Status == OrderStatus.OnRoute)
+                {
+                    var products = order.OrderProducts
+                        .Select(c => new ProductPresentationQuantity
+                        {
+                            Id = c.ProductPresentationId,
+                            Quantity = c.Quantity
+                        })
+                        .ToList();
+
+                    // 🔥 Descomponer bundles si es necesario
+                    var expandedProducts = await _inventoryService.DescomponerBundlesAsync(products);
+
+                    var response = await _inventoryService.OrderDiscount(expandedProducts, User.Identity.Name, order.Id);
+
+                    if (response.IsSuccess)
+                    {
+                        order.ToggleInventoryDiscount();
+                        await _repository.UpdateAsync(order);
+                        messageDiscountInventory = response.Message;
+                        _logger.LogInformation($"Inventario descontado para orden {order.Id} al cambiar a En ruta");
+                    }
+                    else
+                    {
+                        return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
+                            $"No se pudo descontar el inventario: {response.Message}"));
+                    }
+                }
+
+                // 🔥 Revertir inventario cuando se cancela (si ya estaba descontado)
+                if (order.InventoryDiscount && model.Status == OrderStatus.Cancelled)
+                {
+                    var products = order.OrderProducts
+                        .Select(c => new ProductPresentationQuantity
+                        {
+                            Id = c.ProductPresentationId,
+                            Quantity = c.Quantity
+                        })
+                        .ToList();
+
+                    var expandedProducts = await _inventoryService.DescomponerBundlesAsync(products);
+
+                    var response = await _inventoryService.OrderReturn(expandedProducts, User.Identity.Name, order.Id);
+
+                    if (response.IsSuccess)
+                    {
+                        order.ToggleInventoryDiscount();
+                        await _repository.UpdateAsync(order);
+                        _logger.LogInformation($"Inventario revertido para orden {order.Id} al cancelar");
+                    }
+                    else
+                    {
+                        return Json(AjaxFunctions.GenerateAjaxResponse(ResultStatus.Error,
+                            $"No se pudo revertir el inventario: {response.Message}"));
+                    }
+                }
 
                 if (model.Status == OrderStatus.Paid || model.Status == OrderStatus.PartialPayment)
                 {
