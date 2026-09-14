@@ -42,6 +42,7 @@ namespace WendlandtVentas.Core.Services
         private readonly IEmailSender _emailSender;
         private readonly IExcelReadService _excelReaderService;
         private readonly IBitacoraService _bitacoraService;
+        private readonly IClientInventoryReservationService _clientInventoryReservationService;
 
         public OrderService(UserManager<ApplicationUser> userManager,
             IAsyncRepository repository, INotificationService notificationService,
@@ -58,6 +59,7 @@ namespace WendlandtVentas.Core.Services
             _cacheService = cacheService;
             _emailSender = emailSender;
             _excelReaderService = excelReaderService;
+            _clientInventoryReservationService = clientInventoryReservationService;
         }
 
 
@@ -320,7 +322,7 @@ namespace WendlandtVentas.Core.Services
 
                 }
 
-                }
+                
 
                 if (order.OrderClassification != 3) // No validamos en cotizaciones
                 {
