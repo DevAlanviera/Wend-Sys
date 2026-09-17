@@ -10,7 +10,11 @@ namespace WendlandtVentas.Web.Models.TableModels
         public double Liters { get; set; }
         public string Stock { get; set; }
 
-        public int SortPriority { get; set; } // <--- Agrega esto
+        //Columna de reservaciones
+        public int TotalReserved { get; set; }
+        public string TotalReservedFormatted { get; set; }
+
+        public int SortPriority { get; set; } 
 
         // Cambiamos 'object' por una lista real
         public List<BatchRowModel> Batches { get; set; } = new List<BatchRowModel>();

@@ -87,11 +87,9 @@
                 {
                     @if (Model.BatchId.HasValue)
                     {
-                        <div class="form-group">
+                        <div class="form-group col-md-6">  @* 🔥 CORREGIDO: Agregar col-md-6 *@
                             <label asp-for="ExpiryDate">Fecha de Caducidad</label>
-                            @* La mostramos readonly para que el usuario sepa qué lote está afectando *@
                             <input type="text" class="form-control" value="@Model.ExpiryDate?.ToString("dd/MM/yyyy")" readonly />
-                            @* Enviamos la fecha oculta para que el modelo sea válido en el POST *@
                             <input type="hidden" asp-for="ExpiryDate" />
                         </div>
                     }
@@ -103,10 +101,7 @@
                             <span asp-validation-for="ExpiryDate" class="text-danger"></span>
                         </div>
                     }
-                    
                 }
-
-                
             </div>
 
             @* --- COMENTARIOS --- *@

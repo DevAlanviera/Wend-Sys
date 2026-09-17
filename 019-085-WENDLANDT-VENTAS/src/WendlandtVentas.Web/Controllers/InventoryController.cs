@@ -86,10 +86,10 @@ namespace WendlandtVentas.Web.Controllers
         public async Task<IActionResult> GetData([FromBody] DataManagerRequest dm, FilterViewModel model)
         {
             var filters = new Dictionary<string, int?>
-    {
+                {
         { nameof(model.ProductId), model.ProductId },
         { nameof(model.PresentationId), model.PresentationId }
-    };
+            };
 
             // Obtenemos los datos con los lotes incluidos
             var data = await _repository.ListExistingAsync<ProductPresentation>(new ListByFiltersProductPresentationSpecification(filters));
@@ -111,8 +111,7 @@ namespace WendlandtVentas.Web.Controllers
                 // 🔥 Obtener apartados activos
                 var activeReservations = await _clientInventoryReservationService.GetActiveReservationsByProductAsync(c.Id);
 
-                // 🔥 LOG para verificar que hay reservaciones
-                Console.WriteLine($"Producto: {c.Product.Name}, Reservations encontradas: {activeReservations.Count}");
+                int totalReserved = activeReservations.Sum(r => r.AvailableQuantity);
 
                 dataSource.Add(new InventoryTableModel
                 {
@@ -121,6 +120,8 @@ namespace WendlandtVentas.Web.Controllers
                     Presentation = $"{c.Presentation.Name} {c.Presentation.Liters.FormatCommasNullableTwoDecimals()} lts.",
                     Liters = (double)c.Presentation.Liters * realStock,
                     Stock = realStock.ToString(),
+
+                    TotalReserved = totalReserved,
                     SortPriority = c.Product.Name.StartsWith("B.C.", StringComparison.OrdinalIgnoreCase) ? 1 : 2,
                     Batches = activeBatches.Select(b => new BatchRowModel
                     {

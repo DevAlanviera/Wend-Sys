@@ -1082,6 +1082,28 @@ namespace WendlandtVentas.Web.Controllers
                 // 🔥 Descontar inventario cuando el estado cambia a "En ruta" (OnRoute)
                 if (!order.InventoryDiscount && model.Status == OrderStatus.OnRoute)
                 {
+                    foreach (var orderProduct in order.OrderProducts)
+                    {
+                        // ✅ Llamar DIRECTAMENTE a UseReservationAsync
+                        // Este método YA distribuye FIFO entre TODOS los apartados activos del cliente
+                        var useResponse = await _clientInventoryReservationService.UseReservationAsync(
+                            order.ClientId,
+                            orderProduct.ProductPresentationId,
+                            orderProduct.Quantity,  // ✅ Cantidad TOTAL del producto
+                            order.Id.ToString());
+
+                        if (useResponse.IsSuccess)
+                        {
+                            _logger.LogInformation($"Apartados usados para producto {orderProduct.ProductPresentationId}");
+                        }
+                        else
+                        {
+                            // No es error crítico, simplemente el cliente no tiene apartado suficiente
+                            _logger.LogWarning($"No se pudo usar apartado: {useResponse.Message}");
+                        }
+                    }
+
+
                     var products = order.OrderProducts
                         .Select(c => new ProductPresentationQuantity
                         {

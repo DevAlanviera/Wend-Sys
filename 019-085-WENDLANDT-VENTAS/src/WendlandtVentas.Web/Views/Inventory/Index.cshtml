@@ -89,6 +89,7 @@
             <e-grid-column field="presentation" headerText="Presentación" width="200"></e-grid-column>
             <e-grid-column field="liters" headerText="Litros" format="N2" width="100" textAlign="Right" headerTextAlign="Left"></e-grid-column>
             <e-grid-column headerText="En existencia" width="200" template="#movements" textAlign="Center"></e-grid-column>
+            <e-grid-column field="totalReserved" headerText="Apartado" width="120" textAlign="Center" template="#reservedTemplate"></e-grid-column>
             <e-grid-column width="130" template="@actionTemplate" textAlign="Right"></e-grid-column>
         </e-grid-columns>
     </ejs-grid>
@@ -187,58 +188,87 @@ function loadReservations(productId, rowData) {
         }
     </script>
 
-    <script>
-        $(document).ready(function() {
-            // Manejador para el botón de modal apartado
-            $(document).on('click', '.btn-reservation-modal', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                var productPresentationId = $(this).data('product-presentation-id');
-                var $modal = $('#reservationModal');
-                var url = $modal.data('url');
-                
-                if (!productPresentationId) {
-                    console.error('No se encontró product-presentation-id');
-                    return;
-                }
-                
-                $.get(url, { productPresentationId: productPresentationId }, function(data) {
-                    $modal.html(data);
-                    $modal.modal('show');
-                }).fail(function(error) {
-                    alert('Error al cargar el formulario de apartado');
-                });
+<script>
+    $(document).ready(function() {
+        // Manejador para el botón de modal apartado
+        $(document).on('click', '.btn-reservation-modal', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var productPresentationId = $(this).data('product-presentation-id');
+            var $modal = $('#reservationModal');
+            var url = $modal.data('url');
+            
+            if (!productPresentationId) {
+                console.error('No se encontró product-presentation-id');
+                return;
+            }
+            
+            $.get(url, { productPresentationId: productPresentationId }, function(data) {
+                $modal.html(data);
+                $modal.modal('show');
+            }).fail(function(error) {
+                alert('Error al cargar el formulario de apartado');
             });
-
-            // Manejador genérico de botones modales
-           $(document).on('click', '.btn-modal-action', function (e) {
-                // 🔥 ESTO ES VITAL PARA QUE NO FALLE EL ENLACE 🔥
-                e.preventDefault(); 
-                e.stopPropagation();  
-                
-                var $btn = $(this);
-                var modalId = $btn.attr('href');
-                var baseUrl = $(modalId).data('url');
-                var id = $btn.attr('data-id');
-                var bId = $btn.attr('data-batch-id'); 
-
-        console.log("DEBUG: Enviando ID:", id, "BatchId:", bId);
-
-        var urlConParametros = baseUrl + "?id=" + id;
-
-        if (bId && bId !== "undefined" && bId !== "") {
-            urlConParametros += "&batchId=" + bId;
-        }
-
-        $(modalId).load(urlConParametros, function () {
-            $(modalId).modal('show');
-            // 🔥 Resetear después de 500ms
-            setTimeout(function() {
-                $btn.data('processing', false);
-            }, 500);
         });
-    });
+
+        // Manejador genérico de botones modales
+        $(document).on('click', '.btn-modal-action', function (e) {
+            e.preventDefault(); 
+            e.stopPropagation();  
+            
+            var $btn = $(this);
+            var modalId = $btn.attr('href');
+            var baseUrl = $(modalId).data('url');
+
+            var id = $btn.attr('data-id');
+            var bId = $btn.attr('data-batch-id'); 
+
+            console.log("DEBUG: Enviando ID:", id, "BatchId:", bId);
+
+            var urlConParametros = baseUrl + "?id=" + id;
+
+            if (bId && bId !== "undefined" && bId !== "") {
+                urlConParametros += "&batchId=" + bId;
+            }
+
+            $(modalId).load(urlConParametros, function () {
+                $(modalId).modal('show');
+                setTimeout(function() {
+                    $btn.data('processing', false);
+                }, 500);
+            });
+        });
+    }); 
+    // 🔥 Manejador específico para botones de entrada DENTRO del detalle del lote
+        $(document).on('click', '.btn-in-batch', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();  // 🔥 Detiene otros manejadores
+    
+            var $btn = $(this);
+            var productId = $btn.data('product-id');
+            var batchId = $btn.data('batch-id');
+            var $modal = $('#inModal');
+            var baseUrl = $modal.data('url');
+    
+            console.log("=== CLICK EN BTN-IN-BATCH ===");
+            console.log("ProductId:", productId);
+            console.log("BatchId:", batchId);
+    
+            var url = baseUrl + "?id=" + productId + "&batchId=" + batchId;
+            console.log("URL final:", url);
+    
+            $.get(url, function(data) {
+                $modal.html(data);
+                $modal.modal('show');
+            }).fail(function(xhr) {
+                console.error("Error:", xhr.status, xhr.statusText);
+                alert('Error al cargar el formulario de entrada');
+            });
+    
+            return false;
+        });
 </script>
     <script>
                            $(document).ready(function () {
@@ -346,33 +376,57 @@ function loadReservations(productId, rowData) {
         </div>
     </script>
 
-    <script id="batchDetailTemplate" type="text/x-template">
-        <div class="p-3 bg-light border-rounded">
-            <!-- Lotes -->
-            <h6><i class="fa fa-boxes mr-2"></i>Desglose de Lotes Disponibles</h6>
-            <table class="table table-sm table-bordered">
-                <thead><tr><th>Lote</th><th>Existencia</th><th>Caducidad</th><th>Estado</th><th>Acciones</th></tr></thead>
-                <tbody>
-                    ${if(batches && batches.length)}
-                        ${for(batch of batches)}
-                            <tr><td>${batch.batchNumber}</td><td>${batch.currentQuantity}</td><td>${batch.expiryDateFormatted}</td>
+   <script id="batchDetailTemplate" type="text/x-template">
+    <div class="p-3 bg-light border-rounded">
+        <!-- Lotes -->
+        <h6><i class="fa fa-boxes mr-2"></i>Desglose de Lotes Disponibles</h6>
+        <table class="table table-sm table-bordered">
+            <thead><tr><th>Lote</th><th>Existencia</th><th>Caducidad</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+                ${if(batches && batches.length)}
+                    ${for(batch of batches)}
+                        <tr>
+                            <td>${batch.batchNumber}</td>
+                            <td>${batch.currentQuantity}</td>
+                            <td>${batch.expiryDateFormatted}</td>
                             <td><span class="badge ${batch.statusColor}">${batch.statusText}</span></td>
-                            <td><a href="#inModal" data-id="${id}" data-batch-id="${batch.id}" class="btn btn-sm btn-outline-success btn-modal-action"><i class="fa fa-inbox-in"></i></a></td></tr>
-                        ${/for}
-                    ${else}<tr><td colspan="5">No hay lotes</td></tr>${/if}
-                </tbody>
-            </table>
+                            <td>
+                                <!-- 🔥 CORREGIDO: Usar botón con ambos IDs -->
+                                <button type="button" 
+                                        data-product-id="${id}" 
+                                        data-batch-id="${batch.id}"
+                                        title="Agregar entrada a este lote"
+                                        class="btn btn-sm btn-outline-success btn-in-batch">
+                                    <i class="fa fa-inbox-in"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    ${/for}
+                ${else}
+                    <tr><td colspan="5">No hay lotes</td></tr>
+                ${/if}
+            </tbody>
+        </table>
 
-            <!-- Apartados -->
-            <h6 class="mt-3"><i class="fa fa-tag mr-2"></i>Apartados por Cliente</h6>
-            <table class="table table-sm table-bordered">
-                <thead><tr><th>Cliente</th><th>Apartado</th><th>Usado</th><th>Disponible</th><th>Vence</th><th>Estado</th><th>Acciones</th></tr></thead>
-                <tbody id="reservationsBody_${id}"><tr><td colspan="7">Cargando...</td></tr></tbody>
-            </table>
-            
-      
-        </div>
-    </script>
+        <!-- Apartados -->
+        <h6 class="mt-3"><i class="fa fa-tag mr-2"></i>Apartados por Cliente</h6>
+        <table class="table table-sm table-bordered">
+            <thead><tr><th>Cliente</th><th>Apartado</th><th>Usado</th><th>Disponible</th><th>Vence</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="reservationsBody_${id}"><tr><td colspan="7">Cargando...</td></tr></tbody>
+        </table>
+    </div>
+</script>
+<script id="reservedTemplate" type="text/x-template">
+    <div>
+        ${if(totalReserved > 0)}
+            <span style="font-size: 14px; padding: 6px 12px;">
+                <i class="fa fa-tag"></i> ${totalReserved}
+            </span>
+        ${else}
+            <span class="text-muted">-</span>
+        ${/if}
+    </div>
+</script>
 }
 
 
