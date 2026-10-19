@@ -67,8 +67,7 @@ namespace WendlandtVentas.Web.Controllers
                 // --- LÓGICA DE FILTRADO SEGÚN PESTAÑA ---
                 if (classificationId == 3)
                 {
-                    // PESTAÑA DESACTIVADOS: 
-                    // Usamos GetQueryable para ignorar el filtro automático de "ListExisting"
+                    // PESTAÑA DESACTIVADOS
                     filteredProducts = await _repository.GetQueryable<Product>()
                         .Include(p => p.ProductPresentations).ThenInclude(pp => pp.Presentation)
                         .Include(p => p.InventorySource)
@@ -77,31 +76,37 @@ namespace WendlandtVentas.Web.Controllers
                 }
                 else
                 {
-                    // PESTAÑAS ACTIVAS:
+                    // PESTAÑAS ACTIVAS
                     var allProducts = await _repository.ListExistingAsync(new ProductTableSpecification());
 
                     if (classificationId == 4)
                     {
-                        // --- NUEVA PESTAÑA: PAQUETES ---
-                        // Filtramos solo los que marcamos con el nuevo campo IsBundle
+                        // --- PAQUETES ---
                         filteredProducts = allProducts.Where(p => p.IsBundle == true);
+                    }
+                    else if (classificationId == 5)
+                    {
+                        // 🔥 NUEVA PESTAÑA: VINO
+                        filteredProducts = allProducts.Where(p => p.Distinction == Distinction.Vino && p.IsBundle == false);
                     }
                     else if (classificationId == 2)
                     {
-                        // PESTAÑA WELLEN: Excluimos paquetes para que no se dupliquen
+                        // PESTAÑA WELLEN
                         filteredProducts = allProducts.Where(p => p.Distinction == Distinction.Wellen && p.IsBundle == false);
                     }
                     else
                     {
-                        // PESTAÑA CERVEZA (ID 1): Excluimos Wellen y paquetes
-                        filteredProducts = allProducts.Where(p => p.Distinction != Distinction.Wellen && p.IsBundle == false);
+                        // PESTAÑA CERVEZA (ID 1): Excluimos Wellen, Vino y paquetes
+                        filteredProducts = allProducts.Where(p =>
+                            p.Distinction != Distinction.Wellen &&
+                            p.Distinction != Distinction.Vino &&
+                            p.IsBundle == false);
                     }
                 }
 
                 // --- LÓGICA DE MAPEO ---
                 var dataSource = filteredProducts.Select(c =>
                 {
-                    // Para los precios, seguimos filtrando presentaciones que no estén borradas individualmente
                     var presentations = c.ProductPresentations.Where(p => !p.IsDeleted);
 
                     return new ProductTableModel
@@ -111,24 +116,24 @@ namespace WendlandtVentas.Web.Controllers
                         Distinction = c.Distinction.Humanize(),
                         Season = c.Season,
                         IsDeleted = c.IsDeleted,
-                        // --- NUEVOS CAMPOS PARA EL VÍNCULO ---
                         InventorySourceId = c.InventorySourceId,
-                        // Si tiene un InventorySource, mostramos su nombre, si no, es "Propio"
                         InventorySourceName = c.InventorySource?.Name ?? "Inventario Maestro",
                         IsVariant = c.InventorySourceId.HasValue,
+
+                        // --- BARRILES ---
                         PriceBarrelPet20 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Pet") && c.Presentation.Liters == 20)?.Price.FormatCurrency() ?? string.Empty,
                         PriceUsdBarrelPet20 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Pet") && c.Presentation.Liters == 20)?.PriceUsd.FormatCurrency() ?? string.Empty,
                         WeightBarrelPet20 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Pet") && c.Presentation.Liters == 20)?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
-                        // PriceBarrelPet30 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Pet") && c.Presentation.Liters == 30)?.Price.FormatCurrency() ?? string.Empty,
+
                         PriceBarrelInox20 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Inox") && c.Presentation.Liters == 20)?.Price.FormatCurrency() ?? string.Empty,
                         PriceUsdBarrelInox20 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Inox") && c.Presentation.Liters == 20)?.PriceUsd.FormatCurrency() ?? string.Empty,
                         WeightBarrelInox20 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Inox") && c.Presentation.Liters == 20)?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
-                        //Comentado porque ya no se ocupael barril inoxidable 30 litros
-                        //PriceBarrelInox30 = presentations.SingleOrDefault(c => c.Presentation.Name.Equals("Barril Inox") && c.Presentation.Liters == 30)?.Price.FormatCurrency() ?? string.Empty,
+
                         PriceBarrelInox60 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Inox") && c.Presentation.Liters == 60)?.Price.FormatCurrency() ?? string.Empty,
                         PriceUsdBarrelInox60 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Inox") && c.Presentation.Liters == 60)?.PriceUsd.FormatCurrency() ?? string.Empty,
                         WeightBarrelInox60 = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Barril Inox") && c.Presentation.Liters == 60)?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
 
+                        // --- BOTELLA / LATA / TASTING ---
                         PriceBottle = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella"))?.Price.FormatCurrency() ?? string.Empty,
                         PriceUsdBottle = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella"))?.PriceUsd.FormatCurrency() ?? string.Empty,
                         WeightBottle = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
@@ -141,23 +146,24 @@ namespace WendlandtVentas.Web.Controllers
                         TastingUsd = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Tasting"))?.PriceUsd.FormatCurrency() ?? string.Empty,
                         TastingWeight = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Tasting"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
 
-
-                        //Obtenemos los datos del doce pack-
+                        // --- PAQUETES ---
                         PriceBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.Price.FormatCurrency() ?? string.Empty,
                         PriceUsdBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.PriceUsd.FormatCurrency() ?? string.Empty,
                         WeightBotellaDoce = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella 12-Pack"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
 
-                        //Obtenemos los datos del Six Pack-
                         PriceSmallCanSix = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Small Can 6-Pack"))?.Price.FormatCurrency() ?? string.Empty,
                         PriceUsdSmallCanSix = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Small Can 6-Pack"))?.PriceUsd.FormatCurrency() ?? string.Empty,
                         WeightSmallCanSix = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Small Can 6-Pack"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
+
+                        // 🔥 NUEVO: PROPIEDADES PARA VINO
+                        PriceWine = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella Vino"))?.Price.FormatCurrency() ?? string.Empty,
+                        PriceUsdWine = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella Vino"))?.PriceUsd.FormatCurrency() ?? string.Empty,
+                        WeightWine = presentations.FirstOrDefault(c => c.Presentation.Name.Equals("Botella Vino"))?.Weight.FormatCommasNullableTwoDecimals() ?? string.Empty,
                     };
                 }).ToList();
 
-
-
-                // --- MODIFICADO: Guardamos en el caché específico ---
-                _memoryCache.Set(cacheKey, dataSource, TimeSpan.FromMinutes(30)); // Es bueno poner un tiempo de expiración
+                // Guardamos en el caché específico
+                _memoryCache.Set(cacheKey, dataSource, TimeSpan.FromMinutes(30));
                 cachedData = dataSource;
             }
 

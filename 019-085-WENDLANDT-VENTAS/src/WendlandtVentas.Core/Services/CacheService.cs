@@ -32,6 +32,14 @@ namespace WendlandtVentas.Core.Services
 
         public void ClearProductCache()
         {
+            // 🔥 Limpiar TODAS las claves de pestañas de productos
+            _memoryCache.Remove("ProductTableData_Class_1");  // Cerveza
+            _memoryCache.Remove("ProductTableData_Class_2");  // Wellen
+            _memoryCache.Remove("ProductTableData_Class_3");  // Desactivados
+            _memoryCache.Remove("ProductTableData_Class_4");  // Paquetes
+            _memoryCache.Remove("ProductTableData_Class_5");  // Vino
+
+
             // Limpiar solo caché de productos ACTIVOS
             _memoryCache.Remove("ProductTable_Active_Wellen");
             _memoryCache.Remove("ProductTable_Active_Regular");

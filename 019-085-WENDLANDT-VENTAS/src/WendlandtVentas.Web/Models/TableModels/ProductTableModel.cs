@@ -39,6 +39,11 @@
         public string PriceUsdSmallCanSix { get; set; }
         public string WeightSmallCanSix { get; set; }
 
+        //Vinos
+        public string PriceWine { get; set; }
+        public string PriceUsdWine { get; set; }
+        public string WeightWine { get; set; }
+
 
         //Unificacion de inventario
         // Propiedades para la unificación

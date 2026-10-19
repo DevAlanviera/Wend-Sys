@@ -172,6 +172,70 @@ namespace WendlandtVentas.Web.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> GetECommerceData([FromBody] DataManagerRequest dm)
+        {
+            try
+            {
+                if (dm == null)
+                {
+                    return BadRequest("DataManagerRequest no puede ser nulo.");
+                }
+
+                // 🔥 Consulta base filtrando por Channel == ECommerce
+                var ecommerceQuery = _repository.GetQueryable(
+                    new ClientExtendedSpecification(c => c.Channel == Channel.ECommerce));
+
+                // Aplicar búsqueda en la base de datos si hay criterios de búsqueda
+                if (dm.Search != null && dm.Search.Count > 0)
+                {
+                    string searchValue = dm.Search[0].Key.Trim().ToLower();
+                    _logger.LogInformation($"Valor de búsqueda (E-Commerce): {searchValue}");
+
+                    ecommerceQuery = ecommerceQuery.Where(c =>
+                        c.Name.ToLower().Contains(searchValue) ||
+                        (c.DiscountPercentage != null && c.DiscountPercentage.ToString().Contains(searchValue))
+                    );
+                }
+
+                // Obtener el total de registros antes de aplicar paginación
+                var totalCount = await ecommerceQuery.CountAsync();
+
+                // Aplicar paginación en la base de datos
+                var paginatedResults = await ecommerceQuery
+                    .Skip(dm.Skip)
+                    .Take(dm.Take)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Name,
+                        Classification = c.Classification.HasValue ? c.Classification.Value.Humanize() : "-",
+                        Channel = c.Channel.HasValue ? c.Channel.Value.Humanize() : "-",
+                        State = c.State != null ? c.State.Name : "-",
+                        c.RFC,
+                        c.City,
+                        CreationDate = c.CreatedAt.ToString("dd MMM yyyy"),
+                        PayType = c.PayType.HasValue ? c.PayType.Value.Humanize() : "-",
+                        c.CreditDays,
+                        c.SellerId,
+                        Addresses = c.Addresses.Count,
+                        Contacts = c.Contacts.Count,
+                        Comments = c.Comment.Count(x => !x.IsDeleted)
+                    })
+                    .ToListAsync();
+
+                // Devolver resultado con paginación
+                return dm.RequiresCounts
+                    ? new JsonResult(new { result = paginatedResults, count = totalCount })
+                    : new JsonResult(paginatedResults);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en GetECommerceData");
+                return StatusCode(500, "Ocurrió un error al procesar la solicitud.");
+            }
+        }
+
+        [HttpPost]
         public async Task<IActionResult> GetWholesalerData([FromBody] DataManagerRequest dm)
         {
             try

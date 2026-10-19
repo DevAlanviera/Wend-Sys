@@ -27,6 +27,12 @@
             <i class="fa fa-tint"></i> Wellen
         </a>
     </li>
+     <li class="nav-item">
+        <a class="nav-link @(classificationId == "5" ? "active" : "")"
+           href="@Url.Action("Index", new { classificationId = 5 })">
+            <i class="fa fa-wine-bottle"></i> Vino
+        </a>
+    </li>
     @* --- NUEVA PESTAÑA DE PAQUETES --- *@
     <li class="nav-item">
         <a class="nav-link @(classificationId == "4" ? "active" : "")"
